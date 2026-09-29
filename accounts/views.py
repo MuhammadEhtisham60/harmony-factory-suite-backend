@@ -32,18 +32,32 @@ from audit_logs.utils import log_activity
 
 def get_user_by_pk_or_identifier(pk):
     """
-    Helper to look up a User by database ID, formatted string (e.g. USR-001), or username.
+    Helper to look up a User by database ID (integer/ObjectId), formatted string (e.g. USR-001/USR-id), or username/email.
     """
     pk_str = str(pk).strip()
-    if pk_str.upper().startswith('USR-'):
-        try:
-            numeric_id = int(pk_str.split('-')[1])
-            return get_object_or_404(User, id=numeric_id)
-        except (ValueError, IndexError):
-            pass
-    if pk_str.isdigit():
-        return get_object_or_404(User, id=int(pk_str))
+    raw_id = pk_str[4:] if pk_str.upper().startswith('USR-') else pk_str
+
+    # 1. Try by numeric ID if applicable
+    if raw_id.isdigit():
+        user = User.objects.filter(id=int(raw_id)).first()
+        if user:
+            return user
+
+    # 2. Try by raw ObjectId or string ID
+    try:
+        user = User.objects.filter(id=raw_id).first()
+        if user:
+            return user
+    except Exception:
+        pass
+
+    # 3. Try by username or email
+    user = User.objects.filter(Q(username__iexact=pk_str) | Q(email__iexact=pk_str)).first()
+    if user:
+        return user
+
     return get_object_or_404(User, username=pk_str)
+
 
 
 # ============================================================================

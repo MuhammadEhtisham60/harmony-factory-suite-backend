@@ -61,7 +61,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     Serializer for the current user representation (e.g. login, /me, user profile)
     """
     id = serializers.CharField(source='formatted_id', read_only=True)
-    rawId = serializers.IntegerField(source='id', read_only=True)
+    rawId = serializers.CharField(source='id', read_only=True)
     fullName = serializers.CharField(source='full_name')
     firstName = serializers.CharField(source='first_name')
     lastName = serializers.CharField(source='last_name')

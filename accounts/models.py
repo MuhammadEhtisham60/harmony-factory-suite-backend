@@ -147,8 +147,10 @@ class User(AbstractUser):
 
     @property
     def formatted_id(self):
-        """Returns standard ERP user ID representation, e.g. USR-001"""
-        return f"USR-{self.id:03d}"
+        """Returns standard ERP user ID representation, e.g. USR-001 or USR-<id>"""
+        if isinstance(self.id, int):
+            return f"USR-{self.id:03d}"
+        return f"USR-{str(self.id)}"
 
     def get_permissions(self):
         """
