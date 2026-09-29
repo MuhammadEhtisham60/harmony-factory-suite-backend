@@ -10,6 +10,7 @@ from .constants import ALL_PERMISSION_CODES
 
 
 class RoleSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(read_only=True)
     userCount = serializers.IntegerField(source='user_count', read_only=True)
     isSystem = serializers.BooleanField(source='is_system', default=False, required=False)
     slug = serializers.SlugField(required=False, allow_blank=True)

@@ -7,6 +7,7 @@ from .models import ActivityLog
 
 
 class ActivityLogSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(read_only=True)
     timestamp = serializers.SerializerMethodField()
     date = serializers.SerializerMethodField()
     userId = serializers.SerializerMethodField()
