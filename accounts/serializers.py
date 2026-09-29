@@ -59,25 +59,16 @@ class RoleSerializer(serializers.ModelSerializer):
 
 class UserProfileSerializer(serializers.ModelSerializer):
     """
-    Serializer for the current user representation (e.g. login, /me, user profile)
+    Serializer for user profile representation (login, /me, user list, user detail).
     """
     id = serializers.CharField(source='formatted_id', read_only=True)
-    rawId = serializers.CharField(source='id', read_only=True)
-    fullName = serializers.CharField(source='full_name')
-    firstName = serializers.CharField(source='first_name')
-    lastName = serializers.CharField(source='last_name')
-    altPhone = serializers.CharField(source='alt_phone', allow_blank=True)
+    rawId = serializers.IntegerField(source='id', read_only=True)
     role = serializers.SerializerMethodField()
     roleId = serializers.SerializerMethodField()
-    employeeId = serializers.CharField(source='employee_id', allow_null=True)
-    manager = serializers.CharField(source='manager_name', allow_blank=True)
-    postalCode = serializers.CharField(source='postal_code', allow_blank=True)
-    joiningDate = serializers.DateField(source='joining_date', allow_null=True)
-    accountExpiry = serializers.DateField(source='account_expiry', allow_null=True)
-    lastLogin = serializers.SerializerMethodField()
-    createdDate = serializers.DateField(source='created_date', read_only=True)
-    twoFactorEnabled = serializers.BooleanField(source='two_factor_enabled')
+    twoFactorEnabled = serializers.BooleanField(source='two_factor_enabled', read_only=True)
     permissions = serializers.SerializerMethodField()
+    lastLogin = serializers.SerializerMethodField()
+    dateJoined = serializers.DateTimeField(source='date_joined', read_only=True)
 
     class Meta:
         model = User
@@ -85,48 +76,30 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'id',
             'rawId',
             'username',
-            'fullName',
-            'firstName',
-            'lastName',
             'email',
             'phone',
-            'altPhone',
-            'dob',
+            'address',
             'gender',
+            'designation',
             'role',
             'roleId',
-            'department',
-            'designation',
-            'employeeId',
-            'company',
-            'branch',
             'status',
-            'joiningDate',
-            'manager',
-            'shift',
-            'address',
-            'city',
-            'state',
-            'country',
-            'postalCode',
-            'notes',
-            'avatar',
-            'accountExpiry',
-            'lastLogin',
-            'createdDate',
             'twoFactorEnabled',
             'permissions',
+            'lastLogin',
+            'dateJoined',
+            'is_active',
+            'is_staff',
+            'is_superuser',
         ]
 
     def get_role(self, obj):
         return obj.role.name if obj.role else None
 
     def get_roleId(self, obj):
-        return obj.role.id if obj.role else None
+        return str(obj.role.id) if obj.role else None
 
     def get_lastLogin(self, obj):
-        if obj.last_login_at:
-            return obj.last_login_at.strftime('%d %b %Y, %I:%M %p')
         if obj.last_login:
             return obj.last_login.strftime('%d %b %Y, %I:%M %p')
         return None
@@ -143,17 +116,7 @@ class UserListSerializer(UserProfileSerializer):
 class UserCreateSerializer(serializers.ModelSerializer):
     """
     Serializer for creating/onboarding a new user.
-    Supports both camelCase and snake_case input fields.
     """
-    fullName = serializers.CharField(source='full_name', required=True)
-    firstName = serializers.CharField(source='first_name', required=False, allow_blank=True, default='')
-    lastName = serializers.CharField(source='last_name', required=False, allow_blank=True, default='')
-    altPhone = serializers.CharField(source='alt_phone', required=False, allow_blank=True, default='')
-    employeeId = serializers.CharField(source='employee_id', required=False, allow_null=True, allow_blank=True, default=None)
-    joiningDate = serializers.DateField(source='joining_date', required=False, allow_null=True, default=None)
-    manager = serializers.CharField(source='manager_name', required=False, allow_blank=True, default='')
-    postalCode = serializers.CharField(source='postal_code', required=False, allow_blank=True, default='')
-    accountExpiry = serializers.DateField(source='account_expiry', required=False, allow_null=True, default=None)
     twoFactorEnabled = serializers.BooleanField(source='two_factor_enabled', required=False, default=False)
     role = serializers.CharField(required=True, write_only=True)
     password = serializers.CharField(write_only=True, min_length=6)
@@ -162,49 +125,21 @@ class UserCreateSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'username',
-            'fullName',
-            'firstName',
-            'lastName',
             'email',
             'password',
-            'role',
-            'department',
-            'status',
             'phone',
-            'altPhone',
-            'dob',
+            'address',
             'gender',
             'designation',
-            'employeeId',
-            'company',
-            'branch',
-            'shift',
-            'joiningDate',
-            'manager',
-            'address',
-            'city',
-            'state',
-            'country',
-            'postalCode',
-            'notes',
-            'accountExpiry',
+            'role',
+            'status',
             'twoFactorEnabled',
-            'avatar',
         ]
 
     def to_internal_value(self, data):
         # Support snake_case keys if provided
         data_copy = data.copy() if hasattr(data, 'copy') else dict(data)
         mappings = {
-            'full_name': 'fullName',
-            'first_name': 'firstName',
-            'last_name': 'lastName',
-            'alt_phone': 'altPhone',
-            'employee_id': 'employeeId',
-            'joining_date': 'joiningDate',
-            'manager_name': 'manager',
-            'postal_code': 'postalCode',
-            'account_expiry': 'accountExpiry',
             'two_factor_enabled': 'twoFactorEnabled',
         }
         for snake, camel in mappings.items():
@@ -224,12 +159,6 @@ class UserCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("This email address is already in use.")
         return value
 
-    def validate_employeeId(self, value):
-        if value:
-            if User.objects.filter(employee_id__iexact=value).exists():
-                raise serializers.ValidationError("This Employee ID is already registered.")
-        return value
-
     def validate_role(self, value):
         # Resolve role by ID or Name
         role = None
@@ -246,16 +175,6 @@ class UserCreateSerializer(serializers.ModelSerializer):
         password = validated_data.pop('password')
         role = validated_data.pop('role')
 
-        first_name = validated_data.get('first_name', '')
-        last_name = validated_data.get('last_name', '')
-        full_name = validated_data.get('full_name', '')
-
-        if not first_name and full_name:
-            parts = full_name.split(' ', 1)
-            validated_data['first_name'] = parts[0]
-            if len(parts) > 1 and not last_name:
-                validated_data['last_name'] = parts[1]
-
         user = User(**validated_data)
         user.role = role
         user.set_password(password)
@@ -266,17 +185,8 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
 class UserUpdateSerializer(serializers.ModelSerializer):
     """
-    Serializer for updating existing user profile & work details.
+    Serializer for updating existing user profile.
     """
-    fullName = serializers.CharField(source='full_name', required=False)
-    firstName = serializers.CharField(source='first_name', required=False, allow_blank=True)
-    lastName = serializers.CharField(source='last_name', required=False, allow_blank=True)
-    altPhone = serializers.CharField(source='alt_phone', required=False, allow_blank=True)
-    employeeId = serializers.CharField(source='employee_id', required=False, allow_null=True, allow_blank=True)
-    joiningDate = serializers.DateField(source='joining_date', required=False, allow_null=True)
-    manager = serializers.CharField(source='manager_name', required=False, allow_blank=True)
-    postalCode = serializers.CharField(source='postal_code', required=False, allow_blank=True)
-    accountExpiry = serializers.DateField(source='account_expiry', required=False, allow_null=True)
     twoFactorEnabled = serializers.BooleanField(source='two_factor_enabled', required=False)
     role = serializers.CharField(required=False, write_only=True)
 
@@ -284,47 +194,19 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'username',
-            'fullName',
-            'firstName',
-            'lastName',
             'email',
-            'role',
-            'department',
-            'status',
             'phone',
-            'altPhone',
-            'dob',
+            'address',
             'gender',
             'designation',
-            'employeeId',
-            'company',
-            'branch',
-            'shift',
-            'joiningDate',
-            'manager',
-            'address',
-            'city',
-            'state',
-            'country',
-            'postalCode',
-            'notes',
-            'accountExpiry',
+            'role',
+            'status',
             'twoFactorEnabled',
-            'avatar',
         ]
 
     def to_internal_value(self, data):
         data_copy = data.copy() if hasattr(data, 'copy') else dict(data)
         mappings = {
-            'full_name': 'fullName',
-            'first_name': 'firstName',
-            'last_name': 'lastName',
-            'alt_phone': 'altPhone',
-            'employee_id': 'employeeId',
-            'joining_date': 'joiningDate',
-            'manager_name': 'manager',
-            'postal_code': 'postalCode',
-            'account_expiry': 'accountExpiry',
             'two_factor_enabled': 'twoFactorEnabled',
         }
         for snake, camel in mappings.items():
@@ -342,13 +224,6 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         user_id = self.instance.id if self.instance else None
         if User.objects.filter(email__iexact=value).exclude(id=user_id).exists():
             raise serializers.ValidationError("This email address is already in use.")
-        return value
-
-    def validate_employeeId(self, value):
-        if value:
-            user_id = self.instance.id if self.instance else None
-            if User.objects.filter(employee_id__iexact=value).exclude(id=user_id).exists():
-                raise serializers.ValidationError("This Employee ID is already registered.")
         return value
 
     def validate_role(self, value):

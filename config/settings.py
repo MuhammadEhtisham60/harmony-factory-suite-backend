@@ -32,7 +32,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     # Third-party apps
-    'django_mongodb_backend',
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
@@ -77,15 +76,15 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database Configuration
-# Uses MongoDB Atlas via django_mongodb_backend
-MONGODB_URI = os.getenv('MONGODB_URI')
-MONGODB_NAME = os.getenv('MONGODB_NAME', 'harmony_factory_erp')
-
+# PostgreSQL Database Configuration
 DATABASES = {
     'default': {
-        'ENGINE': 'django_mongodb_backend',
-        'HOST': MONGODB_URI,
-        'NAME': MONGODB_NAME,
+        'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.postgresql'),
+        'NAME': os.getenv('DB_NAME', 'loom_management_store'),
+        'USER': os.getenv('DB_USER', 'postgres'),
+        'PASSWORD': os.getenv('DB_PASSWORD', '1234'),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
 
@@ -112,19 +111,13 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Default primary key field type – MongoDB uses ObjectId
-DEFAULT_AUTO_FIELD = 'django_mongodb_backend.fields.ObjectIdAutoField'
-
-# Silence AutoField checks for Django contrib models (auth.Group, auth.Permission,
-# contenttypes.ContentType) — these are handled correctly by django_mongodb_backend engine
-SILENCED_SYSTEM_CHECKS = [
-    'mongodb.fields.auto.E001',
-]
+# Default primary key field type
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # REST Framework Configuration
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'accounts.authentication.SafeJWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',

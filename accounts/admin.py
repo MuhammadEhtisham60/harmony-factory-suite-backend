@@ -18,71 +18,40 @@ class UserAdmin(BaseUserAdmin):
     add_form = CustomUserCreationForm
 
     list_display = (
-        'username', 'full_name', 'email', 'role',
-        'department', 'status', 'is_active', 'is_staff'
+        'username', 'email', 'phone', 'gender', 'designation',
+        'role', 'status', 'is_active', 'is_staff'
     )
-    list_filter = ('status', 'role', 'department', 'is_active', 'is_staff')
-    search_fields = ('username', 'full_name', 'email', 'phone', 'employee_id')
+    list_filter = ('status', 'role', 'gender', 'is_active', 'is_staff')
+    search_fields = ('username', 'email', 'phone', 'designation', 'address')
     ordering = ('-id',)
 
-    # Fields for viewing / editing existing users
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        ('Personal Info', {
+        ('User Details', {
             'fields': (
-                'full_name', 'first_name', 'last_name', 'email', 'avatar',
-                'phone', 'alt_phone', 'dob', 'gender'
+                'email', 'phone', 'gender', 'designation', 'address'
             )
         }),
-        ('Organization & Work', {
+        ('Role & Status', {
             'fields': (
-                'employee_id', 'company', 'branch', 'department',
-                'designation', 'shift', 'joining_date', 'manager_name'
-            )
-        }),
-        ('Address', {
-            'fields': ('address', 'city', 'state', 'country', 'postal_code')
-        }),
-        ('Role & Permissions', {
-            'fields': (
-                'role', 'status', 'is_active', 'is_staff', 'is_superuser',
+                'role', 'status', 'two_factor_enabled',
+                'is_active', 'is_staff', 'is_superuser',
                 'groups', 'user_permissions'
             )
         }),
-        ('Security & Audit', {
-            'fields': (
-                'two_factor_enabled', 'account_expiry', 'last_login_at',
-                'password_last_changed', 'notes'
-            )
+        ('Important Dates', {
+            'fields': ('last_login', 'date_joined')
         }),
     )
 
-    # Fields for creating a new user in admin panel
     add_fieldsets = (
         ('Authentication', {
             'classes': ('wide',),
             'fields': ('username', 'password1', 'password2'),
         }),
-        ('Personal Info', {
+        ('User Details', {
             'fields': (
-                'full_name', 'email', 'avatar',
-                'phone', 'alt_phone', 'dob', 'gender'
-            )
-        }),
-        ('Organization & Work', {
-            'fields': (
-                'employee_id', 'company', 'branch', 'department',
-                'designation', 'shift', 'joining_date', 'manager_name'
-            )
-        }),
-        ('Address', {
-            'fields': ('address', 'city', 'state', 'country', 'postal_code')
-        }),
-        ('Role & Status', {
-            'fields': (
-                'role', 'status', 'is_active', 'is_staff', 'is_superuser',
-                'two_factor_enabled', 'account_expiry', 'notes'
+                'email', 'phone', 'gender', 'designation', 'address', 'role', 'status', 'two_factor_enabled'
             )
         }),
     )
-

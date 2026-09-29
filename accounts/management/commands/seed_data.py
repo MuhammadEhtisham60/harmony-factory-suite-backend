@@ -4,9 +4,7 @@ Usage:
     python manage.py seed_data
 """
 
-from datetime import date
 from django.core.management.base import BaseCommand
-from django.utils import timezone
 from accounts.models import User, Role
 from accounts.constants import ALL_PERMISSION_CODES
 from audit_logs.models import ActivityLog
@@ -96,27 +94,10 @@ class Command(BaseCommand):
                 username='admin',
                 email='admin@fahadweaving.com',
                 password='Admin@123456',
-                full_name='Muhammad Ahmed',
-                first_name='Muhammad',
-                last_name='Ahmed',
                 phone='+92 300 8492011',
-                alt_phone='+92 42 35918800',
-                dob=date(1988, 4, 14),
                 gender='Male',
-                employee_id='EMP-001',
-                company='ABC Weaving Mills Ltd',
-                branch='Head Office - Karachi',
-                department='Administration',
                 designation='System Administrator',
-                shift='General (09:00 - 18:00)',
-                joining_date=date(2019, 1, 15),
-                manager_name='Board of Directors',
                 address='Plot 21, SITE Area, Karachi',
-                city='Karachi',
-                state='Sindh',
-                country='Pakistan',
-                postal_code='74000',
-                notes='Primary ERP administrator with unrestricted access.',
                 two_factor_enabled=True,
                 role=super_admin_role,
                 status='Active',
@@ -138,32 +119,15 @@ class Command(BaseCommand):
                 username='ali.raza',
                 email='production@fahadweaving.com',
                 password='Production@123',
-                full_name='Ali Raza',
-                first_name='Ali',
-                last_name='Raza',
                 phone='+92 321 9988771',
-                alt_phone='+92 300 4433221',
-                dob=date(1985, 8, 22),
                 gender='Male',
-                employee_id='EMP-025',
-                company='ABC Weaving Mills Ltd',
-                branch='Factory 01 - SITE Industrial Area',
-                department='Production',
                 designation='Production Manager',
-                shift='Morning (08:00 - 17:00)',
-                joining_date=date(2020, 3, 1),
-                manager_name='Muhammad Ahmed',
-                address='Plot 18, Block B, North Nazimabad',
-                city='Karachi',
-                state='Sindh',
-                country='Pakistan',
-                postal_code='74600',
-                notes='Supervises 48 Tsudakoma looms and raw yarn quality.',
+                address='Plot 18, Block B, North Nazimabad, Karachi',
                 two_factor_enabled=True,
                 role=prod_mgr_role,
                 status='Active',
             )
-            self.stdout.write(self.style.SUCCESS("[OK] Created sample user Ali Raza (ali.raza / Production@123)."))
+            self.stdout.write(self.style.SUCCESS("[OK] Created sample user ali.raza (Production@123)."))
 
         # 4. Seed Sample User 2: Tariq Mehmood
         tariq_user = User.objects.filter(username='tariq.mehmood').first()
@@ -172,35 +136,22 @@ class Command(BaseCommand):
                 username='tariq.mehmood',
                 email='qc@fahadweaving.com',
                 password='Quality@123',
-                full_name='Tariq Mehmood',
-                first_name='Tariq',
-                last_name='Mehmood',
                 phone='+92 333 5544332',
                 gender='Male',
-                employee_id='EMP-042',
-                company='ABC Weaving Mills Ltd',
-                branch='Factory 01 - SITE Industrial Area',
-                department='Quality Assurance',
                 designation='QC Inspector',
-                shift='Morning (08:00 - 17:00)',
-                joining_date=date(2021, 6, 10),
-                manager_name='Ali Raza',
-                city='Karachi',
-                state='Sindh',
-                country='Pakistan',
                 role=qc_role,
                 status='Active',
             )
-            self.stdout.write(self.style.SUCCESS("[OK] Created sample user Tariq Mehmood (tariq.mehmood / Quality@123)."))
+            self.stdout.write(self.style.SUCCESS("[OK] Created sample user tariq.mehmood (Quality@123)."))
 
         # 5. Seed Initial Activity Logs
         if ActivityLog.objects.count() == 0:
             ActivityLog.objects.create(
                 user=admin_user,
                 username='admin',
-                user_full_name='Muhammad Ahmed',
+                user_full_name='Admin',
                 action='Login',
-                description='Muhammad Ahmed logged in via 2FA authentication.',
+                description='Admin logged in via 2FA authentication.',
                 module='Authentication',
                 ip_address='192.168.1.10',
                 device='Chrome on macOS',
@@ -209,7 +160,7 @@ class Command(BaseCommand):
             ActivityLog.objects.create(
                 user=admin_user,
                 username='admin',
-                user_full_name='Muhammad Ahmed',
+                user_full_name='Admin',
                 action='Role Created',
                 description='Initialized standard ERP roles and permissions.',
                 module='User Management',

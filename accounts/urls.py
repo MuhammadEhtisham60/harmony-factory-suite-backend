@@ -3,8 +3,8 @@ URLs for accounts module (Authentication, Users, Roles, Permissions).
 """
 
 from django.urls import path
-from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
+    SafeTokenRefreshView,
     LoginView,
     LogoutView,
     CurrentUserView,
@@ -21,7 +21,7 @@ from .views import (
 urlpatterns = [
     # Auth Endpoints
     path('auth/login/', LoginView.as_view(), name='auth-login'),
-    path('auth/refresh/', TokenRefreshView.as_view(), name='auth-token-refresh'),
+    path('auth/refresh/', SafeTokenRefreshView.as_view(), name='auth-token-refresh'),
     path('auth/logout/', LogoutView.as_view(), name='auth-logout'),
     path('auth/me/', CurrentUserView.as_view(), name='auth-me'),
 
@@ -34,6 +34,6 @@ urlpatterns = [
 
     # Roles & Permissions Endpoints
     path('roles/', RoleListCreateView.as_view(), name='roles-list-create'),
-    path('roles/<int:pk>/', RoleDetailView.as_view(), name='roles-detail'),
+    path('roles/<str:pk>/', RoleDetailView.as_view(), name='roles-detail'),
     path('permissions/', PermissionListView.as_view(), name='permissions-list'),
 ]

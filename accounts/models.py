@@ -25,8 +25,6 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('status', 'Active')
-        extra_fields.setdefault('full_name', 'Super Admin')
-        extra_fields.setdefault('phone', '+92 300 0000000')
         return self.create_user(username, email, password, **extra_fields)
 
 
@@ -70,7 +68,7 @@ class Role(models.Model):
 
 class User(AbstractUser):
     """
-    Custom User Model conforming to the ABC Weaving Factory ERP specifications.
+    Simplified User Model with only essential fields.
     """
     class StatusChoices(models.TextChoices):
         ACTIVE = 'Active', _('Active')
@@ -84,34 +82,20 @@ class User(AbstractUser):
         OTHER = 'Other', _('Other')
         PREFER_NOT_TO_SAY = 'Prefer not to say', _('Prefer not to say')
 
-    # Basic Info
-    full_name = models.CharField(max_length=255)
-    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
-    phone = models.CharField(max_length=50)
-    alt_phone = models.CharField(max_length=50, blank=True, default='')
-    dob = models.DateField(null=True, blank=True)
+    # Remove unused AbstractUser fields
+    first_name = None
+    last_name = None
+
+    # Core user fields
+    email = models.EmailField(_('email address'), unique=True)
+    phone = models.CharField(max_length=50, blank=True, default='')
+    address = models.TextField(blank=True, default='')
     gender = models.CharField(
         max_length=30,
         choices=GenderChoices.choices,
         default=GenderChoices.MALE
     )
-
-    # Work & Organization
-    employee_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
-    company = models.CharField(max_length=255, default='ABC Weaving Mills Ltd')
-    branch = models.CharField(max_length=255, default='Head Office - Karachi')
-    department = models.CharField(max_length=100, default='Production')
     designation = models.CharField(max_length=150, blank=True, default='')
-    shift = models.CharField(max_length=100, default='Morning (08:00 - 17:00)')
-    joining_date = models.DateField(null=True, blank=True)
-    manager_name = models.CharField(max_length=255, blank=True, default='')
-
-    # Address / Contact
-    address = models.TextField(blank=True, default='')
-    city = models.CharField(max_length=100, blank=True, default='Karachi')
-    state = models.CharField(max_length=100, blank=True, default='Sindh')
-    country = models.CharField(max_length=100, default='Pakistan')
-    postal_code = models.CharField(max_length=20, blank=True, default='')
 
     # Role & Access
     role = models.ForeignKey(
@@ -126,28 +110,21 @@ class User(AbstractUser):
         choices=StatusChoices.choices,
         default=StatusChoices.ACTIVE
     )
-    account_expiry = models.DateField(null=True, blank=True)
     two_factor_enabled = models.BooleanField(default=False)
-    notes = models.TextField(blank=True, default='')
-
-    # Audit tracking
-    created_date = models.DateField(auto_now_add=True)
-    last_login_at = models.DateTimeField(null=True, blank=True)
-    password_last_changed = models.DateTimeField(null=True, blank=True)
 
     objects = UserManager()
 
-    REQUIRED_FIELDS = ['email', 'full_name']
+    REQUIRED_FIELDS = ['email']
 
     class Meta:
         ordering = ['-id']
 
     def __str__(self):
-        return f"{self.full_name} (@{self.username})"
+        return f"@{self.username}"
 
     @property
     def formatted_id(self):
-        """Returns standard ERP user ID representation, e.g. USR-001 or USR-<id>"""
+        """Returns standard ERP user ID representation, e.g. USR-001"""
         if isinstance(self.id, int):
             return f"USR-{self.id:03d}"
         return f"USR-{str(self.id)}"

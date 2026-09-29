@@ -28,7 +28,7 @@ def log_activity(request, action, description, module="User Management", status=
 
         is_authenticated = bool(target_user and getattr(target_user, 'is_authenticated', False))
         username = target_user.username if is_authenticated else (getattr(user, 'username', 'anonymous') if user else 'anonymous')
-        full_name = getattr(target_user, 'full_name', username) or username
+        full_name = getattr(target_user, 'full_name', None) or username
 
         return ActivityLog.objects.create(
             user=target_user if is_authenticated else None,

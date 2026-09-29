@@ -11,7 +11,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.views import TokenRefreshView
 
 from .models import User, Role
 from .constants import MODULE_PERMISSIONS
@@ -32,7 +34,7 @@ from audit_logs.utils import log_activity
 
 def get_user_by_pk_or_identifier(pk):
     """
-    Helper to look up a User by database ID (integer/ObjectId), formatted string (e.g. USR-001/USR-id), or username/email.
+    Helper to look up a User by database ID (integer), formatted ERP code (e.g. USR-001/USR-1), or username/email.
     """
     pk_str = str(pk).strip()
     raw_id = pk_str[4:] if pk_str.upper().startswith('USR-') else pk_str
@@ -43,19 +45,14 @@ def get_user_by_pk_or_identifier(pk):
         if user:
             return user
 
-    # 2. Try by raw ObjectId or string ID
-    try:
-        user = User.objects.filter(id=raw_id).first()
-        if user:
-            return user
-    except Exception:
-        pass
-
-    # 3. Try by username or email
+    # 2. Try by username or email
     user = User.objects.filter(Q(username__iexact=pk_str) | Q(email__iexact=pk_str)).first()
     if user:
         return user
 
+    # 3. Raise 404 if not found
+    if raw_id.isdigit():
+        return get_object_or_404(User, id=int(raw_id))
     return get_object_or_404(User, username=pk_str)
 
 
@@ -128,15 +125,14 @@ class LoginView(APIView):
         refresh_token = str(refresh)
 
         # Update last login timestamps
-        user.last_login_at = timezone.now()
         user.last_login = timezone.now()
-        user.save(update_fields=['last_login_at', 'last_login'])
+        user.save(update_fields=['last_login'])
 
         # Audit log entry
         log_activity(
             request,
             action='Login',
-            description=f"{user.full_name} logged in successfully.",
+            description=f"@{user.username} logged in successfully.",
             module='Authentication',
             status='Success',
             user=user
@@ -155,6 +151,31 @@ class LoginView(APIView):
                 'user': user_data
             }
         }, status=status.HTTP_200_OK)
+
+
+class SafeTokenRefreshSerializer(TokenRefreshSerializer):
+    """
+    Validates that the refresh token references a real, active user in PostgreSQL.
+    Prevents legacy MongoDB tokens from minting new invalid access tokens.
+    """
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        refresh = self.token_class(attrs["refresh"])
+        user_id = refresh.payload.get("user_id")
+        try:
+            user = User.objects.get(id=user_id)
+            if not user.is_active:
+                raise InvalidToken("User is inactive.")
+        except (User.DoesNotExist, ValueError, TypeError):
+            raise InvalidToken("User for this token no longer exists. Please log in again.")
+        return data
+
+
+class SafeTokenRefreshView(TokenRefreshView):
+    """
+    TokenRefreshView using SafeTokenRefreshSerializer.
+    """
+    serializer_class = SafeTokenRefreshSerializer
 
 
 class LogoutView(APIView):
@@ -186,7 +207,7 @@ class LogoutView(APIView):
         log_activity(
             request,
             action='Logout',
-            description=f"{request.user.full_name} logged out.",
+            description=f"@{request.user.username} logged out.",
             module='Authentication',
             status='Success',
             user=request.user
@@ -276,12 +297,10 @@ class UserListCreateView(APIView):
             else:
                 queryset = queryset.filter(
                     Q(username__icontains=search_query) |
-                    Q(full_name__icontains=search_query) |
-                    Q(first_name__icontains=search_query) |
-                    Q(last_name__icontains=search_query) |
                     Q(email__icontains=search_query) |
                     Q(phone__icontains=search_query) |
-                    Q(employee_id__icontains=search_query)
+                    Q(designation__icontains=search_query) |
+                    Q(address__icontains=search_query)
                 )
 
         # Filters
@@ -292,17 +311,13 @@ class UserListCreateView(APIView):
             else:
                 queryset = queryset.filter(role__name__iexact=role_param)
 
-        department = request.query_params.get('department')
-        if department:
-            queryset = queryset.filter(department__iexact=department)
+        gender = request.query_params.get('gender')
+        if gender:
+            queryset = queryset.filter(gender__iexact=gender)
 
-        company = request.query_params.get('company')
-        if company:
-            queryset = queryset.filter(company__iexact=company)
-
-        branch = request.query_params.get('branch')
-        if branch:
-            queryset = queryset.filter(branch__iexact=branch)
+        designation = request.query_params.get('designation')
+        if designation:
+            queryset = queryset.filter(designation__icontains=designation)
 
         status_param = request.query_params.get('status')
         if status_param:
@@ -311,12 +326,16 @@ class UserListCreateView(APIView):
         # Ordering
         ordering = request.query_params.get('ordering', '-id')
         ordering_map = {
-            'fullName': 'full_name',
-            '-fullName': '-full_name',
-            'createdDate': 'created_date',
-            '-createdDate': '-created_date',
-            'lastLogin': 'last_login_at',
-            '-lastLogin': '-last_login_at',
+            'username': 'username',
+            '-username': '-username',
+            'email': 'email',
+            '-email': '-email',
+            'status': 'status',
+            '-status': '-status',
+            'dateJoined': 'date_joined',
+            '-dateJoined': '-date_joined',
+            'lastLogin': 'last_login',
+            '-lastLogin': '-last_login',
         }
         order_field = ordering_map.get(ordering, ordering)
         try:
@@ -344,7 +363,7 @@ class UserListCreateView(APIView):
         log_activity(
             request,
             action='User Created',
-            description=f"Created user account {user.full_name} (@{user.username}) with role {user.role.name if user.role else 'None'}.",
+            description=f"Created user account @{user.username} with role {user.role.name if user.role else 'None'}.",
             module='User Management',
             status='Success',
             user=request.user
@@ -356,11 +375,14 @@ class UserListCreateView(APIView):
             'data': {
                 'id': user.formatted_id,
                 'username': user.username,
-                'fullName': user.full_name,
                 'email': user.email,
+                'phone': user.phone,
+                'gender': user.gender,
+                'designation': user.designation,
+                'address': user.address,
                 'role': user.role.name if user.role else None,
                 'status': user.status,
-                'createdDate': user.created_date.strftime('%Y-%m-%d')
+                'dateJoined': user.date_joined.strftime('%Y-%m-%d %H:%M')
             }
         }, status=status.HTTP_201_CREATED)
 
@@ -413,7 +435,7 @@ class UserDetailView(APIView):
         log_activity(
             request,
             action='Profile Updated',
-            description=f"Updated details for user {updated_user.full_name} (@{updated_user.username}).",
+            description=f"Updated details for user @{updated_user.username}.",
             module='User Management',
             status='Success',
             user=request.user
@@ -435,14 +457,7 @@ class UserDetailView(APIView):
                 'errors': {'detail': 'Self-deletion is prohibited.'}
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        if user.is_superuser and not request.user.is_superuser:
-            return Response({
-                'success': False,
-                'message': 'Superuser accounts can only be removed by another superuser.',
-                'errors': {'detail': 'Permission denied.'}
-            }, status=status.HTTP_403_FORBIDDEN)
-
-        user_info = f"{user.full_name} (@{user.username})"
+        user_info = f"@{user.username}"
         user.delete()
 
         log_activity(
@@ -492,7 +507,7 @@ class UserStatusChangeView(APIView):
         user.save(update_fields=['status', 'is_active'])
 
         action_name = 'User Activated' if new_status == 'Active' else 'User Deactivated'
-        desc = f"Changed status of {user.full_name} to '{new_status}'."
+        desc = f"Changed status of @{user.username} to '{new_status}'."
         if reason:
             desc += f" Reason: {reason}"
 
@@ -534,13 +549,12 @@ class UserPasswordResetView(APIView):
 
         new_password = serializer.validated_data['password']
         user.set_password(new_password)
-        user.password_last_changed = timezone.now()
-        user.save(update_fields=['password', 'password_last_changed'])
+        user.save(update_fields=['password'])
 
         log_activity(
             request,
             action='Password Changed',
-            description=f"Admin {request.user.username} reset password for user {user.full_name} (@{user.username}).",
+            description=f"Admin {request.user.username} reset password for user @{user.username}.",
             module='User Management',
             status='Success',
             user=request.user
@@ -613,8 +627,21 @@ class RoleDetailView(APIView):
             return [IsAuthenticated(), require_permission('roles.manage')()]
         return [IsAuthenticated()]
 
+    def _get_role(self, pk):
+        pk_str = str(pk).strip()
+        if pk_str.isdigit():
+            role = Role.objects.filter(id=int(pk_str)).first()
+            if role:
+                return role
+        role = Role.objects.filter(Q(slug__iexact=pk_str) | Q(name__iexact=pk_str)).first()
+        if role:
+            return role
+        if pk_str.isdigit():
+            return get_object_or_404(Role, id=int(pk_str))
+        return get_object_or_404(Role, slug=pk_str)
+
     def get(self, request, pk):
-        role = get_object_or_404(Role, id=pk)
+        role = self._get_role(pk)
         return Response({
             'success': True,
             'data': RoleSerializer(role).data
@@ -627,7 +654,7 @@ class RoleDetailView(APIView):
         return self._update(request, pk, partial=True)
 
     def _update(self, request, pk, partial):
-        role = get_object_or_404(Role, id=pk)
+        role = self._get_role(pk)
         serializer = RoleSerializer(role, data=request.data, partial=partial)
         if not serializer.is_valid():
             return Response({
@@ -654,7 +681,7 @@ class RoleDetailView(APIView):
         }, status=status.HTTP_200_OK)
 
     def delete(self, request, pk):
-        role = get_object_or_404(Role, id=pk)
+        role = self._get_role(pk)
 
         if role.is_system:
             return Response({
