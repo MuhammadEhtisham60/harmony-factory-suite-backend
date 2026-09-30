@@ -105,7 +105,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
         return None
 
     def get_permissions(self, obj):
-        return obj.get_permissions()
+        user_perms = obj.get_permissions()
+        return {code: code in user_perms for code in ALL_PERMISSION_CODES}
 
 
 class UserListSerializer(UserProfileSerializer):
