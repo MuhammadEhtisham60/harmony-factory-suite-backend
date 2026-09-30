@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     # Local apps
     'accounts',
     'audit_logs',
+    'factory',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
