@@ -48,6 +48,46 @@ MODULE_PERMISSIONS = [
         ]
     },
     {
+        "module": "yarn_buyer",
+        "name": "Yarn Buyers",
+        "permissions": [
+            {"code": "yarn_buyer.view", "name": "View Yarn Buyers", "description": "View yarn buyer list and details"},
+            {"code": "yarn_buyer.add", "name": "Add Yarn Buyer", "description": "Create new yarn buyer records"},
+            {"code": "yarn_buyer.edit", "name": "Edit Yarn Buyer", "description": "Update yarn buyer details"},
+            {"code": "yarn_buyer.delete", "name": "Delete Yarn Buyer", "description": "Delete yarn buyer records"},
+        ]
+    },
+    {
+        "module": "sizing",
+        "name": "Sizing",
+        "permissions": [
+            {"code": "sizing.view", "name": "View Sizing Units", "description": "View sizing unit list and details"},
+            {"code": "sizing.add", "name": "Add Sizing Unit", "description": "Create new sizing unit records"},
+            {"code": "sizing.edit", "name": "Edit Sizing Unit", "description": "Update sizing unit details"},
+            {"code": "sizing.delete", "name": "Delete Sizing Unit", "description": "Delete sizing unit records"},
+        ]
+    },
+    {
+        "module": "yarn_intake",
+        "name": "Yarn Intake",
+        "permissions": [
+            {"code": "yarn_intake.view", "name": "View Yarn Intakes", "description": "View yarn intake records and stock summary"},
+            {"code": "yarn_intake.add", "name": "Add Yarn Intake", "description": "Record new yarn intake from supplier"},
+            {"code": "yarn_intake.edit", "name": "Edit Yarn Intake", "description": "Modify yarn intake quantities and rates"},
+            {"code": "yarn_intake.delete", "name": "Delete Yarn Intake", "description": "Delete yarn intake records"},
+        ]
+    },
+    {
+        "module": "yarn_outcome",
+        "name": "Yarn Outcome",
+        "permissions": [
+            {"code": "yarn_outcome.view", "name": "View Yarn Outcomes", "description": "View yarn outcome (sizing/weft/sold) records"},
+            {"code": "yarn_outcome.add", "name": "Add Yarn Outcome", "description": "Record yarn dispatched for sizing, weft, or sold"},
+            {"code": "yarn_outcome.edit", "name": "Edit Yarn Outcome", "description": "Modify yarn outcome quantities and type"},
+            {"code": "yarn_outcome.delete", "name": "Delete Yarn Outcome", "description": "Delete yarn outcome records and return stock"},
+        ]
+    },
+    {
         "module": "sizing",
         "name": "Sizing",
         "permissions": [

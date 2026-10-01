@@ -11,6 +11,10 @@ urlpatterns = [
     path('api/v1/sales/', include('factory.sales.customer.urls')),
     path('api/v1/factory/', include('factory.loom.urls')),
     path('api/v1/factory/', include('factory.beam.urls')),
+    path('api/v1/', include('factory.yarn.yarn_buyer.urls')),
+    path('api/v1/', include('factory.yarn.yarn_intake.urls')),
+    path('api/v1/', include('factory.yarn.yarn_outcome.urls')),
+    path('api/v1/', include('factory.yarn.sizing.urls')),
 ]
 
 if settings.DEBUG:
