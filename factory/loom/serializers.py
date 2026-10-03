@@ -12,14 +12,8 @@ class LoomListSerializer(serializers.ModelSerializer):
     """
     loomCode = serializers.CharField(source="loom_code")
     loomName = serializers.CharField(source="loom_name")
-    loomType = serializers.CharField(
-        source="loom_type", required=False, allow_blank=True
-    )
     modelNumber = serializers.CharField(
         source="model_number", required=False, allow_blank=True
-    )
-    serialNumber = serializers.CharField(
-        source="serial_number", required=False, allow_null=True, allow_blank=True
     )
     installationDate = serializers.DateField(
         source="installation_date", required=False, allow_null=True
@@ -35,10 +29,7 @@ class LoomListSerializer(serializers.ModelSerializer):
             "id",
             "loomCode",
             "loomName",
-            "loomType",
-            "manufacturer",
             "modelNumber",
-            "serialNumber",
             "width",
             "installationDate",
             "location",
@@ -74,14 +65,8 @@ class LoomDetailSerializer(serializers.ModelSerializer):
     """
     loomCode = serializers.CharField(source="loom_code")
     loomName = serializers.CharField(source="loom_name")
-    loomType = serializers.CharField(
-        source="loom_type", required=False, allow_blank=True, default=""
-    )
     modelNumber = serializers.CharField(
         source="model_number", required=False, allow_blank=True, default=""
-    )
-    serialNumber = serializers.CharField(
-        source="serial_number", required=False, allow_null=True, allow_blank=True
     )
     width = serializers.DecimalField(
         max_digits=10, decimal_places=2, required=False, allow_null=True
@@ -100,10 +85,7 @@ class LoomDetailSerializer(serializers.ModelSerializer):
             "id",
             "loomCode",
             "loomName",
-            "loomType",
-            "manufacturer",
             "modelNumber",
-            "serialNumber",
             "width",
             "installationDate",
             "location",
@@ -148,21 +130,6 @@ class LoomDetailSerializer(serializers.ModelSerializer):
         ):
             raise serializers.ValidationError(
                 "A loom with this code already exists."
-            )
-        return value
-
-    def validate_serialNumber(self, value):  # noqa: N802
-        if not value:
-            return value
-        loom_id = self.instance.id if self.instance else None
-        if (
-            Loom.objects
-            .filter(serial_number__iexact=value)
-            .exclude(id=loom_id)
-            .exists()
-        ):
-            raise serializers.ValidationError(
-                "A loom with this serial number already exists."
             )
         return value
 

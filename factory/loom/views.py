@@ -48,17 +48,12 @@ class LoomViewSet(ModelViewSet):
     search_fields = [
         "loom_code",
         "loom_name",
-        "loom_type",
-        "manufacturer",
-        "serial_number",
         "model_number",
         "location",
     ]
     ordering_fields = [
         "loom_code",
         "loom_name",
-        "loom_type",
-        "manufacturer",
         "status",
         "location",
         "installation_date",

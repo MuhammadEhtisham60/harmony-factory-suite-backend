@@ -25,29 +25,10 @@ class Loom(models.Model):
         max_length=255
     )
 
-    loom_type = models.CharField(
-        max_length=100,
-        blank=True,
-        default=""
-    )
-
-    manufacturer = models.CharField(
-        max_length=255,
-        blank=True,
-        default=""
-    )
-
     model_number = models.CharField(
         max_length=100,
         blank=True,
         default=""
-    )
-
-    serial_number = models.CharField(
-        max_length=100,
-        unique=True,
-        null=True,
-        blank=True
     )
 
     width = models.DecimalField(

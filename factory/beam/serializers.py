@@ -215,12 +215,11 @@ class BeamDetailSerializer(serializers.ModelSerializer):
 class LoomMinSerializer(serializers.ModelSerializer):
     loomCode = serializers.CharField(source="loom_code")
     loomName = serializers.CharField(source="loom_name")
-    loomType = serializers.CharField(source="loom_type")
 
     class Meta:
         from factory.loom.models import Loom
         model = Loom
-        fields = ["id", "loomCode", "loomName", "loomType", "status"]
+        fields = ["id", "loomCode", "loomName", "status"]
 
 
 # ── BeamLoading Serializers ──────────────────────────────────────────────────

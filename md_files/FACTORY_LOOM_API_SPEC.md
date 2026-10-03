@@ -46,10 +46,8 @@ GET /api/v1/factory/looms/
 |-------|------|---------|-------------|
 | `page` | number | `1` | Page number |
 | `page_size` | number | `20` | Items per page (max 100, default 10) |
-| `search` | string | `"L-001"` | Searches code, name, type, manufacturer, serial no., model no., location |
+| `search` | string | `"L-001"` | Searches code, name, model no., location |
 | `status` | string | `"Active"` | Filter by status (see choices below) |
-| `loom_type` | string | `"Rapier"` | Partial match on loom type |
-| `manufacturer` | string | `"Toyota"` | Partial match on manufacturer |
 | `location` | string | `"Hall A"` | Partial match on location |
 | `installed_after` | date | `"2020-01-01"` | `YYYY-MM-DD` – installation date from |
 | `installed_before` | date | `"2026-12-31"` | `YYYY-MM-DD` – installation date to |
@@ -57,7 +55,7 @@ GET /api/v1/factory/looms/
 | `created_before` | date | `"2026-12-31"` | `YYYY-MM-DD` – record created to |
 | `ordering` | string | `"-created_at"` | Prefix `-` for descending |
 
-**Orderable fields:** `loom_code`, `loom_name`, `loom_type`, `manufacturer`, `status`, `location`, `installation_date`, `created_at`, `updated_at`
+**Orderable fields:** `loom_code`, `loom_name`, `status`, `location`, `installation_date`, `created_at`, `updated_at`
 
 ### Axios Example
 
@@ -87,10 +85,7 @@ const response = await axios.get('/api/v1/factory/looms/', {
       "id": 1,
       "loomCode": "L-001",
       "loomName": "Loom A1",
-      "loomType": "Rapier",
-      "manufacturer": "Toyota",
       "modelNumber": "TM-500",
-      "serialNumber": "SN-00123",
       "width": "220.00",
       "installationDate": "2020-05-15",
       "location": "Hall A",
@@ -128,10 +123,7 @@ POST /api/v1/factory/looms/
 {
   "loomCode": "L-001",
   "loomName": "Loom A1",
-  "loomType": "Rapier",
-  "manufacturer": "Toyota",
   "modelNumber": "TM-500",
-  "serialNumber": "SN-00123",
   "width": 220.00,
   "installationDate": "2020-05-15",
   "location": "Hall A",
@@ -146,8 +138,6 @@ POST /api/v1/factory/looms/
 const response = await axios.post('/api/v1/factory/looms/', {
   loomCode: 'L-001',
   loomName: 'Loom A1',
-  loomType: 'Rapier',
-  manufacturer: 'Toyota',
   status: 'Active'
 }, {
   headers: { Authorization: `Bearer ${token}` }
@@ -164,10 +154,7 @@ const response = await axios.post('/api/v1/factory/looms/', {
     "id": 1,
     "loomCode": "L-001",
     "loomName": "Loom A1",
-    "loomType": "Rapier",
-    "manufacturer": "Toyota",
     "modelNumber": "TM-500",
-    "serialNumber": "SN-00123",
     "width": "220.00",
     "installationDate": "2020-05-15",
     "location": "Hall A",
@@ -231,10 +218,7 @@ Send all fields. Any omitted optional field will be reset to its default.
 {
   "loomCode": "L-001",
   "loomName": "Loom A1 Updated",
-  "loomType": "Airjet",
-  "manufacturer": "Toyota",
   "modelNumber": "TM-600",
-  "serialNumber": "SN-00123",
   "width": 240.00,
   "installationDate": "2020-05-15",
   "location": "Hall B",
@@ -383,10 +367,7 @@ Call once on page load to populate the `status` dropdown.
 |------------|---------|------|----------|-------|
 | Loom Code | `loomCode` | string | ✅ | User-defined, must be unique |
 | Loom Name | `loomName` | string | ✅ | |
-| Loom Type | `loomType` | string | — | e.g. Rapier, Airjet, Waterjet, Projectile |
-| Manufacturer | `manufacturer` | string | — | e.g. Toyota, Picanol, Sulzer |
 | Model Number | `modelNumber` | string | — | |
-| Serial Number | `serialNumber` | string | — | Unique when provided |
 | Width (cm) | `width` | decimal | — | Max 2 decimal places, e.g. `220.00` |
 | Installation Date | `installationDate` | date | — | Format: `YYYY-MM-DD` |
 | Location | `location` | string | — | e.g. Hall A, Section 3 |
@@ -439,8 +420,7 @@ Call once on page load to populate the `status` dropdown.
 
 ```json
 {
-  "loomCode": ["A loom with this code already exists."],
-  "serialNumber": ["A loom with this serial number already exists."]
+  "loomCode": ["A loom with this code already exists."]
 }
 ```
 
@@ -453,8 +433,7 @@ try {
   if (error.response?.status === 400) {
     const errors = error.response.data
     setFormErrors(errors)
-    // errors.loomCode?.[0]      → "A loom with this code already exists."
-    // errors.serialNumber?.[0]  → "A loom with this serial number already exists."
+    // errors.loomCode?.[0] → "A loom with this code already exists."
   }
 }
 ```
@@ -476,10 +455,7 @@ export interface Loom {
   id?: number
   loomCode: string            // user-provided, unique
   loomName: string
-  loomType?: string
-  manufacturer?: string
   modelNumber?: string
-  serialNumber?: string | null  // unique when provided
   width?: number | null         // decimal, e.g. 220.00
   installationDate?: string | null  // YYYY-MM-DD
   location?: string
@@ -521,7 +497,7 @@ export interface LoomStats {
    → POST /api/v1/factory/looms/
    → 201: success toast → redirect to list or detail page
    → 400: display field-level errors inline
-      (most common: duplicate loomCode or serialNumber)
+      (most common: duplicate loomCode)
 
 4. Open "Edit Loom" form
    → GET /api/v1/factory/looms/:id/           pre-fill all fields
