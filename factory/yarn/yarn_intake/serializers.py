@@ -179,9 +179,18 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
             "outcome_type",
             self.instance.outcome_type if self.instance else YarnOutcome.OutcomeTypeChoices.SIZING
         )
-        yarn_buyer = attrs.get("yarn_buyer", None)
-        total_price = attrs.get("total_price", Decimal("0"))
-        sizing = attrs.get("sizing", None)
+        yarn_buyer = attrs.get(
+            "yarn_buyer",
+            getattr(self.instance, "yarn_buyer", None) if self.instance else None
+        )
+        total_price = attrs.get(
+            "total_price",
+            getattr(self.instance, "total_price", Decimal("0")) if self.instance else Decimal("0")
+        )
+        sizing = attrs.get(
+            "sizing",
+            getattr(self.instance, "sizing", None) if self.instance else None
+        )
 
         if outcome_type == YarnOutcome.OutcomeTypeChoices.SOLD:
             if not yarn_buyer:
@@ -220,9 +229,15 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({
                     "totalPrice": ["Total price must be 0 for Sizing outcome type."]
                 })
-            # sizing FK is optional but allowed for Sizing outcome type
+            if not sizing:
+                raise serializers.ValidationError({
+                    "sizing": ["Sizing reference is required for Sizing outcome type."]
+                })
 
-        outcome_bags = attrs.get("outcome_bags", 0)
+        outcome_bags = attrs.get(
+            "outcome_bags",
+            getattr(self.instance, "outcome_bags", 0) if self.instance else 0
+        )
         if outcome_bags <= 0:
             raise serializers.ValidationError({
                 "outcomeBags": ["Outcome bags must be greater than 0."]

@@ -3,7 +3,7 @@ Admin registration for the Beam module.
 """
 
 from django.contrib import admin
-from .models import Beam
+from .models import Beam, BeamLoading, Production
 
 
 @admin.register(Beam)
@@ -77,3 +77,55 @@ class BeamAdmin(admin.ModelAdmin):
             },
         ),
     )
+
+
+@admin.register(BeamLoading)
+class BeamLoadingAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "beam",
+        "loom",
+        "sizing_outcome",
+        "status",
+        "warp_count",
+        "weft_count",
+        "reed_width",
+        "pick",
+        "installation_date",
+        "created_at",
+    ]
+    list_filter = ["status", "installation_date"]
+    search_fields = [
+        "beam__beam_code",
+        "beam__beam_number",
+        "loom__loom_code",
+        "sizing_outcome__set_no",
+    ]
+    readonly_fields = ["created_at", "updated_at", "created_by", "updated_by"]
+    ordering = ["-installation_date", "-id"]
+
+
+@admin.register(Production)
+class ProductionAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "beam_loading",
+        "beam",
+        "loom",
+        "production_date",
+        "shift",
+        "meters_produced",
+        "operator_name",
+        "beam_emptied",
+        "created_at",
+    ]
+    list_filter = ["production_date", "shift", "beam_emptied"]
+    search_fields = [
+        "operator_name",
+        "beam__beam_code",
+        "loom__loom_code",
+        "remarks",
+    ]
+    readonly_fields = ["created_at", "updated_at", "created_by", "updated_by"]
+    ordering = ["-production_date", "-id"]
+

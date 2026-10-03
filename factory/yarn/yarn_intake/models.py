@@ -266,6 +266,18 @@ class YarnOutcome(models.Model):
             f"{self.outcome_bags} bags"
         )
 
+    def clean(self):
+        super().clean()
+        from django.core.exceptions import ValidationError
+        if self.outcome_type == self.OutcomeTypeChoices.SIZING:
+            if not self.sizing_id:
+                raise ValidationError({"sizing": "Sizing reference is required for Sizing outcome type."})
+            if self.yarn_buyer_id:
+                raise ValidationError({"yarn_buyer": "Yarn buyer must be null for Sizing outcome type."})
+        elif self.outcome_type in (self.OutcomeTypeChoices.WEFT, self.OutcomeTypeChoices.SOLD):
+            if self.sizing_id:
+                raise ValidationError({"sizing": f"Sizing must be null for {self.outcome_type} outcome type."})
+
     def calculate_outcome_fields(self):
         """
         Recalculate backend-derived outcome weight fields.
@@ -275,3 +287,4 @@ class YarnOutcome(models.Model):
         weight_per_bag = Decimal(str(self.outcome_weight_per_bag_kg))
         self.outcome_weight_kg = outcome_bags * weight_per_bag
         self.outcome_weight_lb = self.outcome_weight_kg * LB_PER_KG
+
