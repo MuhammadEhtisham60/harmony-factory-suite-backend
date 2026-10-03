@@ -376,7 +376,6 @@ Call once on page load to populate the `status` dropdown.
 
 | Form Label | API Key | Type | Required | Notes |
 |------------|---------|------|----------|-------|
-| Beam Code | `beamCode` | string | ✅ | User-defined, must be unique |
 | Beam Name | `beamName` | string | — | Optional label/description |
 | Beam Number | `beamNumber` | string | ✅ | User-defined, must be unique |
 | Yarn Count | `yarnCount` | string | — | e.g. `20/1`, `30/2` |

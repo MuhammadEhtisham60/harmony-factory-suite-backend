@@ -55,12 +55,19 @@ class SizingSerializer(serializers.ModelSerializer):
     contactPerson = serializers.CharField(
         source="contact_person", required=False, allow_blank=True, default=""
     )
+    contactNumber = serializers.CharField(
+        source="phone_no", required=False, allow_blank=True
+    )
     phoneNo = serializers.CharField(
-        source="phone_no", required=False, allow_blank=True, default=""
+        source="phone_no", required=False, allow_blank=True
     )
     email = serializers.EmailField(required=False, allow_blank=True, default="")
     address = serializers.CharField(required=False, allow_blank=True, default="")
-    status = serializers.CharField(required=False, default="Active")
+    status = serializers.ChoiceField(
+        choices=Sizing.StatusChoices.choices,
+        required=False,
+        default=Sizing.StatusChoices.ACTIVE,
+    )
     notes = serializers.CharField(required=False, allow_blank=True, default="")
 
     createdAt = serializers.DateTimeField(source="created_at", read_only=True)
@@ -74,6 +81,7 @@ class SizingSerializer(serializers.ModelSerializer):
             "id",
             "sizingName",
             "contactPerson",
+            "contactNumber",
             "phoneNo",
             "email",
             "address",

@@ -139,6 +139,69 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
             intake_date="2026-10-01",
         )
 
+    def test_sizing_entry_complete_crud(self):
+        create_response = self.client.post(
+            "/api/v1/sizings/",
+            {
+                "sizingName": "North Sizing Works",
+                "address": "12 Mill Road",
+                "contactNumber": "0301-5550123",
+                "status": "Active",
+            },
+            format="json",
+        )
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        sizing_id = create_response.data["data"]["id"]
+        self.assertEqual(create_response.data["data"]["contactNumber"], "0301-5550123")
+        self.assertEqual(create_response.data["data"]["phoneNo"], "0301-5550123")
+
+        detail_url = f"/api/v1/sizings/{sizing_id}/"
+        list_response = self.client.get("/api/v1/sizings/")
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertTrue(
+            any(item["id"] == sizing_id for item in list_response.data["results"])
+        )
+
+        detail_response = self.client.get(detail_url)
+        self.assertEqual(detail_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(detail_response.data["data"]["address"], "12 Mill Road")
+
+        update_response = self.client.put(
+            detail_url,
+            {
+                "sizingName": "North Sizing Factory",
+                "address": "18 Mill Road",
+                "contactNumber": "0302-5550123",
+                "status": "Inactive",
+            },
+            format="json",
+        )
+        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(update_response.data["data"]["sizingName"], "North Sizing Factory")
+
+        legacy_phone_response = self.client.patch(
+            detail_url, {"phoneNo": "0303-5550123"}, format="json"
+        )
+        self.assertEqual(legacy_phone_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            legacy_phone_response.data["data"]["contactNumber"], "0303-5550123"
+        )
+
+        patch_response = self.client.patch(
+            detail_url, {"status": "Active"}, format="json"
+        )
+        self.assertEqual(patch_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(patch_response.data["data"]["status"], "Active")
+
+        invalid_status_response = self.client.patch(
+            detail_url, {"status": "Pending"}, format="json"
+        )
+        self.assertEqual(invalid_status_response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        delete_response = self.client.delete(detail_url)
+        self.assertEqual(delete_response.status_code, status.HTTP_200_OK)
+        self.assertFalse(Sizing.objects.filter(id=sizing_id).exists())
+
     # ── 1. Create SizingOutcome ───────────────────────────────────────────────
 
     def test_create_sizing_outcome_without_beams(self):

@@ -105,6 +105,8 @@ Accept: application/json
 | `GET` | `/api/v1/sizings/` | List sizing mills / parties | `sizing.view` |
 | `POST` | `/api/v1/sizings/` | Register new sizing unit | `sizing.add` |
 | `GET` | `/api/v1/sizings/:id/` | Get sizing unit details | `sizing.view` |
+| `PUT/PATCH` | `/api/v1/sizings/:id/` | Replace or partially update a sizing unit | `sizing.edit` |
+| `DELETE` | `/api/v1/sizings/:id/` | Delete a sizing unit (blocked when protected outcome records reference it) | `sizing.delete` |
 | `GET` | `/api/v1/sizings/choices/` | Minimal dropdown list of active sizing units | `sizing.view` |
 | `GET` | `/api/v1/sizings/:id/outcomes/`| List all Sizing Outcomes for a sizing mill | `sizing.view` |
 | **Sizing Outcomes & Beam Assignment** | | | |
