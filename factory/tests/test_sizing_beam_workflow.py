@@ -92,7 +92,6 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
 
         # Create Physical Beams
         self.beam1 = Beam.objects.create(
-            beam_code="B-001",
             beam_number="BN-1001",
             yarn_count="20/1",
             warp_count=2400,
@@ -100,7 +99,6 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
             status=Beam.StatusChoices.AVAILABLE,
         )
         self.beam2 = Beam.objects.create(
-            beam_code="B-002",
             beam_number="BN-1002",
             yarn_count="20/1",
             warp_count=2400,
@@ -108,7 +106,6 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
             status=Beam.StatusChoices.AVAILABLE,
         )
         self.beam3 = Beam.objects.create(
-            beam_code="B-003",
             beam_number="BN-1003",
             yarn_count="20/1",
             warp_count=2400,
@@ -116,12 +113,10 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
             status=Beam.StatusChoices.AVAILABLE,
         )
         self.beam_damaged = Beam.objects.create(
-            beam_code="B-DMG",
             beam_number="BN-DMG",
             status=Beam.StatusChoices.DAMAGED,
         )
         self.beam_inactive = Beam.objects.create(
-            beam_code="B-INA",
             beam_number="BN-INA",
             status=Beam.StatusChoices.INACTIVE,
         )
@@ -207,8 +202,8 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
         # Check nested assignments in response
         assignments = res.data["data"]["beamAssignments"]
         self.assertEqual(len(assignments), 3)
-        assigned_codes = {a["beam"]["beamCode"] for a in assignments}
-        self.assertEqual(assigned_codes, {"B-001", "B-002", "B-003"})
+        assigned_numbers = {a["beam"]["beamNumber"] for a in assignments}
+        self.assertEqual(assigned_numbers, {"BN-1001", "BN-1002", "BN-1003"})
 
     # ── 4. Add Additional Beams to an Existing Outcome ────────────────────────
 
@@ -567,12 +562,12 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
         res = self.client.get("/api/v1/factory/beams/available/")
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         results = res.data["data"] if "data" in res.data else res.data["results"]
-        returned_codes = {b["beamCode"] for b in results}
-        self.assertIn("B-001", returned_codes)
-        self.assertIn("B-002", returned_codes)
-        self.assertIn("B-003", returned_codes)
-        self.assertNotIn("B-DMG", returned_codes)
-        self.assertNotIn("B-INA", returned_codes)
+        returned_numbers = {b["beamNumber"] for b in results}
+        self.assertIn("BN-1001", returned_numbers)
+        self.assertIn("BN-1002", returned_numbers)
+        self.assertIn("BN-1003", returned_numbers)
+        self.assertNotIn("BN-DMG", returned_numbers)
+        self.assertNotIn("BN-INA", returned_numbers)
 
     # ── 17. Sizing Outcomes for a Sizing Unit ─────────────────────────────────
 
@@ -772,26 +767,22 @@ class BeamLoadingAndProductionWorkflowTests(APITestCase):
 
         # Create Beams (reusable physical assets)
         self.beam1 = Beam.objects.create(
-            beam_code="BEAM-01",
-            beam_number="B-101",
+            beam_number="BEAM-01",
             yarn_count="40/1",
             status=Beam.StatusChoices.AVAILABLE,
         )
         self.beam2 = Beam.objects.create(
-            beam_code="BEAM-02",
-            beam_number="B-102",
+            beam_number="BEAM-02",
             yarn_count="40/1",
             status=Beam.StatusChoices.AVAILABLE,
         )
         self.beam3 = Beam.objects.create(
-            beam_code="BEAM-03",
-            beam_number="B-103",
+            beam_number="BEAM-03",
             yarn_count="40/1",
             status=Beam.StatusChoices.AVAILABLE,
         )
         self.beam_loaded = Beam.objects.create(
-            beam_code="BEAM-LOADED",
-            beam_number="B-999",
+            beam_number="BEAM-LOADED",
             status=Beam.StatusChoices.LOADED,
         )
 
@@ -898,7 +889,7 @@ class BeamLoadingAndProductionWorkflowTests(APITestCase):
         data = res.data["data"]
 
         self.assertEqual(data["setNo"], "SET-10")
-        self.assertEqual(data["beamCode"], "BEAM-01")
+        self.assertEqual(data["beamNumber"], "BEAM-01")
         self.assertEqual(data["loomCode"], "L-101")
         self.assertEqual(data["warpCount"], "40/1")
         self.assertEqual(data["status"], BeamLoading.StatusChoices.LOADED)
@@ -1224,7 +1215,7 @@ class BeamLoadingAndProductionWorkflowTests(APITestCase):
         data = res.data["data"]
 
         self.assertEqual(data["beamId"], self.beam1.id)
-        self.assertEqual(data["beamCode"], "BEAM-01")
+        self.assertEqual(data["beamNumber"], "BEAM-01")
         self.assertEqual(data["totalLoadings"], 2)
         self.assertEqual(len(data["history"]), 2)
 

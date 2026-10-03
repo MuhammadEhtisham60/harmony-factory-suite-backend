@@ -17,11 +17,6 @@ class Beam(models.Model):
         DAMAGED = "Damaged", "Damaged"
         INACTIVE = "Inactive", "Inactive"
 
-    beam_code = models.CharField(
-        max_length=50,
-        unique=True
-    )
-
     beam_name = models.CharField(
         max_length=255,
         blank=True,
@@ -105,12 +100,12 @@ class Beam(models.Model):
     )
 
     class Meta:
-        ordering = ["beam_code"]
+        ordering = ["beam_number"]
         verbose_name = "Beam"
         verbose_name_plural = "Beams"
 
     def __str__(self):
-        return f"{self.beam_code} - {self.beam_number}"
+        return f"{self.beam_number} - {self.beam_name}" if self.beam_name else self.beam_number
 
 
 class BeamLoading(models.Model):

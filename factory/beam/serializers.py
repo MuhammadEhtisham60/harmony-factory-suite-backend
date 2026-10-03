@@ -10,7 +10,6 @@ class BeamListSerializer(serializers.ModelSerializer):
     """
     Lightweight serializer for list / table views.
     """
-    beamCode = serializers.CharField(source="beam_code")
     beamName = serializers.CharField(
         source="beam_name", required=False, allow_blank=True
     )
@@ -36,7 +35,6 @@ class BeamListSerializer(serializers.ModelSerializer):
         model = Beam
         fields = [
             "id",
-            "beamCode",
             "beamName",
             "beamNumber",
             "yarnCount",
@@ -76,7 +74,6 @@ class BeamDetailSerializer(serializers.ModelSerializer):
     Full serializer for create / retrieve / update operations.
     Includes notes field not shown in list view.
     """
-    beamCode = serializers.CharField(source="beam_code")
     beamName = serializers.CharField(
         source="beam_name", required=False, allow_blank=True, default=""
     )
@@ -108,7 +105,6 @@ class BeamDetailSerializer(serializers.ModelSerializer):
         model = Beam
         fields = [
             "id",
-            "beamCode",
             "beamName",
             "beamNumber",
             "yarnCount",
@@ -147,19 +143,6 @@ class BeamDetailSerializer(serializers.ModelSerializer):
     # ------------------------------------------------------------------ #
     # Validation
     # ------------------------------------------------------------------ #
-
-    def validate_beamCode(self, value):  # noqa: N802
-        beam_id = self.instance.id if self.instance else None
-        if (
-            Beam.objects
-            .filter(beam_code__iexact=value)
-            .exclude(id=beam_id)
-            .exists()
-        ):
-            raise serializers.ValidationError(
-                "A beam with this code already exists."
-            )
-        return value
 
     def validate_beamNumber(self, value):  # noqa: N802
         beam_id = self.instance.id if self.instance else None
@@ -254,7 +237,6 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
 
     # Flat convenience fields
     setNo = serializers.SerializerMethodField()
-    beamCode = serializers.SerializerMethodField()
     beamNumber = serializers.SerializerMethodField()
     loomNumber = serializers.SerializerMethodField()
     loomCode = serializers.SerializerMethodField()
@@ -293,7 +275,6 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
             "sizingOutcomeDetail",
             "beam",
             "beamId",
-            "beamCode",
             "beamNumber",
             "beamDetail",
             "loom",
@@ -323,7 +304,6 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
             "id",
             "status",
             "setNo",
-            "beamCode",
             "beamNumber",
             "loomCode",
             "loomNumber",
@@ -339,9 +319,6 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
 
     def get_setNo(self, obj):
         return obj.sizing_outcome.set_no if obj.sizing_outcome else ""
-
-    def get_beamCode(self, obj):
-        return obj.beam.beam_code if obj.beam else ""
 
     def get_beamNumber(self, obj):
         return obj.beam.beam_number if obj.beam else ""
@@ -366,7 +343,6 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
         if obj.beam:
             return {
                 "id": obj.beam.id,
-                "beamCode": obj.beam.beam_code,
                 "beamName": obj.beam.beam_name,
                 "beamNumber": obj.beam.beam_number,
                 "status": obj.beam.status,
@@ -591,7 +567,7 @@ class ProductionSerializer(serializers.ModelSerializer):
 
     def get_beamDetail(self, obj):
         if obj.beam:
-            return {"id": obj.beam.id, "beamCode": obj.beam.beam_code, "status": obj.beam.status}
+            return {"id": obj.beam.id, "beamNumber": obj.beam.beam_number, "status": obj.beam.status}
         return None
 
     def get_loomDetail(self, obj):

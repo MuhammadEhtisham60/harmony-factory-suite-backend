@@ -78,7 +78,7 @@ def load_beam_onto_loom(
             if beam.status != Beam.StatusChoices.AVAILABLE:
                 raise ValidationError({
                     "beam": [
-                        f"Beam '{beam.beam_code}' cannot be loaded because its status is '{beam.status}'. "
+                        f"Beam '{beam.beam_number}' cannot be loaded because its status is '{beam.status}'. "
                         f"Only 'Available' beams can be loaded."
                     ]
                 })
@@ -102,7 +102,7 @@ def load_beam_onto_loom(
             if active_beam_loading:
                 raise ValidationError({
                     "beam": [
-                        f"Beam '{beam.beam_code}' already has an active loading (Loading #{active_beam_loading.id} on Loom '{active_beam_loading.loom.loom_code}')."
+                        f"Beam '{beam.beam_number}' already has an active loading (Loading #{active_beam_loading.id} on Loom '{active_beam_loading.loom.loom_code}')."
                     ]
                 })
 
@@ -118,7 +118,7 @@ def load_beam_onto_loom(
                 raise ValidationError({
                     "loom": [
                         f"Loom '{loom.loom_code}' already has an active beam mounted on it "
-                        f"(Beam '{active_loom_loading.beam.beam_code}', Loading #{active_loom_loading.id})."
+                        f"(Beam '{active_loom_loading.beam.beam_number}', Loading #{active_loom_loading.id})."
                     ]
                 })
 
@@ -156,7 +156,7 @@ def load_beam_onto_loom(
                 request=request,
                 action="Load Beam",
                 description=(
-                    f"Loaded Beam '{beam.beam_code}' onto Loom '{loom.loom_code}' "
+                    f"Loaded Beam '{beam.beam_number}' onto Loom '{loom.loom_code}' "
                     f"for Sizing Outcome #{sizing_outcome.id} (Set #{sizing_outcome.set_no})."
                 ),
                 module="Factory – Beam Loading",
@@ -252,7 +252,7 @@ def record_production_entry(
             request=request,
             action="Record Production",
             description=(
-                f"Logged {meters_produced}m production for Loom '{loom.loom_code}' / Beam '{beam.beam_code}'"
+                f"Logged {meters_produced}m production for Loom '{loom.loom_code}' / Beam '{beam.beam_number}'"
                 f" (Empty: {beam_emptied})."
             ),
             module="Factory – Production",
@@ -306,7 +306,7 @@ def mark_beam_empty_and_available(beam_loading_or_id, user=None, request=None):
         log_activity(
             request=request,
             action="Beam Emptied",
-            description=f"Marked Beam '{beam.beam_code}' on Loom '{loom.loom_code}' as empty and Available.",
+            description=f"Marked Beam '{beam.beam_number}' on Loom '{loom.loom_code}' as empty and Available.",
             module="Factory – Beam Loading",
             status="Success",
             user=user,

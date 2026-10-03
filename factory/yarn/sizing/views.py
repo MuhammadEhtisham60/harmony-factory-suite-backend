@@ -418,7 +418,7 @@ class SizingOutcomeViewSet(ModelViewSet):
 
         return Response({
             "success": True,
-            "message": f"Beam '{released.beam.beam_code}' has been released and is now Available.",
+            "message": f"Beam '{released.beam.beam_number}' has been released and is now Available.",
             "data": SizingBeamAssignmentSerializer(released, context={"request": request}).data,
         })
 
@@ -445,7 +445,7 @@ class SizingBeamAssignmentViewSet(ReadOnlyModelViewSet):
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = SizingBeamAssignmentFilter
-    search_fields = ["beam__beam_code", "beam__beam_number", "sizing_outcome__sizing__sizing_name"]
+    search_fields = ["beam__beam_number", "sizing_outcome__sizing__sizing_name"]
     ordering_fields = ["assigned_at", "released_at", "status"]
     ordering = ["-assigned_at", "-id"]
 
@@ -508,6 +508,6 @@ class SizingBeamAssignmentViewSet(ReadOnlyModelViewSet):
 
         return Response({
             "success": True,
-            "message": f"Beam '{released.beam.beam_code}' released and marked Available.",
+            "message": f"Beam '{released.beam.beam_number}' released and marked Available.",
             "data": SizingBeamAssignmentSerializer(released, context={"request": request}).data,
         })

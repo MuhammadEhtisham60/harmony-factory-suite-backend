@@ -9,7 +9,6 @@ from .models import Beam, BeamLoading, Production
 @admin.register(Beam)
 class BeamAdmin(admin.ModelAdmin):
     list_display = [
-        "beam_code",
         "beam_number",
         "beam_name",
         "yarn_count",
@@ -22,23 +21,21 @@ class BeamAdmin(admin.ModelAdmin):
     ]
     list_filter = ["status"]
     search_fields = [
-        "beam_code",
         "beam_name",
         "beam_number",
         "yarn_count",
         "production_order",
     ]
     readonly_fields = ["created_at", "updated_at", "created_by", "updated_by"]
-    ordering = ["beam_code"]
+    ordering = ["beam_number"]
 
     fieldsets = (
         (
             "Identification",
             {
                 "fields": (
-                    "beam_code",
-                    "beam_name",
                     "beam_number",
+                    "beam_name",
                     "status",
                 )
             },
@@ -96,7 +93,6 @@ class BeamLoadingAdmin(admin.ModelAdmin):
     ]
     list_filter = ["status", "installation_date"]
     search_fields = [
-        "beam__beam_code",
         "beam__beam_number",
         "loom__loom_code",
         "sizing_outcome__set_no",
@@ -122,7 +118,7 @@ class ProductionAdmin(admin.ModelAdmin):
     list_filter = ["production_date", "shift", "beam_emptied"]
     search_fields = [
         "operator_name",
-        "beam__beam_code",
+        "beam__beam_number",
         "loom__loom_code",
         "remarks",
     ]

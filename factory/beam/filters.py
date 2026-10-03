@@ -13,7 +13,7 @@ class BeamFilter(django_filters.FilterSet):
         status              – exact  (Available / Sizing / Loaded / In Production / Completed / Damaged / Inactive)
         production_order    – icontains free-text
         yarn_count          – icontains free-text
-        search              – icontains across beam_code, beam_name, beam_number, yarn_count, production_order
+        search              – icontains across beam_name, beam_number, yarn_count, production_order
         created_after       – YYYY-MM-DD, record created on or after
         created_before      – YYYY-MM-DD, record created on or before
         min_length          – decimal, filter beams with length >= value
@@ -78,8 +78,7 @@ class BeamFilter(django_filters.FilterSet):
 
     def filter_search(self, queryset, name, value):  # noqa: ARG002
         return queryset.filter(
-            Q(beam_code__icontains=value)
-            | Q(beam_name__icontains=value)
+            Q(beam_name__icontains=value)
             | Q(beam_number__icontains=value)
             | Q(yarn_count__icontains=value)
             | Q(production_order__icontains=value)
@@ -94,7 +93,7 @@ class BeamLoadingFilter(django_filters.FilterSet):
         beam               – exact integer ID
         loom               – exact integer ID
         status             – exact status (Loaded / In Production / Completed / Cancelled)
-        search             – free-text across beam_code, beam_number, loom_code, set_no
+        search             – free-text across beam_number, loom_code, set_no
         installation_after – YYYY-MM-DD, installed on or after
         installation_before– YYYY-MM-DD, installed on or before
     """
@@ -127,8 +126,7 @@ class BeamLoadingFilter(django_filters.FilterSet):
 
     def filter_search(self, queryset, name, value):  # noqa: ARG002
         return queryset.filter(
-            Q(beam__beam_code__icontains=value)
-            | Q(beam__beam_number__icontains=value)
+            Q(beam__beam_number__icontains=value)
             | Q(loom__loom_code__icontains=value)
             | Q(sizing_outcome__set_no__icontains=value)
             | Q(warp_count__icontains=value)
@@ -148,7 +146,7 @@ class ProductionFilter(django_filters.FilterSet):
         date_before        – YYYY-MM-DD, produced on or before
         shift              – exact or icontains
         beam_emptied       – boolean (true/false)
-        search             – free-text across operator_name, beam_code, loom_code
+        search             – free-text across operator_name, beam_number, loom_code
     """
     beam_loading = django_filters.NumberFilter(field_name="beam_loading_id")
     beam = django_filters.NumberFilter(field_name="beam_id")
@@ -172,7 +170,7 @@ class ProductionFilter(django_filters.FilterSet):
     def filter_search(self, queryset, name, value):  # noqa: ARG002
         return queryset.filter(
             Q(operator_name__icontains=value)
-            | Q(beam__beam_code__icontains=value)
+            | Q(beam__beam_number__icontains=value)
             | Q(loom__loom_code__icontains=value)
             | Q(remarks__icontains=value)
         )

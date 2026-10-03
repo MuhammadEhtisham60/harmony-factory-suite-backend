@@ -25,7 +25,6 @@ class SizingMinSerializer(serializers.ModelSerializer):
 
 class BeamMinSerializer(serializers.ModelSerializer):
     """Minimal Beam details for assignment responses."""
-    beamCode = serializers.CharField(source="beam_code")
     beamName = serializers.CharField(source="beam_name")
     beamNumber = serializers.CharField(source="beam_number")
     yarnCount = serializers.CharField(source="yarn_count")
@@ -37,7 +36,6 @@ class BeamMinSerializer(serializers.ModelSerializer):
         model = Beam
         fields = [
             "id",
-            "beamCode",
             "beamName",
             "beamNumber",
             "yarnCount",

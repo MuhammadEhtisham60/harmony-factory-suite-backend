@@ -53,16 +53,14 @@ class BeamViewSet(ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = BeamFilter
     search_fields = [
-        "beam_code",
         "beam_name",
         "beam_number",
         "yarn_count",
         "production_order",
     ]
     ordering_fields = [
-        "beam_code",
-        "beam_name",
         "beam_number",
+        "beam_name",
         "status",
         "yarn_count",
         "length",
@@ -72,7 +70,7 @@ class BeamViewSet(ModelViewSet):
         "created_at",
         "updated_at",
     ]
-    ordering = ["beam_code"]
+    ordering = ["beam_number"]
 
     # RBAC permission map
     permission_map = {
@@ -107,7 +105,7 @@ class BeamViewSet(ModelViewSet):
             request=request,
             action="Create Beam",
             description=(
-                f"Created beam '{instance.beam_number}' (Code: {instance.beam_code})."
+                f"Created beam '{instance.beam_number}'."
             ),
             module="Factory – Beams",
             status="Success",
@@ -141,8 +139,8 @@ class BeamViewSet(ModelViewSet):
             request=request,
             action="Update Beam",
             description=(
-                f"Updated beam '{updated.beam_number}' (Code: {updated.beam_code},"
-                f" Status: {updated.status})."
+                f"Updated beam '{updated.beam_number}' ("
+                f"Status: {updated.status})."
             ),
             module="Factory – Beams",
             status="Success",
@@ -163,7 +161,6 @@ class BeamViewSet(ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        beam_code = instance.beam_code
         beam_number = instance.beam_number
         instance.delete()
 
@@ -171,7 +168,7 @@ class BeamViewSet(ModelViewSet):
             request=request,
             action="Delete Beam",
             description=(
-                f"Deleted beam '{beam_number}' (Code: {beam_code})."
+                f"Deleted beam '{beam_number}'."
             ),
             module="Factory – Beams",
             status="Success",
@@ -258,7 +255,6 @@ class BeamViewSet(ModelViewSet):
             "success": True,
             "data": {
                 "beamId": beam.id,
-                "beamCode": beam.beam_code,
                 "beamNumber": beam.beam_number,
                 "currentStatus": beam.status,
                 "totalSizingCycles": history_qs.count(),
@@ -280,7 +276,7 @@ class BeamViewSet(ModelViewSet):
             return Response({
                 "success": True,
                 "data": None,
-                "message": f"Beam '{beam.beam_code}' has no active sizing assignment.",
+                "message": f"Beam '{beam.beam_number}' has no active sizing assignment.",
             })
 
         serializer = SizingBeamAssignmentSerializer(assignment, context={"request": request})
@@ -314,7 +310,7 @@ class BeamViewSet(ModelViewSet):
 
         return Response({
             "success": True,
-            "message": f"Beam '{beam.beam_code}' has been released and is now Available.",
+            "message": f"Beam '{beam.beam_number}' has been released and is now Available.",
             "data": SizingBeamAssignmentSerializer(released_assignment, context={"request": request}).data,
         })
 
@@ -331,7 +327,6 @@ class BeamViewSet(ModelViewSet):
             "success": True,
             "data": {
                 "beamId": beam.id,
-                "beamCode": beam.beam_code,
                 "beamNumber": beam.beam_number,
                 "currentStatus": beam.status,
                 "totalLoadings": loadings.count(),
@@ -366,7 +361,6 @@ class BeamLoadingViewSet(ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = BeamLoadingFilter
     search_fields = [
-        "beam__beam_code",
         "beam__beam_number",
         "loom__loom_code",
         "sizing_outcome__set_no",
@@ -408,7 +402,7 @@ class BeamLoadingViewSet(ModelViewSet):
             request=request,
             action="Load Beam Onto Loom",
             description=(
-                f"Loaded Beam '{instance.beam.beam_code}' onto Loom '{instance.loom.loom_code}' "
+                f"Loaded Beam '{instance.beam.beam_number}' onto Loom '{instance.loom.loom_code}' "
                 f"for SizingOutcome #{instance.sizing_outcome_id} (Set No: {instance.sizing_outcome.set_no})."
             ),
             module="Factory – Beam Loading",
@@ -419,7 +413,7 @@ class BeamLoadingViewSet(ModelViewSet):
         return Response(
             {
                 "success": True,
-                "message": f"Beam '{instance.beam.beam_code}' loaded successfully onto Loom '{instance.loom.loom_code}'.",
+                "message": f"Beam '{instance.beam.beam_number}' loaded successfully onto Loom '{instance.loom.loom_code}'.",
                 "data": out.data,
             },
             status=status.HTTP_201_CREATED,
@@ -442,7 +436,7 @@ class BeamLoadingViewSet(ModelViewSet):
         log_activity(
             request=request,
             action="Update Beam Loading",
-            description=f"Updated BeamLoading #{updated.id} (Beam: {updated.beam.beam_code}, Loom: {updated.loom.loom_code}).",
+            description=f"Updated BeamLoading #{updated.id} (Beam: {updated.beam.beam_number}, Loom: {updated.loom.loom_code}).",
             module="Factory – Beam Loading",
             status="Success",
         )
@@ -495,7 +489,7 @@ class BeamLoadingViewSet(ModelViewSet):
         log_activity(
             request=request,
             action="Delete Beam Loading",
-            description=f"Deleted BeamLoading #{instance.id} (Beam: {beam.beam_code}).",
+            description=f"Deleted BeamLoading #{instance.id} (Beam: {beam.beam_number}).",
             module="Factory – Beam Loading",
             status="Success",
         )
@@ -591,7 +585,7 @@ class BeamLoadingViewSet(ModelViewSet):
         out = BeamLoadingSerializer(updated, context={"request": request})
         return Response({
             "success": True,
-            "message": f"Beam '{updated.beam.beam_code}' has been emptied and is now AVAILABLE for new sizing sets.",
+            "message": f"Beam '{updated.beam.beam_number}' has been emptied and is now AVAILABLE for new sizing sets.",
             "data": out.data,
         })
 
@@ -638,7 +632,7 @@ class ProductionViewSet(ModelViewSet):
     filterset_class = ProductionFilter
     search_fields = [
         "operator_name",
-        "beam__beam_code",
+        "beam__beam_number",
         "loom__loom_code",
         "remarks",
     ]
@@ -672,7 +666,7 @@ class ProductionViewSet(ModelViewSet):
             action="Record Production",
             description=(
                 f"Recorded {instance.meters_produced}m produced on Loom '{instance.loom.loom_code}' "
-                f"from Beam '{instance.beam.beam_code}' (Shift: {instance.shift})."
+                f"from Beam '{instance.beam.beam_number}' (Shift: {instance.shift})."
             ),
             module="Factory – Production",
             status="Success",

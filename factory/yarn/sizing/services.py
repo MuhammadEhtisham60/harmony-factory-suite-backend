@@ -72,7 +72,7 @@ def assign_beams_to_outcome(sizing_outcome, beam_ids, user=None, request=None):
                 if beam.status != Beam.StatusChoices.AVAILABLE:
                     raise ValidationError({
                         "beam_ids": [
-                            f"Beam '{beam.beam_code}' cannot be assigned because its status is "
+                            f"Beam '{beam.beam_number}' cannot be assigned because its status is "
                             f"'{beam.status}'. Only 'Available' beams can be assigned."
                         ]
                     })
@@ -88,7 +88,7 @@ def assign_beams_to_outcome(sizing_outcome, beam_ids, user=None, request=None):
                 if active_assignment:
                     raise ValidationError({
                         "beam_ids": [
-                            f"Beam '{beam.beam_code}' already has an active sizing assignment "
+                            f"Beam '{beam.beam_number}' already has an active sizing assignment "
                             f"(Assignment #{active_assignment.id} in Outcome #{active_assignment.sizing_outcome_id})."
                         ]
                     })
@@ -109,12 +109,12 @@ def assign_beams_to_outcome(sizing_outcome, beam_ids, user=None, request=None):
                 created_assignments.append(assignment)
 
             # Audit log
-            beam_codes = ", ".join(b.beam_code for b in ordered_beams)
+            beam_numbers = ", ".join(b.beam_number for b in ordered_beams)
             log_activity(
                 request=request,
                 action="Assign Beams to Sizing Outcome",
                 description=(
-                    f"Assigned {len(ordered_beams)} beam(s) [{beam_codes}] to "
+                    f"Assigned {len(ordered_beams)} beam(s) [{beam_numbers}] to "
                     f"Sizing Outcome #{sizing_outcome.id} (Sizing: {sizing_outcome.sizing.sizing_name})."
                 ),
                 module="Yarn – Sizing",
@@ -240,7 +240,7 @@ def transition_beam_assignment(assignment, new_status, user=None, request=None):
             request=request,
             action="Transition Beam Assignment",
             description=(
-                f"Transitioned Assignment #{assignment.id} for Beam '{beam.beam_code}' "
+                f"Transitioned Assignment #{assignment.id} for Beam '{beam.beam_number}' "
                 f"from '{old_status}' to '{new_status}' (Beam status: {beam.status})."
             ),
             module="Factory – Beams",
@@ -291,7 +291,7 @@ def release_beam_active_assignment(beam_or_id, user=None, request=None):
 
     if not assignment:
         raise ValidationError({
-            "detail": f"Beam '{beam.beam_code}' has no active or unreleased sizing assignment to release."
+            "detail": f"Beam '{beam.beam_number}' has no active or unreleased sizing assignment to release."
         })
 
     return release_beam_assignment(

@@ -58,7 +58,7 @@ GET /api/v1/factory/beams/
 | `created_before` | date | `"2026-12-31"` | `YYYY-MM-DD` |
 | `ordering` | string | `"-created_at"` | Prefix `-` for descending |
 
-**Orderable fields:** `beam_code`, `beam_name`, `beam_number`, `status`, `yarn_count`, `length`, `weight`, `warp_count`, `total_ends`, `created_at`, `updated_at`
+**Orderable fields:** `beam_number`, `beam_name`, `status`, `yarn_count`, `length`, `weight`, `warp_count`, `total_ends`, `created_at`, `updated_at`
 
 ### Axios Example
 
@@ -69,7 +69,7 @@ const response = await axios.get('/api/v1/factory/beams/', {
     page: 1,
     page_size: 20,
     status: 'Available',
-    ordering: 'beam_code'
+    ordering: 'beam_number'
   }
 })
 ```
@@ -86,9 +86,8 @@ const response = await axios.get('/api/v1/factory/beams/', {
   "results": [
     {
       "id": 1,
-      "beamCode": "B-001",
-      "beamName": "Main Beam 1",
       "beamNumber": "BN-10001",
+      "beamName": "Main Beam 1",
       "yarnCount": "20/1",
       "warpCount": 2400,
       "totalEnds": 2400,
@@ -117,19 +116,17 @@ POST /api/v1/factory/beams/
 
 | Field | Required |
 |-------|----------|
-| `beamCode` | ✅ Yes – must be unique |
 | `beamNumber` | ✅ Yes – must be unique |
 | All other fields | Optional |
 
-> **Note:** Both `beamCode` and `beamNumber` are **user-provided** and must be unique across all beams.
+> **Note:** `beamNumber` is **user-provided** and must be unique across all beams.
 
 ### Request Body
 
 ```json
 {
-  "beamCode": "B-001",
-  "beamName": "Main Beam 1",
   "beamNumber": "BN-10001",
+  "beamName": "Main Beam 1",
   "yarnCount": "20/1",
   "warpCount": 2400,
   "totalEnds": 2400,
@@ -145,7 +142,6 @@ POST /api/v1/factory/beams/
 
 ```js
 const response = await axios.post('/api/v1/factory/beams/', {
-  beamCode: 'B-001',
   beamNumber: 'BN-10001',
   yarnCount: '20/1',
   warpCount: 2400,
@@ -164,9 +160,8 @@ const response = await axios.post('/api/v1/factory/beams/', {
   "message": "Beam created successfully.",
   "data": {
     "id": 1,
-    "beamCode": "B-001",
-    "beamName": "Main Beam 1",
     "beamNumber": "BN-10001",
+    "beamName": "Main Beam 1",
     "yarnCount": "20/1",
     "warpCount": 2400,
     "totalEnds": 2400,
@@ -209,7 +204,7 @@ const response = await axios.get(`/api/v1/factory/beams/${beamId}/`, {
   "success": true,
   "data": {
     "id": 1,
-    "beamCode": "B-001",
+    "beamNumber": "BN-10001",
     ...
     "notes": "Newly prepared beam. Ready for sizing."
   }
@@ -230,9 +225,8 @@ Send all fields. Any omitted optional field will be reset to its default.
 
 ```json
 {
-  "beamCode": "B-001",
-  "beamName": "Main Beam 1",
   "beamNumber": "BN-10001",
+  "beamName": "Main Beam 1",
   "yarnCount": "20/1",
   "warpCount": 2400,
   "totalEnds": 2400,
@@ -439,7 +433,6 @@ Call once on page load to populate the `status` dropdown.
 
 ```json
 {
-  "beamCode": ["A beam with this code already exists."],
   "beamNumber": ["A beam with this number already exists."]
 }
 ```
@@ -453,7 +446,6 @@ try {
   if (error.response?.status === 400) {
     const errors = error.response.data
     setFormErrors(errors)
-    // errors.beamCode?.[0]   → "A beam with this code already exists."
     // errors.beamNumber?.[0] → "A beam with this number already exists."
   }
 }
@@ -475,9 +467,8 @@ export type BeamStatus =
 
 export interface Beam {
   id?: number
-  beamCode: string          // user-provided, unique
-  beamName?: string
   beamNumber: string        // user-provided, unique
+  beamName?: string
   yarnCount?: string        // e.g. "20/1"
   warpCount?: number | null
   totalEnds?: number | null
@@ -516,13 +507,13 @@ export interface BeamStats {
    → GET /api/v1/factory/beams/choices/         populate status dropdown
 
 2. User fills in beam details
-   → Both beamCode and beamNumber are manually entered (not auto-generated)
+   → beamNumber is manually entered (not auto-generated)
 
 3. Submit
    → POST /api/v1/factory/beams/
    → 201: success toast → redirect to list or detail page
    → 400: display field-level errors inline
-      (most common: duplicate beamCode or beamNumber)
+      (most common: duplicate beamNumber)
 
 4. Open "Edit Beam" form
    → GET /api/v1/factory/beams/:id/             pre-fill all fields
