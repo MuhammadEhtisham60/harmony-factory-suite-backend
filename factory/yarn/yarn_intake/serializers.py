@@ -102,8 +102,22 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         max_digits=15, decimal_places=2,
         required=False, default=0
     )
+    ratePerKg = serializers.DecimalField(
+        max_digits=15, decimal_places=2, required=False, allow_null=True
+    )
     outcomeDate = serializers.DateField(source="outcome_date")
     notes = serializers.CharField(required=False, allow_blank=True, default="")
+
+    # ── Beam Assignment inputs (optional at creation) ─────────────────────
+    beamIds = serializers.ListField(
+        child=serializers.IntegerField(), required=False, write_only=True
+    )
+    beamId = serializers.IntegerField(
+        required=False, allow_null=True, write_only=True
+    )
+    beam = serializers.IntegerField(
+        required=False, allow_null=True, write_only=True
+    )
 
     # ── Read-only calculated ──────────────────────────────────────────────
     outcomeWeightKg = serializers.DecimalField(
@@ -112,6 +126,8 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
     outcomeWeightLb = serializers.DecimalField(
         source="outcome_weight_lb", max_digits=15, decimal_places=3, read_only=True
     )
+    beamAssignments = serializers.SerializerMethodField()
+    totalBeams = serializers.IntegerField(source="total_beams", read_only=True)
 
     # ── Audit ─────────────────────────────────────────────────────────────
     createdAt = serializers.DateTimeField(source="created_at", read_only=True)
@@ -139,8 +155,14 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
             "sizing",
             "sizingDetail",
             "totalPrice",
+            "ratePerKg",
             "outcomeDate",
             "notes",
+            "beamIds",
+            "beamId",
+            "beam",
+            "beamAssignments",
+            "totalBeams",
             "createdBy",
             "updatedBy",
             "createdAt",
@@ -148,9 +170,18 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id", "outcomeWeightKg", "outcomeWeightLb",
+            "beamAssignments", "totalBeams",
             "createdAt", "updatedAt", "createdBy", "updatedBy",
             "yarnBuyerDetail", "sizingDetail",
         ]
+
+    def get_beamAssignments(self, obj):
+        if hasattr(obj, "beam_assignments"):
+            from factory.yarn.sizing.serializers import SizingBeamAssignmentSerializer
+            return SizingBeamAssignmentSerializer(
+                obj.beam_assignments.all(), many=True, context=self.context
+            ).data
+        return []
 
     def get_createdBy(self, obj):
         if obj.created_by:

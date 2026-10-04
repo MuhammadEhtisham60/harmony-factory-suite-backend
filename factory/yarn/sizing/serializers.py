@@ -130,12 +130,16 @@ class SizingSerializer(serializers.ModelSerializer):
 
 class SizingBeamAssignmentSerializer(serializers.ModelSerializer):
     """
-    Serializer representing a Beam assignment to a SizingOutcome.
-    Includes rich nested beam information.
+    Serializer representing a Beam assignment to a YarnOutcome.
+    Includes rich nested beam information for many-to-many physical Beams.
     """
-    sizingOutcomeId = serializers.IntegerField(source="sizing_outcome_id", read_only=True)
-    beamId = serializers.IntegerField(source="beam_id", read_only=True)
-    beam = BeamMinSerializer(read_only=True)
+    yarnOutcomeId = serializers.IntegerField(source="yarn_outcome_id", read_only=True)
+    sizingOutcomeId = serializers.IntegerField(source="yarn_outcome_id", read_only=True)
+    beamId = serializers.SerializerMethodField()
+    beamIds = serializers.SerializerMethodField()
+    beam = serializers.SerializerMethodField()
+    beams = BeamMinSerializer(source="beam", many=True, read_only=True)
+    totalBeams = serializers.SerializerMethodField()
     assignedAt = serializers.DateTimeField(source="assigned_at", read_only=True)
     releasedAt = serializers.DateTimeField(source="released_at", read_only=True)
     createdAt = serializers.DateTimeField(source="created_at", read_only=True)
@@ -147,9 +151,13 @@ class SizingBeamAssignmentSerializer(serializers.ModelSerializer):
         model = SizingBeamAssignment
         fields = [
             "id",
+            "yarnOutcomeId",
             "sizingOutcomeId",
             "beamId",
+            "beamIds",
             "beam",
+            "beams",
+            "totalBeams",
             "status",
             "assignedAt",
             "releasedAt",
@@ -160,9 +168,13 @@ class SizingBeamAssignmentSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id",
+            "yarnOutcomeId",
             "sizingOutcomeId",
             "beamId",
+            "beamIds",
             "beam",
+            "beams",
+            "totalBeams",
             "status",
             "assignedAt",
             "releasedAt",
@@ -171,6 +183,22 @@ class SizingBeamAssignmentSerializer(serializers.ModelSerializer):
             "createdAt",
             "updatedAt",
         ]
+
+    def get_beamId(self, obj):
+        first_b = obj.beam.first()
+        return first_b.id if first_b else None
+
+    def get_beamIds(self, obj):
+        return list(obj.beam.values_list("id", flat=True))
+
+    def get_beam(self, obj):
+        first_b = obj.beam.first()
+        if first_b:
+            return BeamMinSerializer(first_b).data
+        return None
+
+    def get_totalBeams(self, obj):
+        return obj.beam.count()
 
     def get_createdBy(self, obj):
         if obj.created_by:
@@ -242,12 +270,17 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
     )
 
     # Read-only nested beam assignments
-    beamAssignments = SizingBeamAssignmentSerializer(
-        source="beam_assignments",
-        many=True,
-        read_only=True,
-    )
+    beamAssignments = serializers.SerializerMethodField()
     totalBeams = serializers.IntegerField(source="total_beams", read_only=True)
+
+    def get_beamAssignments(self, obj):
+        if hasattr(obj, "beam_assignments"):
+            return SizingBeamAssignmentSerializer(obj.beam_assignments.all(), many=True, context=self.context).data
+        if obj.sizing_id:
+            from factory.yarn.sizing.models import SizingBeamAssignment
+            assignments = SizingBeamAssignment.objects.filter(yarn_outcome__sizing_id=obj.sizing_id).order_by("-assigned_at")
+            return SizingBeamAssignmentSerializer(assignments, many=True, context=self.context).data
+        return []
 
     createdAt = serializers.DateTimeField(source="created_at", read_only=True)
     updatedAt = serializers.DateTimeField(source="updated_at", read_only=True)
@@ -495,9 +528,10 @@ class TransitionAssignmentSerializer(serializers.Serializer):
 class BeamAssignmentHistorySerializer(serializers.ModelSerializer):
     """
     Rich serializer representing one historical sizing cycle of a Beam,
-    including the SizingOutcome, Sizing Unit details, and related dispatched yarn.
+    including the YarnOutcome, Sizing Unit details, and related dispatched yarn.
     """
     assignmentId = serializers.IntegerField(source="id", read_only=True)
+    yarnOutcome = serializers.SerializerMethodField()
     sizingOutcome = serializers.SerializerMethodField()
     assignedAt = serializers.DateTimeField(source="assigned_at", read_only=True)
     releasedAt = serializers.DateTimeField(source="released_at", read_only=True)
@@ -511,6 +545,7 @@ class BeamAssignmentHistorySerializer(serializers.ModelSerializer):
             "status",
             "assignedAt",
             "releasedAt",
+            "yarnOutcome",
             "sizingOutcome",
             "createdBy",
             "updatedBy",
@@ -526,34 +561,29 @@ class BeamAssignmentHistorySerializer(serializers.ModelSerializer):
             return {"id": obj.updated_by.id, "username": obj.updated_by.username}
         return None
 
-    def get_sizingOutcome(self, obj):
-        so = obj.sizing_outcome
-        if not so:
+    def get_yarnOutcome(self, obj):
+        yo = getattr(obj, "yarn_outcome", None)
+        if not yo:
             return None
 
-        # Related dispatched yarn to this sizing unit
-        sizing = so.sizing
-        dispatched_yarns = []
-        if sizing and hasattr(sizing, "yarn_outcomes"):
-            for yo in sizing.yarn_outcomes.all():
-                dispatched_yarns.append({
-                    "id": yo.id,
-                    "yarnName": yo.yarn_intake.yarn_name if yo.yarn_intake else None,
-                    "yarnCount": yo.yarn_intake.yarn_count if yo.yarn_intake else None,
-                    "outcomeBags": yo.outcome_bags,
-                    "outcomeWeightKg": str(yo.outcome_weight_kg),
-                    "outcomeDate": yo.outcome_date,
-                })
+        sizing = getattr(yo, "sizing", None)
+        intake = getattr(yo, "yarn_intake", None)
 
         return {
-            "id": so.id,
-            "outcomeDate": so.outcome_date,
-            "remarks": so.remarks,
+            "id": yo.id,
+            "outcomeType": yo.outcome_type,
+            "outcomeBags": yo.outcome_bags,
+            "outcomeWeightKg": str(yo.outcome_weight_kg),
+            "outcomeDate": yo.outcome_date,
+            "yarnName": intake.yarn_name if intake else None,
+            "yarnCount": intake.yarn_count if intake else None,
             "sizing": {
                 "id": sizing.id if sizing else None,
                 "sizingName": sizing.sizing_name if sizing else None,
                 "contactPerson": sizing.contact_person if sizing else None,
                 "phoneNo": sizing.phone_no if sizing else None,
             } if sizing else None,
-            "dispatchedYarns": dispatched_yarns,
         }
+
+    def get_sizingOutcome(self, obj):
+        return self.get_yarnOutcome(obj)

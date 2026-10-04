@@ -49,13 +49,18 @@ class SizingOutcomeAdmin(admin.ModelAdmin):
     list_filter = ["outcome_date", "sizing"]
     search_fields = ["set_no", "sizing_name", "sizing__sizing_name", "remarks"]
     readonly_fields = ["created_at", "updated_at", "created_by", "updated_by"]
-    inlines = [SizingBeamAssignmentInline]
 
 
 
 @admin.register(SizingBeamAssignment)
 class SizingBeamAssignmentAdmin(admin.ModelAdmin):
-    list_display = ["id", "beam", "sizing_outcome", "status", "assigned_at", "released_at"]
+    list_display = ["id", "display_beams", "yarn_outcome", "status", "assigned_at", "released_at"]
     list_filter = ["status", "assigned_at"]
-    search_fields = ["beam__beam_number", "sizing_outcome__sizing__sizing_name"]
+    search_fields = ["beam__beam_number", "yarn_outcome__yarn_intake__yarn_name"]
+    filter_horizontal = ["beam"]
     readonly_fields = ["assigned_at", "created_at", "updated_at", "created_by", "updated_by"]
+
+    @admin.display(description="Beams")
+    def display_beams(self, obj):
+        return ", ".join(b.beam_number for b in obj.beam.all())
+

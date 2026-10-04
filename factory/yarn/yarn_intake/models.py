@@ -288,3 +288,16 @@ class YarnOutcome(models.Model):
         self.outcome_weight_kg = outcome_bags * weight_per_bag
         self.outcome_weight_lb = self.outcome_weight_kg * LB_PER_KG
 
+    @property
+    def total_beams(self):
+        if hasattr(self, "beam_assignments"):
+            from factory.beam.models import Beam
+            from factory.yarn.sizing.models import SizingBeamAssignment
+            return Beam.objects.filter(
+                sizing_assignments__yarn_outcome=self
+            ).exclude(
+                sizing_assignments__status=SizingBeamAssignment.StatusChoices.RELEASED
+            ).distinct().count()
+        return 0
+
+

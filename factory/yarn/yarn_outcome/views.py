@@ -13,6 +13,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.viewsets import ModelViewSet
+from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 
 from django.db import transaction
@@ -118,6 +119,7 @@ class YarnOutcomeViewSet(ModelViewSet):
                     outcome_cones_per_bag=validated.get("outcome_cones_per_bag", 0),
                     outcome_weight_per_bag_kg=validated["outcome_weight_per_bag_kg"],
                     yarn_buyer=validated.get("yarn_buyer"),
+                    sizing=validated.get("sizing"),
                     total_price=validated.get("total_price", 0),
                     outcome_date=validated["outcome_date"],
                     notes=validated.get("notes", ""),
@@ -132,6 +134,47 @@ class YarnOutcomeViewSet(ModelViewSet):
 
                 # Recalculate intake summary from actual outcomes
                 recalculate_yarn_intake_stock(locked_intake)
+
+                # When outcomeType is Sizing: create SizingBeamAssignment using created YarnOutcome id
+                if outcome.outcome_type == YarnOutcome.OutcomeTypeChoices.SIZING:
+                    from factory.yarn.sizing.models import SizingBeamAssignment
+                    from factory.yarn.sizing.services import assign_beams_to_outcome
+
+                    raw_beam_ids = (
+                        request.data.get("beam_ids")
+                        or request.data.get("beamIds")
+                        or validated.get("beamIds")
+                    )
+                    single_beam = (
+                        request.data.get("beam")
+                        or request.data.get("beam_id")
+                        or request.data.get("beamId")
+                        or validated.get("beam")
+                        or validated.get("beamId")
+                    )
+
+                    user = request.user if request.user and request.user.is_authenticated else None
+                    if raw_beam_ids and isinstance(raw_beam_ids, list):
+                        assign_beams_to_outcome(
+                            outcome=outcome,
+                            beam_ids=raw_beam_ids,
+                            user=user,
+                            request=request,
+                        )
+                    elif single_beam:
+                        assign_beams_to_outcome(
+                            outcome=outcome,
+                            beam_ids=[single_beam],
+                            user=user,
+                            request=request,
+                        )
+                    else:
+                        SizingBeamAssignment.objects.create(
+                            yarn_outcome=outcome,
+                            status=SizingBeamAssignment.StatusChoices.ASSIGNED,
+                            created_by=user,
+                            updated_by=user,
+                        )
 
         except ValidationError:
             raise
@@ -208,9 +251,10 @@ class YarnOutcomeViewSet(ModelViewSet):
                 except ValueError as e:
                     raise ValidationError(e.args[0])
 
-                # Apply changes
+                # Apply changes (skipping non-model write-only fields)
                 for attr, value in validated.items():
-                    setattr(locked_outcome, attr, value)
+                    if hasattr(locked_outcome, attr):
+                        setattr(locked_outcome, attr, value)
 
                 if request.user and request.user.is_authenticated:
                     locked_outcome.updated_by = request.user
@@ -267,6 +311,19 @@ class YarnOutcomeViewSet(ModelViewSet):
                 intake_name = locked_intake.yarn_name
                 intake_set = locked_intake.set_no
 
+                # Release any active beam assignments back to Available
+                from factory.beam.models import Beam
+                from factory.yarn.sizing.models import SizingBeamAssignment
+                for assignment in instance.beam_assignments.all():
+                    if assignment.status in [
+                        SizingBeamAssignment.StatusChoices.ASSIGNED,
+                        SizingBeamAssignment.StatusChoices.IN_USE,
+                    ]:
+                        for b in assignment.beam.all():
+                            b.status = Beam.StatusChoices.AVAILABLE
+                            b.save(update_fields=["status"])
+                instance.beam_assignments.all().delete()
+
                 # Delete the outcome
                 instance.delete()
 
@@ -291,3 +348,82 @@ class YarnOutcomeViewSet(ModelViewSet):
             {"success": True, "message": "Yarn outcome deleted successfully. Stock restored."},
             status=status.HTTP_200_OK,
         )
+
+    @action(detail=True, methods=["post"], url_path="assign-beams")
+    def assign_beams(self, request, pk=None):
+        """
+        Assigns one or multiple Beams to this YarnOutcome (when outcome_type == 'Sizing').
+        Payload:
+            { "beam_ids": [101, 102] } or { "beamIds": [101, 102] } or { "beam": 101 }
+        """
+        from factory.yarn.sizing.services import assign_beams_to_outcome
+        from factory.yarn.sizing.serializers import SizingBeamAssignmentSerializer
+
+        outcome = self.get_object()
+        if outcome.outcome_type != YarnOutcome.OutcomeTypeChoices.SIZING:
+            return Response(
+                {"success": False, "message": "Beams can only be assigned to Sizing outcomes."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        raw_beam_ids = (
+            request.data.get("beam_ids")
+            or request.data.get("beamIds")
+        )
+        single_beam = (
+            request.data.get("beam")
+            or request.data.get("beam_id")
+            or request.data.get("beamId")
+        )
+
+        beam_ids = raw_beam_ids if raw_beam_ids else ([single_beam] if single_beam else [])
+        if not beam_ids:
+            return Response(
+                {"success": False, "message": "At least one beam ID must be provided."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        created_assignments = assign_beams_to_outcome(
+            outcome=outcome,
+            beam_ids=beam_ids,
+            user=request.user if request.user and request.user.is_authenticated else None,
+            request=request,
+        )
+
+        out_serializer = SizingBeamAssignmentSerializer(
+            created_assignments, many=True, context={"request": request}
+        )
+        return Response(
+            {
+                "success": True,
+                "message": f"Successfully assigned {len(beam_ids)} beam(s) to Yarn Outcome #{outcome.id}.",
+                "data": {
+                    "yarnOutcomeId": outcome.id,
+                    "totalBeamsAssigned": outcome.total_beams,
+                    "assignments": out_serializer.data,
+                },
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["get"], url_path="beams")
+    def beams(self, request, pk=None):
+        """Lists all Beams assigned to this YarnOutcome."""
+        from factory.yarn.sizing.serializers import SizingBeamAssignmentSerializer
+        outcome = self.get_object()
+        assignments = (
+            outcome.beam_assignments
+            .select_related("created_by", "updated_by")
+            .prefetch_related("beam")
+            .all()
+        )
+        serializer = SizingBeamAssignmentSerializer(assignments, many=True, context={"request": request})
+        return Response({
+            "success": True,
+            "data": {
+                "yarnOutcomeId": outcome.id,
+                "outcomeDate": outcome.outcome_date,
+                "totalBeams": outcome.total_beams,
+                "assignments": serializer.data,
+            }
+        })

@@ -47,14 +47,15 @@ class SizingOutcomeFilter(django_filters.FilterSet):
 
 
 class SizingBeamAssignmentFilter(django_filters.FilterSet):
-    beam = django_filters.NumberFilter(field_name="beam_id")
-    sizing_outcome = django_filters.NumberFilter(field_name="sizing_outcome_id")
+    beam = django_filters.NumberFilter(field_name="beam")
+    yarn_outcome = django_filters.NumberFilter(field_name="yarn_outcome_id")
+    sizing_outcome = django_filters.NumberFilter(field_name="yarn_outcome_id")
     status = django_filters.ChoiceFilter(choices=SizingBeamAssignment.StatusChoices.choices)
     is_active = django_filters.BooleanFilter(method="filter_is_active", label="Is Active")
 
     class Meta:
         model = SizingBeamAssignment
-        fields = ["beam", "sizing_outcome", "status"]
+        fields = ["beam", "yarn_outcome", "sizing_outcome", "status"]
 
     def filter_is_active(self, queryset, name, value):
         if value is True:

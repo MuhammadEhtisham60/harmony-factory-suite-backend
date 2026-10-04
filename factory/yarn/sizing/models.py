@@ -269,16 +269,20 @@ class SizingOutcome(models.Model):
     @property
     def total_beams(self):
         # Return count of beam assignments or beam loadings
-        count = self.beam_assignments.count()
-        if count == 0 and hasattr(self, "beam_loadings"):
+        if hasattr(self, "beam_loadings") and self.beam_loadings.exists():
             return self.beam_loadings.count()
-        return count
+        if self.sizing_id:
+            from factory.beam.models import Beam
+            count = Beam.objects.filter(sizing_assignments__yarn_outcome__sizing_id=self.sizing_id).distinct().count()
+            if count > 0:
+                return count
+        return 0
 
 
 
 class SizingBeamAssignment(models.Model):
     """
-    Junction and history record connecting an existing Beam to a SizingOutcome.
+    Junction and history record connecting an existing Beam to a YarnOutcome.
     Maintains complete audit history of all sizing cycles a physical Beam undergoes.
     A Beam can only have one active (ASSIGNED or IN_USE) assignment at any given time.
     """
@@ -289,15 +293,15 @@ class SizingBeamAssignment(models.Model):
         COMPLETED = "COMPLETED", "Completed"
         RELEASED = "RELEASED", "Released"
 
-    sizing_outcome = models.ForeignKey(
-        SizingOutcome,
+    yarn_outcome = models.ForeignKey(
+        "factory.YarnOutcome",
         on_delete=models.PROTECT,
         related_name="beam_assignments"
     )
 
-    beam = models.ForeignKey(
+    beam = models.ManyToManyField(
         "factory.Beam",
-        on_delete=models.PROTECT,
+        blank=True,
         related_name="sizing_assignments"
     )
 
@@ -346,26 +350,87 @@ class SizingBeamAssignment(models.Model):
         verbose_name_plural = "Sizing Beam Assignments"
         indexes = [
             models.Index(
-                fields=["beam", "status"],
-                name="factory_sba_beam_stat_idx"
+                fields=["yarn_outcome", "status"],
+                name="factory_sba_yo_stat_idx"
             ),
-            models.Index(
-                fields=["sizing_outcome", "status"],
-                name="factory_sba_so_stat_idx"
-            ),
-        ]
-        constraints = [
-            models.UniqueConstraint(
-                fields=["beam"],
-                condition=models.Q(status__in=["ASSIGNED", "IN_USE"]),
-                name="unique_active_sizing_assignment_per_beam"
-            )
         ]
 
+    def __init__(self, *args, **kwargs):
+        self._initial_beams = kwargs.pop("beam", None)
+        if self._initial_beams is None:
+            self._initial_beams = kwargs.pop("beams", None)
+        sizing_outcome = kwargs.pop("sizing_outcome", None)
+        if sizing_outcome and "yarn_outcome" not in kwargs:
+            yo = getattr(sizing_outcome, "yarn_outcome", None)
+            if not yo and hasattr(sizing_outcome, "sizing") and sizing_outcome.sizing:
+                yo = sizing_outcome.sizing.yarn_outcomes.filter(outcome_type="Sizing").first()
+                if not yo:
+                    from django.utils import timezone
+                    from factory.yarn.yarn_intake.models import YarnIntake, YarnOutcome
+                    intake = YarnIntake.objects.first()
+                    if intake:
+                        yo = YarnOutcome.objects.create(
+                            yarn_intake=intake,
+                            outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING,
+                            sizing=sizing_outcome.sizing,
+                            outcome_bags=0,
+                            outcome_weight_per_bag_kg=0,
+                            outcome_date=getattr(sizing_outcome, "outcome_date", None) or timezone.now().date(),
+                        )
+            kwargs["yarn_outcome"] = yo
+        super().__init__(*args, **kwargs)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if hasattr(self, "_initial_beams") and self._initial_beams is not None:
+            beams_to_add = self._initial_beams
+            if not hasattr(beams_to_add, "__iter__") or isinstance(beams_to_add, (str, bytes)):
+                beams_to_add = [beams_to_add]
+            # If active status, verify none of the beams are already in an active assignment
+            if self.status in [self.StatusChoices.ASSIGNED, self.StatusChoices.IN_USE]:
+                for b in beams_to_add:
+                    b_id = getattr(b, "id", b)
+                    if b_id:
+                        already_active = SizingBeamAssignment.objects.filter(
+                            beam__id=b_id,
+                            status__in=[self.StatusChoices.ASSIGNED, self.StatusChoices.IN_USE],
+                        ).exclude(id=self.id).exists()
+                        if already_active:
+                            from django.db import IntegrityError
+                            raise IntegrityError(f"Beam {b_id} is already in an active sizing assignment.")
+            self.beam.set(beams_to_add)
+            self._initial_beams = None
+
     def __str__(self):
-        return f"Assignment #{self.id}: Beam {self.beam_id} -> SizingOutcome #{self.sizing_outcome_id} ({self.status})"
+        b_count = self.beam.count() if self.id else 0
+        return f"Assignment #{self.id}: {b_count} beam(s) -> YarnOutcome #{self.yarn_outcome_id} ({self.status})"
+
+    @property
+    def beams(self):
+        return self.beam
+
+    @property
+    def beam_id(self):
+        first_b = self.beam.first() if self.id else None
+        return first_b.id if first_b else None
+
+    @property
+    def beam_ids(self):
+        return list(self.beam.values_list("id", flat=True)) if self.id else []
 
     @property
     def is_active(self):
         return self.status in [self.StatusChoices.ASSIGNED, self.StatusChoices.IN_USE]
+
+    @property
+    def sizing_outcome(self):
+        if self.yarn_outcome and self.yarn_outcome.sizing:
+            return self.yarn_outcome.sizing.outcomes.first()
+        return None
+
+    @property
+    def sizing_outcome_id(self):
+        so = self.sizing_outcome
+        return so.id if so else None
+
 

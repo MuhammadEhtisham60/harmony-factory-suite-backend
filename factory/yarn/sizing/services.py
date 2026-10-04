@@ -16,9 +16,9 @@ from audit_logs.utils import log_activity
 logger = logging.getLogger(__name__)
 
 
-def assign_beams_to_outcome(sizing_outcome, beam_ids, user=None, request=None):
+def assign_beams_to_outcome(outcome=None, beam_ids=None, user=None, request=None, **kwargs):
     """
-    Atomically assign a list of existing Beams to a SizingOutcome.
+    Atomically assign a list of existing Beams to a YarnOutcome.
 
     Validates:
       - beam_ids is non-empty
@@ -26,13 +26,33 @@ def assign_beams_to_outcome(sizing_outcome, beam_ids, user=None, request=None):
       - All Beams exist
       - All Beams have status == AVAILABLE
       - No Beam has an active (ASSIGNED or IN_USE) sizing assignment
-      - The SizingOutcome is valid
+      - The YarnOutcome is valid
 
     Updates:
       - Creates a SizingBeamAssignment for each Beam
       - Updates each Beam's status to SIZING
       - Emits audit log entry
     """
+    yarn_outcome = outcome or kwargs.get("yarn_outcome") or kwargs.get("sizing_outcome")
+    if yarn_outcome and hasattr(yarn_outcome, "sizing") and not hasattr(yarn_outcome, "yarn_intake"):
+        sizing_outcome = yarn_outcome
+        yo = sizing_outcome.sizing.yarn_outcomes.filter(outcome_type="Sizing").first()
+        if not yo:
+            from django.utils import timezone
+            from factory.yarn.yarn_intake.models import YarnIntake, YarnOutcome
+            intake = YarnIntake.objects.first()
+            if intake:
+                yo = YarnOutcome.objects.create(
+                    yarn_intake=intake,
+                    outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING,
+                    sizing=sizing_outcome.sizing,
+                    outcome_bags=0,
+                    outcome_weight_per_bag_kg=0,
+                    outcome_date=getattr(sizing_outcome, "outcome_date", None) or timezone.now().date(),
+                    notes=f"Auto-created for Sizing Outcome #{sizing_outcome.id}",
+                )
+        yarn_outcome = yo
+
     if not beam_ids:
         raise ValidationError({"beam_ids": ["At least one beam ID must be provided."]})
 
@@ -89,33 +109,42 @@ def assign_beams_to_outcome(sizing_outcome, beam_ids, user=None, request=None):
                     raise ValidationError({
                         "beam_ids": [
                             f"Beam '{beam.beam_number}' already has an active sizing assignment "
-                            f"(Assignment #{active_assignment.id} in Outcome #{active_assignment.sizing_outcome_id})."
+                            f"(Assignment #{active_assignment.id} in Outcome #{active_assignment.yarn_outcome_id})."
                         ]
                     })
 
-            # Create assignment records and transition beam status to SIZING
-            created_assignments = []
-            for beam in ordered_beams:
+            # Check if an active SizingBeamAssignment already exists for this outcome, else create one
+            assignment = SizingBeamAssignment.objects.filter(
+                yarn_outcome=yarn_outcome,
+                status=SizingBeamAssignment.StatusChoices.ASSIGNED,
+            ).first()
+            if not assignment:
                 assignment = SizingBeamAssignment.objects.create(
-                    sizing_outcome=sizing_outcome,
-                    beam=beam,
+                    yarn_outcome=yarn_outcome,
                     status=SizingBeamAssignment.StatusChoices.ASSIGNED,
                     created_by=user,
                     updated_by=user,
                 )
+
+            assignment.beam.add(*ordered_beams)
+
+            for beam in ordered_beams:
                 beam.status = Beam.StatusChoices.SIZING
                 beam.updated_by = user
                 beam.save(update_fields=["status", "updated_by", "updated_at"])
-                created_assignments.append(assignment)
+
+            created_assignments = [assignment]
 
             # Audit log
             beam_numbers = ", ".join(b.beam_number for b in ordered_beams)
+            sizing_unit = getattr(yarn_outcome, "sizing", None) if yarn_outcome else None
+            sizing_name = sizing_unit.sizing_name if sizing_unit else "N/A"
             log_activity(
                 request=request,
                 action="Assign Beams to Sizing Outcome",
                 description=(
                     f"Assigned {len(ordered_beams)} beam(s) [{beam_numbers}] to "
-                    f"Sizing Outcome #{sizing_outcome.id} (Sizing: {sizing_outcome.sizing.sizing_name})."
+                    f"Outcome #{getattr(yarn_outcome, 'id', '')} (Sizing: {sizing_name})."
                 ),
                 module="Yarn – Sizing",
                 status="Success",
@@ -202,10 +231,10 @@ def transition_beam_assignment(assignment, new_status, user=None, request=None):
         assignment = (
             SizingBeamAssignment.objects
             .select_for_update()
-            .select_related("beam", "sizing_outcome", "sizing_outcome__sizing")
             .get(id=assignment.id if hasattr(assignment, "id") else assignment)
         )
-        beam = Beam.objects.select_for_update().get(id=assignment.beam_id)
+        beam_ids = list(assignment.beam.values_list("id", flat=True))
+        beams = list(Beam.objects.select_for_update().filter(id__in=beam_ids))
 
         if new_status == assignment.status:
             return assignment
@@ -223,25 +252,30 @@ def transition_beam_assignment(assignment, new_status, user=None, request=None):
         assignment.status = new_status
         assignment.updated_by = user
 
+        for beam in beams:
+            if new_status == SizingBeamAssignment.StatusChoices.RELEASED:
+                beam.status = Beam.StatusChoices.AVAILABLE
+            elif new_status == SizingBeamAssignment.StatusChoices.IN_USE:
+                if beam.status == Beam.StatusChoices.SIZING:
+                    beam.status = Beam.StatusChoices.LOADED
+            elif new_status == SizingBeamAssignment.StatusChoices.COMPLETED:
+                beam.status = Beam.StatusChoices.COMPLETED
+
+            beam.updated_by = user
+            beam.save(update_fields=["status", "updated_by", "updated_at"])
+
         if new_status == SizingBeamAssignment.StatusChoices.RELEASED:
             assignment.released_at = timezone.now()
-            beam.status = Beam.StatusChoices.AVAILABLE
-        elif new_status == SizingBeamAssignment.StatusChoices.IN_USE:
-            if beam.status == Beam.StatusChoices.SIZING:
-                beam.status = Beam.StatusChoices.LOADED
-        elif new_status == SizingBeamAssignment.StatusChoices.COMPLETED:
-            beam.status = Beam.StatusChoices.COMPLETED
 
-        beam.updated_by = user
-        beam.save(update_fields=["status", "updated_by", "updated_at"])
         assignment.save(update_fields=["status", "released_at", "updated_by", "updated_at"])
 
+        beam_numbers = ", ".join(b.beam_number for b in beams)
         log_activity(
             request=request,
             action="Transition Beam Assignment",
             description=(
-                f"Transitioned Assignment #{assignment.id} for Beam '{beam.beam_number}' "
-                f"from '{old_status}' to '{new_status}' (Beam status: {beam.status})."
+                f"Transitioned Assignment #{assignment.id} for Beam(s) [{beam_numbers}] "
+                f"from '{old_status}' to '{new_status}'."
             ),
             module="Factory – Beams",
             status="Success",
@@ -283,7 +317,7 @@ def release_beam_active_assignment(beam_or_id, user=None, request=None):
 
     assignment = (
         SizingBeamAssignment.objects
-        .filter(beam_id=beam_id)
+        .filter(beam=beam_id)
         .exclude(status=SizingBeamAssignment.StatusChoices.RELEASED)
         .order_by("-assigned_at", "-id")
         .first()
@@ -304,23 +338,19 @@ def release_beam_active_assignment(beam_or_id, user=None, request=None):
 def get_beam_sizing_history(beam_id):
     """
     Retrieves the complete sizing history for a Beam.
-    Uses select_related and prefetch_related for optimal database query performance.
+    Uses select_related for optimal database query performance.
     """
     return (
         SizingBeamAssignment.objects
-        .filter(beam_id=beam_id)
+        .filter(beam=beam_id)
         .select_related(
-            "sizing_outcome",
-            "sizing_outcome__sizing",
-            "sizing_outcome__created_by",
-            "sizing_outcome__updated_by",
+            "yarn_outcome",
+            "yarn_outcome__sizing",
+            "yarn_outcome__yarn_intake",
             "created_by",
             "updated_by",
         )
-        .prefetch_related(
-            "sizing_outcome__sizing__yarn_outcomes",
-            "sizing_outcome__sizing__yarn_outcomes__yarn_intake",
-        )
+        .prefetch_related("beam")
         .order_by("-assigned_at", "-id")
     )
 
@@ -332,17 +362,19 @@ def get_beam_active_assignment(beam_id):
     return (
         SizingBeamAssignment.objects
         .filter(
-            beam_id=beam_id,
+            beam=beam_id,
             status__in=[
                 SizingBeamAssignment.StatusChoices.ASSIGNED,
                 SizingBeamAssignment.StatusChoices.IN_USE,
             ],
         )
         .select_related(
-            "sizing_outcome",
-            "sizing_outcome__sizing",
+            "yarn_outcome",
+            "yarn_outcome__sizing",
+            "yarn_outcome__yarn_intake",
             "created_by",
             "updated_by",
         )
+        .prefetch_related("beam")
         .first()
     )

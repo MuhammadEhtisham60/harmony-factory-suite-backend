@@ -156,12 +156,6 @@ class SizingViewSet(ModelViewSet):
             SizingOutcome.objects
             .filter(sizing=sizing)
             .select_related("sizing", "created_by", "updated_by")
-            .prefetch_related(
-                "beam_assignments",
-                "beam_assignments__beam",
-                "beam_assignments__created_by",
-                "beam_assignments__updated_by",
-            )
             .order_by("-outcome_date", "-id")
         )
         page = self.paginate_queryset(qs)
@@ -191,12 +185,6 @@ class SizingOutcomeViewSet(ModelViewSet):
     queryset = (
         SizingOutcome.objects
         .select_related("sizing", "created_by", "updated_by")
-        .prefetch_related(
-            "beam_assignments",
-            "beam_assignments__beam",
-            "beam_assignments__created_by",
-            "beam_assignments__updated_by",
-        )
         .all()
     )
     serializer_class = SizingOutcomeSerializer
@@ -231,11 +219,10 @@ class SizingOutcomeViewSet(ModelViewSet):
         serializer.is_valid(raise_exception=True)
         outcome = serializer.save()
 
-        # Reload with prefetched assignments for response
+        # Reload with related data for response
         refreshed = (
             SizingOutcome.objects
             .select_related("sizing", "created_by", "updated_by")
-            .prefetch_related("beam_assignments__beam")
             .get(id=outcome.id)
         )
         out = SizingOutcomeSerializer(refreshed, context={"request": request})
@@ -284,11 +271,15 @@ class SizingOutcomeViewSet(ModelViewSet):
         oid = instance.id
 
         # Check if there are active assignments
-        active_assignments = instance.beam_assignments.filter(
-            status__in=[
-                SizingBeamAssignment.StatusChoices.ASSIGNED,
-                SizingBeamAssignment.StatusChoices.IN_USE,
-            ]
+        active_assignments = (
+            instance.beam_assignments.filter(
+                status__in=[
+                    SizingBeamAssignment.StatusChoices.ASSIGNED,
+                    SizingBeamAssignment.StatusChoices.IN_USE,
+                ]
+            )
+            if hasattr(instance, "beam_assignments")
+            else SizingBeamAssignment.objects.none()
         )
         if active_assignments.exists():
             return Response(
@@ -340,11 +331,11 @@ class SizingOutcomeViewSet(ModelViewSet):
         out_serializer = SizingBeamAssignmentSerializer(
             created_assignments, many=True, context={"request": request}
         )
-        total_assigned = SizingBeamAssignment.objects.filter(sizing_outcome=outcome).count()
+        total_assigned = Beam.objects.filter(sizing_assignments__yarn_outcome__sizing_id=outcome.sizing_id).distinct().count()
         return Response(
             {
                 "success": True,
-                "message": f"Successfully assigned {len(created_assignments)} beam(s) to Sizing Outcome #{outcome.id}.",
+                "message": f"Successfully assigned {len(beam_ids)} beam(s) to Sizing Outcome #{outcome.id}.",
                 "data": {
                     "sizingOutcomeId": outcome.id,
                     "totalBeamsAssigned": total_assigned,
@@ -359,17 +350,20 @@ class SizingOutcomeViewSet(ModelViewSet):
         """Lists all Beams assigned to this SizingOutcome."""
         outcome = self.get_object()
         assignments = (
-            outcome.beam_assignments
-            .select_related("beam", "created_by", "updated_by")
+            SizingBeamAssignment.objects
+            .filter(yarn_outcome__sizing_id=outcome.sizing_id)
+            .select_related("created_by", "updated_by")
+            .prefetch_related("beam")
             .all()
         )
         serializer = SizingBeamAssignmentSerializer(assignments, many=True, context={"request": request})
+        total_beams_count = sum(a.beam.count() for a in assignments)
         return Response({
             "success": True,
             "data": {
                 "sizingOutcomeId": outcome.id,
                 "outcomeDate": outcome.outcome_date,
-                "totalBeams": assignments.count(),
+                "totalBeams": total_beams_count,
                 "assignments": serializer.data,
             }
         })
@@ -395,10 +389,13 @@ class SizingOutcomeViewSet(ModelViewSet):
         aid = req_serializer.validated_data.get("resolved_assignment_id")
 
         if aid:
-            assignment = outcome.beam_assignments.filter(id=aid).first()
+            assignment = SizingBeamAssignment.objects.filter(
+                id=aid, yarn_outcome__sizing_id=outcome.sizing_id
+            ).first()
         else:
-            assignment = outcome.beam_assignments.filter(
-                beam_id=bid,
+            assignment = SizingBeamAssignment.objects.filter(
+                beam=bid,
+                yarn_outcome__sizing_id=outcome.sizing_id,
             ).exclude(status=SizingBeamAssignment.StatusChoices.RELEASED).first()
 
         if not assignment:
@@ -416,9 +413,10 @@ class SizingOutcomeViewSet(ModelViewSet):
             request=request,
         )
 
+        beam_names = ", ".join(b.beam_number for b in released.beam.all())
         return Response({
             "success": True,
-            "message": f"Beam '{released.beam.beam_number}' has been released and is now Available.",
+            "message": f"Beam(s) '{beam_names}' have been released and are now Available.",
             "data": SizingBeamAssignmentSerializer(released, context={"request": request}).data,
         })
 
@@ -436,7 +434,8 @@ class SizingBeamAssignmentViewSet(ReadOnlyModelViewSet):
 
     queryset = (
         SizingBeamAssignment.objects
-        .select_related("beam", "sizing_outcome", "sizing_outcome__sizing", "created_by", "updated_by")
+        .select_related("yarn_outcome", "yarn_outcome__sizing", "yarn_outcome__yarn_intake", "created_by", "updated_by")
+        .prefetch_related("beam")
         .all()
     )
     serializer_class = SizingBeamAssignmentSerializer
@@ -445,7 +444,7 @@ class SizingBeamAssignmentViewSet(ReadOnlyModelViewSet):
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = SizingBeamAssignmentFilter
-    search_fields = ["beam__beam_number", "sizing_outcome__sizing__sizing_name"]
+    search_fields = ["beam__beam_number", "yarn_outcome__yarn_intake__yarn_name"]
     ordering_fields = ["assigned_at", "released_at", "status"]
     ordering = ["-assigned_at", "-id"]
 
@@ -506,8 +505,9 @@ class SizingBeamAssignmentViewSet(ReadOnlyModelViewSet):
             request=request,
         )
 
+        beam_names = ", ".join(b.beam_number for b in released.beam.all())
         return Response({
             "success": True,
-            "message": f"Beam '{released.beam.beam_number}' released and marked Available.",
+            "message": f"Beam(s) '{beam_names}' released and marked Available.",
             "data": SizingBeamAssignmentSerializer(released, context={"request": request}).data,
         })

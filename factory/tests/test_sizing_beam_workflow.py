@@ -264,8 +264,8 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
 
         # Check nested assignments in response
         assignments = res.data["data"]["beamAssignments"]
-        self.assertEqual(len(assignments), 3)
-        assigned_numbers = {a["beam"]["beamNumber"] for a in assignments}
+        self.assertEqual(len(assignments), 1)
+        assigned_numbers = {b["beamNumber"] for b in assignments[0]["beams"]}
         self.assertEqual(assigned_numbers, {"BN-1001", "BN-1002", "BN-1003"})
 
     # ── 4. Add Additional Beams to an Existing Outcome ────────────────────────
@@ -777,6 +777,68 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
         with self.assertRaises(ValidationError) as ctx:
             assign_beams_to_outcome(outcome2, [self.beam1.id])
         self.assertIn("cannot be assigned", str(ctx.exception))
+
+    def test_create_sizing_yarn_outcome_creates_sizing_beam_assignment(self):
+        """
+        Verify that POST /api/v1/yarn-outcomes/ with outcomeType='Sizing'
+        creates a SizingBeamAssignment using the newly created YarnOutcome id.
+        """
+        payload = {
+            "yarnIntake": self.yarn_intake.id,
+            "outcomeType": "Sizing",
+            "outcomeBags": 10,
+            "outcomeConesPerBag": 43,
+            "outcomeWeightPerBagKg": 12,
+            "outcomeDate": "2026-10-04",
+            "sizing": self.sizing.id,
+            "yarnBuyer": None,
+            "ratePerKg": None,
+        }
+        res = self.client.post("/api/v1/yarn-outcomes/", payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        outcome_id = res.data["data"]["id"]
+
+        # Check SizingBeamAssignment was created referencing this yarn_outcome
+        assignment = SizingBeamAssignment.objects.filter(yarn_outcome_id=outcome_id).first()
+        self.assertIsNotNone(assignment)
+        self.assertEqual(assignment.yarn_outcome_id, outcome_id)
+        self.assertEqual(assignment.status, SizingBeamAssignment.StatusChoices.ASSIGNED)
+
+        # Check response contains beam assignments info
+        self.assertIn("beamAssignments", res.data["data"])
+        self.assertEqual(res.data["data"]["totalBeams"], 0)
+        self.assertEqual(assignment.beam.count(), 0)
+
+    def test_create_sizing_yarn_outcome_with_explicit_beam_ids(self):
+        """
+        Verify that POST /api/v1/yarn-outcomes/ with outcomeType='Sizing'
+        and explicit beamIds assigns those specific physical beams.
+        """
+        payload = {
+            "yarnIntake": self.yarn_intake.id,
+            "outcomeType": "Sizing",
+            "outcomeBags": 5,
+            "outcomeConesPerBag": 24,
+            "outcomeWeightPerBagKg": 10,
+            "outcomeDate": "2026-10-04",
+            "sizing": self.sizing.id,
+            "beamIds": [self.beam1.id, self.beam2.id],
+        }
+        res = self.client.post("/api/v1/yarn-outcomes/", payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        outcome_id = res.data["data"]["id"]
+
+        assignment = SizingBeamAssignment.objects.filter(yarn_outcome_id=outcome_id).first()
+        self.assertIsNotNone(assignment)
+        self.assertEqual(assignment.beam.count(), 2)
+        assigned_beam_ids = set(assignment.beam.values_list("id", flat=True))
+        self.assertEqual(assigned_beam_ids, {self.beam1.id, self.beam2.id})
+        self.assertEqual(res.data["data"]["totalBeams"], 2)
+
+        self.beam1.refresh_from_db()
+        self.assertEqual(self.beam1.status, Beam.StatusChoices.SIZING)
+        self.beam2.refresh_from_db()
+        self.assertEqual(self.beam2.status, Beam.StatusChoices.SIZING)
 
 
 class BeamLoadingAndProductionWorkflowTests(APITestCase):
@@ -1291,6 +1353,7 @@ class BeamLoadingAndProductionWorkflowTests(APITestCase):
         self.assertEqual(res_filter.status_code, status.HTTP_200_OK)
         results = res_filter.data["results"] if "results" in res_filter.data else res_filter.data["data"]
         self.assertEqual(len(results), 2)
+
 
 
 
