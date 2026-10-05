@@ -70,6 +70,7 @@ class SizingBeamAssignmentFilter(django_filters.FilterSet):
                 status__in=[
                     SizingBeamAssignment.StatusChoices.ASSIGNED,
                     SizingBeamAssignment.StatusChoices.IN_USE,
+                    SizingBeamAssignment.StatusChoices.RECEIVED,
                 ]
             )
         elif value is False:

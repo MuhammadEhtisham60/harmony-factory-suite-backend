@@ -165,6 +165,7 @@ class BeamDetailSerializer(serializers.ModelSerializer):
                 status__in=[
                     SizingBeamAssignment.StatusChoices.ASSIGNED,
                     SizingBeamAssignment.StatusChoices.IN_USE,
+                    SizingBeamAssignment.StatusChoices.RECEIVED,
                 ]
             ).exists()
             if has_active:

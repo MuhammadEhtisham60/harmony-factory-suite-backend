@@ -131,37 +131,64 @@ def assign_beams_to_outcome(outcome=None, beam_ids=None, user=None, request=None
                         ]
                     })
 
-                # Check if beam already has an active assignment in the DB
+                # Check if beam already has an active assignment in another outcome
                 active_assignment = SizingBeamAssignment.objects.filter(
                     beam=beam,
                     status__in=[
                         SizingBeamAssignment.StatusChoices.ASSIGNED,
                         SizingBeamAssignment.StatusChoices.IN_USE,
-                    ]
+                        SizingBeamAssignment.StatusChoices.RECEIVED,
+                    ],
                 ).first()
-                if active_assignment:
-                    raise ValidationError({
-                        "beam_ids": [
-                            f"Beam '{beam.beam_number}' already has an active sizing assignment "
-                            f"(Assignment #{active_assignment.id} in Outcome #{active_assignment.yarn_outcome_id})."
-                        ]
-                    })
 
-            # Check if an active SizingBeamAssignment already exists for this outcome, else create one
+                if active_assignment:
+                    # If this is sizing outcome and the active assignment belongs to this same yarn_outcome
+                    # and is currently waiting to be received (ASSIGNED or IN_USE):
+                    if (
+                        is_sizing_outcome
+                        and yarn_outcome
+                        and active_assignment.yarn_outcome_id == yarn_outcome.id
+                        and active_assignment.status in [
+                            SizingBeamAssignment.StatusChoices.ASSIGNED,
+                            SizingBeamAssignment.StatusChoices.IN_USE,
+                        ]
+                    ):
+                        pass
+                    else:
+                        raise ValidationError({
+                            "beam_ids": [
+                                f"Beam '{beam.beam_number}' already has an active sizing assignment "
+                                f"(Assignment #{active_assignment.id} in Outcome #{active_assignment.yarn_outcome_id})."
+                            ]
+                        })
+
+            target_status = (
+                SizingBeamAssignment.StatusChoices.RECEIVED
+                if is_sizing_outcome
+                else SizingBeamAssignment.StatusChoices.ASSIGNED
+            )
+
+            # Check if an active/matching SizingBeamAssignment already exists for this outcome, else create one
             assignment = SizingBeamAssignment.objects.filter(
                 yarn_outcome=yarn_outcome,
                 status__in=[
                     SizingBeamAssignment.StatusChoices.ASSIGNED,
                     SizingBeamAssignment.StatusChoices.IN_USE,
+                    SizingBeamAssignment.StatusChoices.RECEIVED,
                 ],
             ).first()
             if not assignment:
                 assignment = SizingBeamAssignment.objects.create(
                     yarn_outcome=yarn_outcome,
-                    status=SizingBeamAssignment.StatusChoices.ASSIGNED,
+                    status=target_status,
                     created_by=user,
                     updated_by=user,
                 )
+            else:
+                if is_sizing_outcome and assignment.status != target_status:
+                    assignment.status = target_status
+                    assignment.updated_by = user
+                    assignment.save(update_fields=["status", "updated_by", "updated_at"])
 
             assignment.beam.add(*ordered_beams)
 
@@ -176,12 +203,13 @@ def assign_beams_to_outcome(outcome=None, beam_ids=None, user=None, request=None
             beam_numbers = ", ".join(b.beam_number for b in ordered_beams)
             sizing_unit = getattr(yarn_outcome, "sizing", None) if yarn_outcome else None
             sizing_name = sizing_unit.sizing_name if sizing_unit else "N/A"
+            action_name = "Receive Beams from Sizing Outcome" if is_sizing_outcome else "Assign Beams to Sizing Outcome"
             log_activity(
                 request=request,
-                action="Assign Beams to Sizing Outcome",
+                action=action_name,
                 description=(
-                    f"Assigned {len(ordered_beams)} beam(s) [{beam_numbers}] to "
-                    f"Outcome #{getattr(yarn_outcome, 'id', '')} (Sizing: {sizing_name})."
+                    f"Recorded {len(ordered_beams)} beam(s) [{beam_numbers}] in "
+                    f"Outcome #{getattr(yarn_outcome, 'id', '')} (Sizing: {sizing_name}) with status '{target_status}'."
                 ),
                 module="Yarn – Sizing",
                 status="Success",
@@ -286,10 +314,17 @@ def transition_beam_assignment(assignment, new_status, user=None, request=None):
     valid_transitions = {
         SizingBeamAssignment.StatusChoices.ASSIGNED: [
             SizingBeamAssignment.StatusChoices.IN_USE,
+            SizingBeamAssignment.StatusChoices.RECEIVED,
             SizingBeamAssignment.StatusChoices.COMPLETED,
             SizingBeamAssignment.StatusChoices.RELEASED,
         ],
         SizingBeamAssignment.StatusChoices.IN_USE: [
+            SizingBeamAssignment.StatusChoices.RECEIVED,
+            SizingBeamAssignment.StatusChoices.COMPLETED,
+            SizingBeamAssignment.StatusChoices.RELEASED,
+        ],
+        SizingBeamAssignment.StatusChoices.RECEIVED: [
+            SizingBeamAssignment.StatusChoices.IN_USE,
             SizingBeamAssignment.StatusChoices.COMPLETED,
             SizingBeamAssignment.StatusChoices.RELEASED,
         ],
@@ -330,6 +365,8 @@ def transition_beam_assignment(assignment, new_status, user=None, request=None):
             elif new_status == SizingBeamAssignment.StatusChoices.IN_USE:
                 if beam.status == Beam.StatusChoices.SIZING:
                     beam.status = Beam.StatusChoices.LOADED
+            elif new_status == SizingBeamAssignment.StatusChoices.RECEIVED:
+                beam.status = Beam.StatusChoices.SIZING
             elif new_status == SizingBeamAssignment.StatusChoices.COMPLETED:
                 beam.status = Beam.StatusChoices.COMPLETED
 
@@ -429,7 +466,7 @@ def get_beam_sizing_history(beam_id):
 
 def get_beam_active_assignment(beam_id):
     """
-    Retrieves the currently active (ASSIGNED or IN_USE) sizing assignment for a Beam.
+    Retrieves the currently active (ASSIGNED, IN_USE, or RECEIVED) sizing assignment for a Beam.
     """
     return (
         SizingBeamAssignment.objects
@@ -438,6 +475,7 @@ def get_beam_active_assignment(beam_id):
             status__in=[
                 SizingBeamAssignment.StatusChoices.ASSIGNED,
                 SizingBeamAssignment.StatusChoices.IN_USE,
+                SizingBeamAssignment.StatusChoices.RECEIVED,
             ],
         )
         .select_related(

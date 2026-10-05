@@ -276,6 +276,7 @@ class SizingOutcomeViewSet(ModelViewSet):
                 status__in=[
                     SizingBeamAssignment.StatusChoices.ASSIGNED,
                     SizingBeamAssignment.StatusChoices.IN_USE,
+                    SizingBeamAssignment.StatusChoices.RECEIVED,
                 ]
             )
             if hasattr(instance, "beam_assignments")

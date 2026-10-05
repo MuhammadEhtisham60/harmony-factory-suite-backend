@@ -347,6 +347,7 @@ class SizingBeamAssignment(models.Model):
     class StatusChoices(models.TextChoices):
         ASSIGNED = "ASSIGNED", "Assigned"
         IN_USE = "IN_USE", "In Use"
+        RECEIVED = "RECEIVED", "Received"
         COMPLETED = "COMPLETED", "Completed"
         RELEASED = "RELEASED", "Released"
 
@@ -477,7 +478,11 @@ class SizingBeamAssignment(models.Model):
 
     @property
     def is_active(self):
-        return self.status in [self.StatusChoices.ASSIGNED, self.StatusChoices.IN_USE]
+        return self.status in [
+            self.StatusChoices.ASSIGNED,
+            self.StatusChoices.IN_USE,
+            self.StatusChoices.RECEIVED,
+        ]
 
     @property
     def sizing_outcome(self):

@@ -292,7 +292,7 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
 
         # Assignment record check
         assignment = SizingBeamAssignment.objects.get(beam=self.beam1)
-        self.assertEqual(assignment.status, SizingBeamAssignment.StatusChoices.ASSIGNED)
+        self.assertEqual(assignment.status, SizingBeamAssignment.StatusChoices.RECEIVED)
         self.assertEqual(assignment.sizing_outcome.id, res.data["data"]["id"])
 
     def test_reject_available_beam_on_sizing_outcome(self):
@@ -346,6 +346,64 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
         self.assertEqual(res.data["data"]["setNo"], "253")
         self.assertEqual(res.data["data"]["totalBeams"], 1)
         self.assertEqual(res.data["data"]["beamAssignments"][0]["beams"][0]["beamNumber"], "32")
+        self.assertEqual(res.data["data"]["beamAssignments"][0]["status"], "RECEIVED")
+
+    def test_yarn_outcome_dispatch_and_sizing_outcome_return_workflow(self):
+        """
+        Tests the complete real-world flow:
+        1. YarnOutcome created with outcomeType='Sizing', sizing=<id>, beamIds=[beam.id]
+           -> Beam status becomes SIZING, SizingBeamAssignment status is ASSIGNED.
+        2. Set returns from Sizing: SizingOutcome created with sizing_id and beam_ids=[beam.id]
+           -> SizingOutcome created successfully, SizingBeamAssignment status updated to RECEIVED without validation error.
+        """
+        beam_32 = Beam.objects.create(
+            beam_number="BN-REAL-32",
+            yarn_count="40/1",
+            status=Beam.StatusChoices.AVAILABLE,
+        )
+
+        # Step 1: Dispatch yarn and beam 32 to sizing via YarnOutcome
+        yo_res = self.client.post(
+            "/api/v1/yarn-outcomes/",
+            {
+                "yarnIntake": self.yarn_intake.id,
+                "outcomeType": "Sizing",
+                "sizing": self.sizing.id,
+                "outcomeBags": 10,
+                "outcomeConesPerBag": 24,
+                "outcomeWeightPerBagKg": 45.36,
+                "outcomeDate": "2026-10-04",
+                "beamIds": [beam_32.id],
+            },
+            format="json",
+        )
+        self.assertEqual(yo_res.status_code, status.HTTP_201_CREATED, yo_res.data)
+        yo_id = yo_res.data["data"]["id"]
+
+        beam_32.refresh_from_db()
+        self.assertEqual(beam_32.status, Beam.StatusChoices.SIZING)
+
+        assignment = SizingBeamAssignment.objects.get(beam=beam_32, yarn_outcome_id=yo_id)
+        self.assertEqual(assignment.status, SizingBeamAssignment.StatusChoices.ASSIGNED)
+
+        # Step 2: Set comes back from sizing, user records SizingOutcome with beam 32
+        so_payload = {
+            "sizing_id": self.sizing.id,
+            "outcome_date": "2026-10-05",
+            "set_no": "SET-253",
+            "set_bill": "BILL-1002",
+            "total_bags_on_sizing": 10,
+            "bag_packing_cone": 24,
+            "total_cones": 240,
+            "beam_ids": [beam_32.id],
+        }
+        so_res = self.client.post("/api/v1/sizing-outcomes/", so_payload, format="json")
+        self.assertEqual(so_res.status_code, status.HTTP_201_CREATED, so_res.data)
+        self.assertTrue(so_res.data["success"])
+
+        # Assignment entry status should now be RECEIVED
+        assignment.refresh_from_db()
+        self.assertEqual(assignment.status, SizingBeamAssignment.StatusChoices.RECEIVED)
 
     # ── 3. Assign Multiple Existing Beams ─────────────────────────────────────
 
@@ -537,7 +595,7 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
             format="json",
         )
         assignment = SizingBeamAssignment.objects.get(beam=self.beam1)
-        self.assertEqual(assignment.status, SizingBeamAssignment.StatusChoices.ASSIGNED)
+        self.assertEqual(assignment.status, SizingBeamAssignment.StatusChoices.RECEIVED)
         self.beam1.refresh_from_db()
         self.assertEqual(self.beam1.status, Beam.StatusChoices.SIZING)
 
@@ -670,9 +728,9 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
         self.assertEqual(beam1_assignments[0].sizing_outcome_id, outcome1_id)
         self.assertEqual(beam1_assignments[0].status, SizingBeamAssignment.StatusChoices.RELEASED)
 
-        # Second assignment is ASSIGNED, outcome2
+        # Second assignment is RECEIVED, outcome2
         self.assertEqual(beam1_assignments[1].sizing_outcome_id, outcome2_id)
-        self.assertEqual(beam1_assignments[1].status, SizingBeamAssignment.StatusChoices.ASSIGNED)
+        self.assertEqual(beam1_assignments[1].status, SizingBeamAssignment.StatusChoices.RECEIVED)
 
     # ── 14. Retrieve Beam Sizing History ──────────────────────────────────────
 
