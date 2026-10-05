@@ -331,7 +331,10 @@ class SizingOutcomeViewSet(ModelViewSet):
         out_serializer = SizingBeamAssignmentSerializer(
             created_assignments, many=True, context={"request": request}
         )
-        total_assigned = Beam.objects.filter(sizing_assignments__yarn_outcome__sizing_id=outcome.sizing_id).distinct().count()
+        total_assigned = (
+            Beam.objects.filter(sizing_assignments__yarn_outcome_id=outcome.yarn_outcome_id).distinct().count()
+            if outcome.yarn_outcome_id else 0
+        )
         return Response(
             {
                 "success": True,
@@ -349,9 +352,12 @@ class SizingOutcomeViewSet(ModelViewSet):
     def beams(self, request, pk=None):
         """Lists all Beams assigned to this SizingOutcome."""
         outcome = self.get_object()
+        q_filter = models.Q(yarn_outcome_id=outcome.yarn_outcome_id) if outcome.yarn_outcome_id else models.Q()
+        if outcome.sizing_id:
+            q_filter |= models.Q(yarn_outcome__sizing_id=outcome.sizing_id)
         assignments = (
             SizingBeamAssignment.objects
-            .filter(yarn_outcome__sizing_id=outcome.sizing_id)
+            .filter(q_filter)
             .select_related("created_by", "updated_by")
             .prefetch_related("beam")
             .all()
@@ -388,14 +394,17 @@ class SizingOutcomeViewSet(ModelViewSet):
         bid = req_serializer.validated_data.get("resolved_beam_id")
         aid = req_serializer.validated_data.get("resolved_assignment_id")
 
+        q_base = models.Q(yarn_outcome_id=outcome.yarn_outcome_id) if outcome.yarn_outcome_id else models.Q()
+        if outcome.sizing_id:
+            q_base |= models.Q(yarn_outcome__sizing_id=outcome.sizing_id)
+
         if aid:
             assignment = SizingBeamAssignment.objects.filter(
-                id=aid, yarn_outcome__sizing_id=outcome.sizing_id
+                q_base, id=aid
             ).first()
         else:
             assignment = SizingBeamAssignment.objects.filter(
-                beam=bid,
-                yarn_outcome__sizing_id=outcome.sizing_id,
+                q_base, beam=bid
             ).exclude(status=SizingBeamAssignment.StatusChoices.RELEASED).first()
 
         if not assignment:
