@@ -160,13 +160,31 @@ def assign_beams_to_outcome(outcome=None, beam_ids=None, user=None, request=None
         })
 
 
-def create_sizing_outcome(sizing, outcome_date, remarks="", beam_ids=None, user=None, request=None, **extra_fields):
+def create_sizing_outcome(yarn_outcome=None, outcome_date=None, remarks="", beam_ids=None, user=None, request=None, **extra_fields):
     """
     Creates a new SizingOutcome and optionally assigns a batch of Beams atomically.
+    Supports either yarn_outcome (preferred) or legacy sizing reference.
     """
+    sizing = extra_fields.pop("sizing", None)
+    if not yarn_outcome and sizing:
+        from factory.yarn.yarn_intake.models import YarnIntake, YarnOutcome
+        from django.utils import timezone
+        yarn_outcome = YarnOutcome.objects.filter(sizing=sizing, outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING).first()
+        if not yarn_outcome:
+            intake = YarnIntake.objects.first()
+            if intake:
+                yarn_outcome = YarnOutcome.objects.create(
+                    yarn_intake=intake,
+                    outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING,
+                    sizing=sizing,
+                    outcome_bags=0,
+                    outcome_weight_per_bag_kg=0,
+                    outcome_date=outcome_date or timezone.now().date(),
+                )
+
     with transaction.atomic():
         outcome = SizingOutcome.objects.create(
-            sizing=sizing,
+            yarn_outcome=yarn_outcome,
             outcome_date=outcome_date,
             remarks=remarks or "",
             created_by=user,
@@ -183,11 +201,16 @@ def create_sizing_outcome(sizing, outcome_date, remarks="", beam_ids=None, user=
                 request=request,
             )
 
+        sizing_title = (
+            yarn_outcome.sizing.sizing_name
+            if yarn_outcome and hasattr(yarn_outcome, "sizing") and yarn_outcome.sizing
+            else (sizing.sizing_name if sizing else "N/A")
+        )
         log_activity(
             request=request,
             action="Create Sizing Outcome",
             description=(
-                f"Created Sizing Outcome #{outcome.id} for sizing '{sizing.sizing_name}' "
+                f"Created Sizing Outcome #{outcome.id} for sizing '{sizing_title}' "
                 f"with {len(assignments)} initial beam assignment(s)."
             ),
             module="Yarn – Sizing",

@@ -220,6 +220,37 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
         outcome = SizingOutcome.objects.get(id=res.data["data"]["id"])
         self.assertEqual(outcome.sizing, self.sizing)
 
+    def test_create_sizing_outcome_with_yarn_outcome_and_set_bill(self):
+        """Tests creating a SizingOutcome explicitly specifying yarn_outcome_id and set_bill."""
+        yo = YarnOutcome.objects.create(
+            yarn_intake=self.yarn_intake,
+            outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING,
+            sizing=self.sizing,
+            outcome_bags=10,
+            outcome_weight_per_bag_kg=Decimal("45.36"),
+            outcome_date="2026-10-03",
+        )
+        payload = {
+            "yarn_outcome_id": yo.id,
+            "set_no": "SET-990",
+            "set_bill": "BILL-2026-001",
+            "outcome_date": "2026-10-03",
+            "remarks": "Outcome with explicit yarn_outcome and set_bill",
+        }
+        res = self.client.post("/api/v1/sizing-outcomes/", payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(res.data["data"]["setBill"], "BILL-2026-001")
+        self.assertEqual(res.data["data"]["set_bill"], "BILL-2026-001")
+        self.assertEqual(res.data["data"]["yarn_outcome"], yo.id)
+        self.assertEqual(res.data["data"]["yarnOutcomeId"], yo.id)
+
+        outcome = SizingOutcome.objects.get(id=res.data["data"]["id"])
+        self.assertEqual(outcome.yarn_outcome, yo)
+        self.assertEqual(outcome.set_bill, "BILL-2026-001")
+        self.assertEqual(outcome.set_no, "SET-990")
+        self.assertIn("Bill #BILL-2026-001", str(outcome))
+        self.assertIn("Set #SET-990", str(outcome))
+
     # ── 2. Assign One Existing Beam ───────────────────────────────────────────
 
     def test_assign_one_existing_beam(self):

@@ -36,8 +36,9 @@ class SizingOutcomeAdmin(admin.ModelAdmin):
     list_display = [
         "id",
         "set_no",
+        "set_bill",
         "sizing_name",
-        "sizing",
+        "yarn_outcome",
         "outcome_date",
         "total_bags_on_sizing",
         "total_cones",
@@ -46,8 +47,8 @@ class SizingOutcomeAdmin(admin.ModelAdmin):
         "total_beams",
         "created_at",
     ]
-    list_filter = ["outcome_date", "sizing"]
-    search_fields = ["set_no", "sizing_name", "sizing__sizing_name", "remarks"]
+    list_filter = ["outcome_date", "yarn_outcome"]
+    search_fields = ["set_no", "set_bill", "sizing_name", "yarn_outcome__sizing__sizing_name", "remarks"]
     readonly_fields = ["created_at", "updated_at", "created_by", "updated_by"]
 
 

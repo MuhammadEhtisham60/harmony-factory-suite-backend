@@ -86,10 +86,17 @@ class SizingOutcome(models.Model):
     Maintains all sizing set specifications, yarn usage, and shortage metrics.
     Can be loaded onto multiple existing Beams via BeamLoading.
     """
-    sizing = models.ForeignKey(
-        Sizing,
+    yarn_outcome = models.ForeignKey(
+        "factory.YarnOutcome",
         on_delete=models.PROTECT,
-        related_name="outcomes"
+        related_name="sizing_outcomes"
+    )
+
+    set_bill = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        help_text="Set bill / invoice number"
     )
 
     outcome_date = models.DateField()
@@ -255,25 +262,63 @@ class SizingOutcome(models.Model):
         verbose_name = "Sizing Outcome"
         verbose_name_plural = "Sizing Outcomes"
 
+    def __init__(self, *args, **kwargs):
+        # Backward compatibility: resolve yarn_outcome from legacy sizing kwargs if provided
+        sizing = kwargs.pop("sizing", None)
+        if sizing and "yarn_outcome" not in kwargs:
+            from factory.yarn.yarn_intake.models import YarnIntake, YarnOutcome
+            from django.utils import timezone
+            yo = getattr(sizing, "yarn_outcomes", None)
+            yo_inst = yo.filter(outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING).first() if yo else None
+            if not yo_inst:
+                intake = YarnIntake.objects.first()
+                if intake:
+                    yo_inst = YarnOutcome.objects.create(
+                        yarn_intake=intake,
+                        outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING,
+                        sizing=sizing,
+                        outcome_bags=0,
+                        outcome_weight_per_bag_kg=0,
+                        outcome_date=kwargs.get("outcome_date") or timezone.now().date(),
+                    )
+            kwargs["yarn_outcome"] = yo_inst
+        super().__init__(*args, **kwargs)
+
     def __str__(self):
         set_str = f" Set #{self.set_no}" if self.set_no else ""
-        return f"Sizing Outcome #{self.id}{set_str} ({self.sizing_name or self.sizing.sizing_name})"
+        bill_str = f" Bill #{self.set_bill}" if self.set_bill else ""
+        s_name = self.sizing_name
+        if not s_name and self.yarn_outcome and hasattr(self.yarn_outcome, "sizing") and self.yarn_outcome.sizing:
+            s_name = self.yarn_outcome.sizing.sizing_name
+        return f"Sizing Outcome #{self.id}{set_str}{bill_str} ({s_name or 'N/A'})"
 
     def save(self, *args, **kwargs):
-        if not self.sizing_name and self.sizing_id:
-            self.sizing_name = self.sizing.sizing_name
+        if not self.sizing_name and self.yarn_outcome_id:
+            yo = getattr(self, "yarn_outcome", None)
+            if yo and getattr(yo, "sizing", None):
+                self.sizing_name = yo.sizing.sizing_name
         if not self.total_cones and self.total_bags_on_sizing and self.bag_packing_cone:
             self.total_cones = self.total_bags_on_sizing * self.bag_packing_cone
         super().save(*args, **kwargs)
+
+    @property
+    def sizing(self):
+        """Backward compatibility property returning the linked Sizing instance via yarn_outcome."""
+        return self.yarn_outcome.sizing if self.yarn_outcome else None
+
+    @property
+    def sizing_id(self):
+        """Backward compatibility property returning the sizing ID via yarn_outcome."""
+        return self.yarn_outcome.sizing_id if self.yarn_outcome else None
 
     @property
     def total_beams(self):
         # Return count of beam assignments or beam loadings
         if hasattr(self, "beam_loadings") and self.beam_loadings.exists():
             return self.beam_loadings.count()
-        if self.sizing_id:
+        if self.yarn_outcome_id:
             from factory.beam.models import Beam
-            count = Beam.objects.filter(sizing_assignments__yarn_outcome__sizing_id=self.sizing_id).distinct().count()
+            count = Beam.objects.filter(sizing_assignments__yarn_outcome_id=self.yarn_outcome_id).distinct().count()
             if count > 0:
                 return count
         return 0
@@ -424,8 +469,8 @@ class SizingBeamAssignment(models.Model):
 
     @property
     def sizing_outcome(self):
-        if self.yarn_outcome and self.yarn_outcome.sizing:
-            return self.yarn_outcome.sizing.outcomes.first()
+        if self.yarn_outcome:
+            return self.yarn_outcome.sizing_outcomes.first()
         return None
 
     @property

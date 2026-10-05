@@ -154,8 +154,8 @@ class SizingViewSet(ModelViewSet):
         sizing = self.get_object()
         qs = (
             SizingOutcome.objects
-            .filter(sizing=sizing)
-            .select_related("sizing", "created_by", "updated_by")
+            .filter(yarn_outcome__sizing=sizing)
+            .select_related("yarn_outcome", "yarn_outcome__sizing", "created_by", "updated_by")
             .order_by("-outcome_date", "-id")
         )
         page = self.paginate_queryset(qs)
@@ -184,7 +184,7 @@ class SizingOutcomeViewSet(ModelViewSet):
 
     queryset = (
         SizingOutcome.objects
-        .select_related("sizing", "created_by", "updated_by")
+        .select_related("yarn_outcome", "yarn_outcome__sizing", "created_by", "updated_by")
         .all()
     )
     serializer_class = SizingOutcomeSerializer
@@ -193,7 +193,7 @@ class SizingOutcomeViewSet(ModelViewSet):
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = SizingOutcomeFilter
-    search_fields = ["sizing__sizing_name", "sizing__contact_person", "remarks"]
+    search_fields = ["yarn_outcome__sizing__sizing_name", "sizing_name", "set_no", "set_bill", "remarks"]
     ordering_fields = ["outcome_date", "created_at", "updated_at"]
     ordering = ["-outcome_date", "-id"]
 
@@ -222,7 +222,7 @@ class SizingOutcomeViewSet(ModelViewSet):
         # Reload with related data for response
         refreshed = (
             SizingOutcome.objects
-            .select_related("sizing", "created_by", "updated_by")
+            .select_related("yarn_outcome", "yarn_outcome__sizing", "created_by", "updated_by")
             .get(id=outcome.id)
         )
         out = SizingOutcomeSerializer(refreshed, context={"request": request})

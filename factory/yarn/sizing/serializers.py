@@ -6,11 +6,25 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from factory.beam.models import Beam
+from factory.yarn.yarn_intake.models import YarnOutcome
 from factory.yarn.sizing.models import Sizing, SizingOutcome, SizingBeamAssignment
 from factory.yarn.sizing.services import create_sizing_outcome, assign_beams_to_outcome
 
 
 # ── Minimal / Nested Serializers ─────────────────────────────────────────────
+
+class YarnOutcomeMinSerializer(serializers.ModelSerializer):
+    """Minimal YarnOutcome details for nested responses."""
+    yarnName = serializers.CharField(source="yarn_intake.yarn_name", read_only=True)
+    yarnType = serializers.CharField(source="yarn_intake.yarn_type", read_only=True)
+    yarnCount = serializers.CharField(source="yarn_intake.yarn_count", read_only=True)
+    intakeSetNo = serializers.CharField(source="yarn_intake.set_no", read_only=True)
+    sizingName = serializers.CharField(source="sizing.sizing_name", read_only=True)
+
+    class Meta:
+        model = YarnOutcome
+        fields = ["id", "outcome_type", "outcome_bags", "yarnName", "yarnType", "yarnCount", "intakeSetNo", "sizingName"]
+
 
 class SizingMinSerializer(serializers.ModelSerializer):
     """Minimal Sizing details for nested responses."""
@@ -227,15 +241,36 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
     Supports assigning multiple existing beams during creation via `beam_ids` or `beamIds`.
     Accepts both camelCase and snake_case request parameters.
     """
+    yarn_outcome = serializers.PrimaryKeyRelatedField(
+        queryset=YarnOutcome.objects.all(),
+        required=False,
+    )
+    yarnOutcome = serializers.PrimaryKeyRelatedField(
+        queryset=YarnOutcome.objects.all(),
+        source="yarn_outcome",
+        required=False,
+        write_only=True,
+    )
+    yarnOutcomeId = serializers.IntegerField(source="yarn_outcome_id", read_only=True)
+    yarn_outcome_id = serializers.IntegerField(required=False, write_only=True)
+    yarnOutcomeDetail = YarnOutcomeMinSerializer(source="yarn_outcome", read_only=True)
+
+    # Backward compatibility for legacy sizing / sizingId callers
     sizing = serializers.PrimaryKeyRelatedField(
         queryset=Sizing.objects.all(),
         required=False,
+        write_only=True,
     )
     sizingId = serializers.IntegerField(source="sizing_id", required=False, write_only=True)
+    sizing_id = serializers.IntegerField(required=False, write_only=True)
     sizingDetail = SizingMinSerializer(source="sizing", read_only=True)
 
     setNo = serializers.CharField(source="set_no", required=False, allow_blank=True, default="")
+    set_no = serializers.CharField(required=False, allow_blank=True, default="")
+    setBill = serializers.CharField(source="set_bill", required=False, allow_blank=True, default="")
+    set_bill = serializers.CharField(required=False, allow_blank=True, default="")
     sizingName = serializers.CharField(source="sizing_name", required=False, allow_blank=True, default="")
+    sizing_name = serializers.CharField(required=False, allow_blank=True, default="")
     totalBagsOnSizing = serializers.IntegerField(source="total_bags_on_sizing", required=False, default=0)
     bagPackingCone = serializers.IntegerField(source="bag_packing_cone", required=False, default=0)
     totalCones = serializers.IntegerField(source="total_cones", required=False, default=0)
@@ -276,7 +311,11 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
     def get_beamAssignments(self, obj):
         if hasattr(obj, "beam_assignments"):
             return SizingBeamAssignmentSerializer(obj.beam_assignments.all(), many=True, context=self.context).data
-        if obj.sizing_id:
+        if obj.yarn_outcome_id:
+            from factory.yarn.sizing.models import SizingBeamAssignment
+            assignments = SizingBeamAssignment.objects.filter(yarn_outcome_id=obj.yarn_outcome_id).order_by("-assigned_at")
+            return SizingBeamAssignmentSerializer(assignments, many=True, context=self.context).data
+        elif obj.sizing_id:
             from factory.yarn.sizing.models import SizingBeamAssignment
             assignments = SizingBeamAssignment.objects.filter(yarn_outcome__sizing_id=obj.sizing_id).order_by("-assigned_at")
             return SizingBeamAssignmentSerializer(assignments, many=True, context=self.context).data
@@ -291,11 +330,21 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
         model = SizingOutcome
         fields = [
             "id",
+            "yarn_outcome",
+            "yarnOutcome",
+            "yarnOutcomeId",
+            "yarn_outcome_id",
+            "yarnOutcomeDetail",
             "sizing",
             "sizingId",
+            "sizing_id",
             "sizingDetail",
             "setNo",
+            "set_no",
+            "setBill",
+            "set_bill",
             "sizingName",
+            "sizing_name",
             "totalBagsOnSizing",
             "bagPackingCone",
             "totalCones",
@@ -326,6 +375,7 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id",
+            "yarnOutcomeDetail",
             "sizingDetail",
             "beamAssignments",
             "totalBeams",
@@ -355,6 +405,7 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
         data = data.copy() if hasattr(data, "copy") else dict(data)
         mapping = {
             "set_no": "setNo",
+            "set_bill": "setBill",
             "sizing_name": "sizingName",
             "total_bags_on_sizing": "totalBagsOnSizing",
             "bag_packing_cone": "bagPackingCone",
@@ -372,6 +423,7 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "total_set_shortage": "totalSetShortage",
             "outcome_date": "outcomeDate",
             "sizing_id": "sizingId",
+            "yarn_outcome_id": "yarnOutcomeId",
         }
         for snake, camel in mapping.items():
             if snake in data and camel not in data:
@@ -379,23 +431,61 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
         return super().to_internal_value(data)
 
     def validate(self, attrs):
+        # Resolve yarn_outcome reference from yarn_outcome / yarnOutcome / yarn_outcome_id / yarnOutcomeId
+        yarn_outcome = attrs.get("yarn_outcome")
+        raw_yo_id = (
+            self.initial_data.get("yarn_outcome_id")
+            or self.initial_data.get("yarnOutcomeId")
+            or self.initial_data.get("yarn_outcome")
+            or self.initial_data.get("yarnOutcome")
+        )
 
-        # Resolve sizing reference from either `sizing`, `sizing_id`, or `sizingId`
-        sizing = attrs.get("sizing")
-        raw_sizing_id = self.initial_data.get("sizing_id") or self.initial_data.get("sizingId")
-
-        if not sizing and raw_sizing_id:
+        if not yarn_outcome and raw_yo_id:
             try:
-                sizing = Sizing.objects.get(id=raw_sizing_id)
-                attrs["sizing"] = sizing
-            except Sizing.DoesNotExist:
+                yarn_outcome = YarnOutcome.objects.get(id=raw_yo_id)
+                attrs["yarn_outcome"] = yarn_outcome
+            except (YarnOutcome.DoesNotExist, ValueError):
                 raise serializers.ValidationError({
-                    "sizingId": [f"Sizing unit with ID {raw_sizing_id} does not exist."]
+                    "yarnOutcomeId": [f"Yarn outcome with ID {raw_yo_id} does not exist."]
                 })
 
-        if not sizing and not self.instance:
+        # Backward compatibility: resolve via sizing if yarn_outcome is not directly passed
+        if not yarn_outcome:
+            raw_sizing_id = (
+                self.initial_data.get("sizing_id")
+                or self.initial_data.get("sizingId")
+                or (attrs.get("sizing").id if attrs.get("sizing") else None)
+            )
+            if raw_sizing_id:
+                try:
+                    sizing_inst = Sizing.objects.get(id=raw_sizing_id)
+                    yo = YarnOutcome.objects.filter(
+                        sizing=sizing_inst,
+                        outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING,
+                    ).first()
+                    if not yo:
+                        from factory.yarn.yarn_intake.models import YarnIntake
+                        from django.utils import timezone
+                        intake = YarnIntake.objects.first()
+                        if intake:
+                            yo = YarnOutcome.objects.create(
+                                yarn_intake=intake,
+                                outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING,
+                                sizing=sizing_inst,
+                                outcome_bags=0,
+                                outcome_weight_per_bag_kg=0,
+                                outcome_date=attrs.get("outcome_date") or timezone.now().date(),
+                            )
+                    if yo:
+                        attrs["yarn_outcome"] = yo
+                except Sizing.DoesNotExist:
+                    raise serializers.ValidationError({
+                        "sizingId": [f"Sizing unit with ID {raw_sizing_id} does not exist."]
+                    })
+
+        if not attrs.get("yarn_outcome") and not self.instance:
             raise serializers.ValidationError({
-                "sizing": ["Sizing reference (sizing or sizing_id) is required."]
+                "yarn_outcome": ["Yarn outcome reference (yarn_outcome or yarn_outcome_id) is required."]
             })
 
         # Resolve outcome_date
@@ -428,16 +518,18 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
         validated_data.pop("beam_ids", None)
         validated_data.pop("beamIds", None)
         validated_data.pop("sizing_id", None)
+        validated_data.pop("sizing", None)
+        validated_data.pop("yarn_outcome_id", None)
 
         request = self.context.get("request")
         user = request.user if request and request.user and request.user.is_authenticated else None
 
-        sizing = validated_data.pop("sizing")
+        yarn_outcome = validated_data.pop("yarn_outcome")
         outcome_date = validated_data.pop("outcome_date")
         remarks = validated_data.pop("remarks", "")
 
         return create_sizing_outcome(
-            sizing=sizing,
+            yarn_outcome=yarn_outcome,
             outcome_date=outcome_date,
             remarks=remarks,
             beam_ids=resolved_beam_ids,
@@ -451,6 +543,8 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
         validated_data.pop("beam_ids", None)
         validated_data.pop("beamIds", None)
         validated_data.pop("sizing_id", None)
+        validated_data.pop("sizing", None)
+        validated_data.pop("yarn_outcome_id", None)
 
         request = self.context.get("request")
         if request and request.user and request.user.is_authenticated:
