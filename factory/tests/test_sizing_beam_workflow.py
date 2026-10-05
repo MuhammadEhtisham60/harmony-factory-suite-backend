@@ -90,23 +90,44 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
             status="Active",
         )
 
-        # Create Physical Beams
+        # Create Physical Beams (status SIZING for SizingOutcome tests)
         self.beam1 = Beam.objects.create(
             beam_number="BN-1001",
             yarn_count="20/1",
             warp_count=2400,
             total_ends=2400,
-            status=Beam.StatusChoices.AVAILABLE,
+            status=Beam.StatusChoices.SIZING,
         )
         self.beam2 = Beam.objects.create(
             beam_number="BN-1002",
             yarn_count="20/1",
             warp_count=2400,
             total_ends=2400,
-            status=Beam.StatusChoices.AVAILABLE,
+            status=Beam.StatusChoices.SIZING,
         )
         self.beam3 = Beam.objects.create(
             beam_number="BN-1003",
+            yarn_count="20/1",
+            warp_count=2400,
+            total_ends=2400,
+            status=Beam.StatusChoices.SIZING,
+        )
+        self.beam_available = Beam.objects.create(
+            beam_number="BN-AVAIL",
+            yarn_count="20/1",
+            warp_count=2400,
+            total_ends=2400,
+            status=Beam.StatusChoices.AVAILABLE,
+        )
+        self.avail_beam1 = Beam.objects.create(
+            beam_number="BN-AVAIL1",
+            yarn_count="20/1",
+            warp_count=2400,
+            total_ends=2400,
+            status=Beam.StatusChoices.AVAILABLE,
+        )
+        self.avail_beam2 = Beam.objects.create(
+            beam_number="BN-AVAIL2",
             yarn_count="20/1",
             warp_count=2400,
             total_ends=2400,
@@ -254,7 +275,7 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
     # ── 2. Assign One Existing Beam ───────────────────────────────────────────
 
     def test_assign_one_existing_beam(self):
-        """Assigns one existing available beam to a new SizingOutcome."""
+        """Assigns one existing sizing beam to a new SizingOutcome."""
         payload = {
             "sizing_id": self.sizing.id,
             "outcome_date": "2026-10-03",
@@ -265,7 +286,7 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
         self.assertEqual(res.data["data"]["totalBeams"], 1)
 
-        # Beam status must become SIZING
+        # Beam status must remain SIZING
         self.beam1.refresh_from_db()
         self.assertEqual(self.beam1.status, Beam.StatusChoices.SIZING)
 
@@ -273,6 +294,58 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
         assignment = SizingBeamAssignment.objects.get(beam=self.beam1)
         self.assertEqual(assignment.status, SizingBeamAssignment.StatusChoices.ASSIGNED)
         self.assertEqual(assignment.sizing_outcome.id, res.data["data"]["id"])
+
+    def test_reject_available_beam_on_sizing_outcome(self):
+        """Beams that are AVAILABLE must be rejected on SizingOutcome (only SIZING allowed)."""
+        payload = {
+            "sizing_id": self.sizing.id,
+            "outcome_date": "2026-10-03",
+            "beam_ids": [self.beam_available.id],
+            "remarks": "Available beam should be rejected",
+        }
+        res = self.client.post("/api/v1/sizing-outcomes/", payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("beam_ids", res.data["errors"])
+        self.assertIn("Only 'Sizing' beams can be assigned", str(res.data["errors"]["beam_ids"]))
+
+    def test_create_sizing_outcome_with_user_exact_payload(self):
+        """Tests the exact payload submitted by the user with beam status Sizing."""
+        beam_32 = Beam.objects.create(
+            beam_number="32",
+            yarn_count="40/1",
+            status=Beam.StatusChoices.SIZING,
+        )
+        payload = {
+            "sizing_id": self.sizing.id,
+            "outcome_date": "2014-05-19",
+            "set_no": "253",
+            "sizing_name": "Haley Adkins Inc",
+            "total_bags_on_sizing": 20,
+            "bag_packing_cone": 19,
+            "total_cones": 64,
+            "remaining_bags_on_sizing_stock": 23,
+            "remaining_cones_on_sizing_stock": 49,
+            "lagat_bags": "99",
+            "lagat_cones": "30",
+            "brand": "Nam qui et ipsam eu",
+            "width": "47",
+            "set_length_meter": "56",
+            "set_length_gaz": "63",
+            "total_tarr": "86",
+            "yarn_beam": "Deserunt error illo",
+            "back_beam": "Adipisci voluptatibu",
+            "count": "Provident et dicta",
+            "total_set_lumbai": "56",
+            "total_set_shortage": "96",
+            "remarks": "Non et non vel iste",
+            "beam_ids": [beam_32.id],
+        }
+        res = self.client.post("/api/v1/sizing-outcomes/", payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED, res.data)
+        self.assertTrue(res.data["success"])
+        self.assertEqual(res.data["data"]["setNo"], "253")
+        self.assertEqual(res.data["data"]["totalBeams"], 1)
+        self.assertEqual(res.data["data"]["beamAssignments"][0]["beams"][0]["beamNumber"], "32")
 
     # ── 3. Assign Multiple Existing Beams ─────────────────────────────────────
 
@@ -345,9 +418,9 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
         self.assertFalse(res.data["success"])
         self.assertIn("beam_ids", res.data["errors"])
 
-        # beam1 must remain AVAILABLE due to atomic rollback
+        # beam1 must remain SIZING due to atomic rollback
         self.beam1.refresh_from_db()
-        self.assertEqual(self.beam1.status, Beam.StatusChoices.AVAILABLE)
+        self.assertEqual(self.beam1.status, Beam.StatusChoices.SIZING)
         self.assertFalse(SizingBeamAssignment.objects.filter(beam=self.beam1).exists())
 
     # ── 6. Reject Duplicate Beam IDs ──────────────────────────────────────────
@@ -426,9 +499,9 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
         self.assertEqual(res2.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(res2.data["success"])
 
-        # beam2 must remain AVAILABLE because batch rolled back
+        # beam2 must remain SIZING because batch rolled back
         self.beam2.refresh_from_db()
-        self.assertEqual(self.beam2.status, Beam.StatusChoices.AVAILABLE)
+        self.assertEqual(self.beam2.status, Beam.StatusChoices.SIZING)
 
     # ── 9. Transaction Rollback If One Beam In Batch Is Invalid ────────────────
 
@@ -445,8 +518,8 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
         # Verify neither beam1 nor beam2 was assigned
         self.beam1.refresh_from_db()
         self.beam2.refresh_from_db()
-        self.assertEqual(self.beam1.status, Beam.StatusChoices.AVAILABLE)
-        self.assertEqual(self.beam2.status, Beam.StatusChoices.AVAILABLE)
+        self.assertEqual(self.beam1.status, Beam.StatusChoices.SIZING)
+        self.assertEqual(self.beam2.status, Beam.StatusChoices.SIZING)
         self.assertEqual(SizingBeamAssignment.objects.count(), 0)
 
     # ── 10. Beam Lifecycle and Valid Status Transitions ───────────────────────
@@ -570,6 +643,10 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
         self.beam1.refresh_from_db()
         self.assertEqual(self.beam1.status, Beam.StatusChoices.AVAILABLE)
 
+        # Beam is sent to sizing for Cycle 2
+        self.beam1.status = Beam.StatusChoices.SIZING
+        self.beam1.save()
+
         # Cycle 2: assign B-001 again and also B-002
         sizing2 = Sizing.objects.create(sizing_name="Second Sizing Unit", status="Active")
         res2 = self.client.post(
@@ -657,9 +734,12 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         results = res.data["data"] if "data" in res.data else res.data["results"]
         returned_numbers = {b["beamNumber"] for b in results}
-        self.assertIn("BN-1001", returned_numbers)
-        self.assertIn("BN-1002", returned_numbers)
-        self.assertIn("BN-1003", returned_numbers)
+        self.assertIn("BN-AVAIL", returned_numbers)
+        self.assertIn("BN-AVAIL1", returned_numbers)
+        self.assertIn("BN-AVAIL2", returned_numbers)
+        self.assertNotIn("BN-1001", returned_numbers)
+        self.assertNotIn("BN-1002", returned_numbers)
+        self.assertNotIn("BN-1003", returned_numbers)
         self.assertNotIn("BN-DMG", returned_numbers)
         self.assertNotIn("BN-INA", returned_numbers)
 
@@ -807,7 +887,10 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
         # Second concurrent attempt detects beam is now SIZING
         with self.assertRaises(ValidationError) as ctx:
             assign_beams_to_outcome(outcome2, [self.beam1.id])
-        self.assertIn("cannot be assigned", str(ctx.exception))
+        self.assertTrue(
+            "already has an active sizing assignment" in str(ctx.exception)
+            or "cannot be assigned" in str(ctx.exception)
+        )
 
     def test_create_sizing_yarn_outcome_creates_sizing_beam_assignment(self):
         """
@@ -853,7 +936,7 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
             "outcomeWeightPerBagKg": 10,
             "outcomeDate": "2026-10-04",
             "sizing": self.sizing.id,
-            "beamIds": [self.beam1.id, self.beam2.id],
+            "beamIds": [self.avail_beam1.id, self.avail_beam2.id],
         }
         res = self.client.post("/api/v1/yarn-outcomes/", payload, format="json")
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
@@ -863,13 +946,13 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
         self.assertIsNotNone(assignment)
         self.assertEqual(assignment.beam.count(), 2)
         assigned_beam_ids = set(assignment.beam.values_list("id", flat=True))
-        self.assertEqual(assigned_beam_ids, {self.beam1.id, self.beam2.id})
+        self.assertEqual(assigned_beam_ids, {self.avail_beam1.id, self.avail_beam2.id})
         self.assertEqual(res.data["data"]["totalBeams"], 2)
 
-        self.beam1.refresh_from_db()
-        self.assertEqual(self.beam1.status, Beam.StatusChoices.SIZING)
-        self.beam2.refresh_from_db()
-        self.assertEqual(self.beam2.status, Beam.StatusChoices.SIZING)
+        self.avail_beam1.refresh_from_db()
+        self.assertEqual(self.avail_beam1.status, Beam.StatusChoices.SIZING)
+        self.avail_beam2.refresh_from_db()
+        self.assertEqual(self.avail_beam2.status, Beam.StatusChoices.SIZING)
 
 
 class BeamLoadingAndProductionWorkflowTests(APITestCase):
@@ -919,6 +1002,24 @@ class BeamLoadingAndProductionWorkflowTests(APITestCase):
             contact_person="Babar",
             phone_no="0321-7654321",
             status="Active",
+        )
+
+        # Create Supplier & Yarn Intake for yarn outcome testing
+        self.supplier = Supplier.objects.create(
+            supplier_name="Premier Yarn Mills 2",
+            contact_person="Usman",
+            status="Active",
+        )
+        self.yarn_intake = YarnIntake.objects.create(
+            yarn_name="Cotton Warp 40/1",
+            yarn_type="Warp",
+            yarn_count="40/1",
+            supplier=self.supplier,
+            bags=100,
+            cones_per_bag=24,
+            weight_per_bag_kg=Decimal("45.36"),
+            rate_per_bag=Decimal("15000"),
+            intake_date="2026-10-01",
         )
 
         # Create Beams (reusable physical assets)

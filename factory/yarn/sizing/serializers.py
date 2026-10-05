@@ -459,23 +459,49 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             if raw_sizing_id:
                 try:
                     sizing_inst = Sizing.objects.get(id=raw_sizing_id)
-                    yo = YarnOutcome.objects.filter(
-                        sizing=sizing_inst,
-                        outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING,
-                    ).first()
+                    yo = None
+                    raw_beam_ids = (
+                        attrs.get("beam_ids")
+                        or attrs.get("beamIds")
+                        or self.initial_data.get("beam_ids")
+                        or self.initial_data.get("beamIds")
+                    )
+                    if raw_beam_ids and isinstance(raw_beam_ids, list):
+                        yo = YarnOutcome.objects.filter(
+                            sizing=sizing_inst,
+                            outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING,
+                            beam_assignments__beam__id__in=raw_beam_ids,
+                        ).order_by("-id").first()
                     if not yo:
-                        from factory.yarn.yarn_intake.models import YarnIntake
+                        yo = YarnOutcome.objects.filter(
+                            sizing=sizing_inst,
+                            outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING,
+                        ).order_by("-id").first()
+                    if not yo:
+                        from factory.yarn.yarn_intake.models import YarnIntake, Supplier
                         from django.utils import timezone
                         intake = YarnIntake.objects.first()
-                        if intake:
-                            yo = YarnOutcome.objects.create(
-                                yarn_intake=intake,
-                                outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING,
-                                sizing=sizing_inst,
-                                outcome_bags=0,
-                                outcome_weight_per_bag_kg=0,
-                                outcome_date=attrs.get("outcome_date") or timezone.now().date(),
+                        if not intake:
+                            supplier = Supplier.objects.first()
+                            if not supplier:
+                                supplier = Supplier.objects.create(supplier_name="Auto Supplier", status="Active")
+                            intake = YarnIntake.objects.create(
+                                yarn_name="Default Intake",
+                                supplier=supplier,
+                                bags=0,
+                                cones_per_bag=0,
+                                weight_per_bag_kg=0,
+                                rate_per_bag=0,
+                                intake_date=attrs.get("outcome_date") or timezone.now().date(),
                             )
+                        yo = YarnOutcome.objects.create(
+                            yarn_intake=intake,
+                            outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING,
+                            sizing=sizing_inst,
+                            outcome_bags=0,
+                            outcome_weight_per_bag_kg=0,
+                            outcome_date=attrs.get("outcome_date") or timezone.now().date(),
+                        )
                     if yo:
                         attrs["yarn_outcome"] = yo
                 except Sizing.DoesNotExist:

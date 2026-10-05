@@ -266,21 +266,33 @@ class SizingOutcome(models.Model):
         # Backward compatibility: resolve yarn_outcome from legacy sizing kwargs if provided
         sizing = kwargs.pop("sizing", None)
         if sizing and "yarn_outcome" not in kwargs:
-            from factory.yarn.yarn_intake.models import YarnIntake, YarnOutcome
+            from factory.yarn.yarn_intake.models import YarnIntake, Supplier, YarnOutcome
             from django.utils import timezone
             yo = getattr(sizing, "yarn_outcomes", None)
             yo_inst = yo.filter(outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING).first() if yo else None
             if not yo_inst:
                 intake = YarnIntake.objects.first()
-                if intake:
-                    yo_inst = YarnOutcome.objects.create(
-                        yarn_intake=intake,
-                        outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING,
-                        sizing=sizing,
-                        outcome_bags=0,
-                        outcome_weight_per_bag_kg=0,
-                        outcome_date=kwargs.get("outcome_date") or timezone.now().date(),
+                if not intake:
+                    supplier = Supplier.objects.first()
+                    if not supplier:
+                        supplier = Supplier.objects.create(supplier_name="Auto Supplier", status="Active")
+                    intake = YarnIntake.objects.create(
+                        yarn_name="Default Intake",
+                        supplier=supplier,
+                        bags=0,
+                        cones_per_bag=0,
+                        weight_per_bag_kg=0,
+                        rate_per_bag=0,
+                        intake_date=kwargs.get("outcome_date") or timezone.now().date(),
                     )
+                yo_inst = YarnOutcome.objects.create(
+                    yarn_intake=intake,
+                    outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING,
+                    sizing=sizing,
+                    outcome_bags=0,
+                    outcome_weight_per_bag_kg=0,
+                    outcome_date=kwargs.get("outcome_date") or timezone.now().date(),
+                )
             kwargs["yarn_outcome"] = yo_inst
         super().__init__(*args, **kwargs)
 

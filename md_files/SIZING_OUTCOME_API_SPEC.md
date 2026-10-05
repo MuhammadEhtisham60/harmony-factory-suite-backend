@@ -701,3 +701,11 @@ Or for deletion with active assignments:
   "message": "Cannot delete sizing outcome with active beam assignments. Release or complete assignments first."
 }
 ```
+
+### Physical Beam Status Requirement:
+> [!IMPORTANT]
+> **Physical Beams Assigned to Sizing Outcomes Must Have Status `"Sizing"`**:
+> When recording a Sizing Outcome (return of a set from Sizing), physical beams provided in `beam_ids` (or via `/assign-beams/`) must currently have status `"Sizing"`.
+> - If an `"Available"`, `"Loaded"`, or other status beam is submitted, the API will reject it with:
+>   `"Beam '<number>' cannot be assigned because its status is '<status>'. Only 'Sizing' beams can be assigned."`
+> - Beams with an active assignment cannot be assigned to another outcome until released.

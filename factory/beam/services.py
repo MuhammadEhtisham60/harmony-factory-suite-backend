@@ -325,7 +325,8 @@ def get_beam_loading_history(beam_id):
         .filter(beam_id=beam_id)
         .select_related(
             "sizing_outcome",
-            "sizing_outcome__sizing",
+            "sizing_outcome__yarn_outcome",
+            "sizing_outcome__yarn_outcome__sizing",
             "loom",
             "created_by",
             "updated_by",

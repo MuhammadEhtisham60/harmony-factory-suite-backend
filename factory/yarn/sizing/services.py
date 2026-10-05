@@ -18,30 +18,50 @@ logger = logging.getLogger(__name__)
 
 def assign_beams_to_outcome(outcome=None, beam_ids=None, user=None, request=None, **kwargs):
     """
-    Atomically assign a list of existing Beams to a YarnOutcome.
+    Atomically assign a list of existing Beams to a YarnOutcome or SizingOutcome.
 
     Validates:
       - beam_ids is non-empty
       - No duplicates within beam_ids
       - All Beams exist
-      - All Beams have status == AVAILABLE
-      - No Beam has an active (ASSIGNED or IN_USE) sizing assignment
+      - Physical status:
+        * If assigning to SizingOutcome: only Beams with status == SIZING are allowed.
+        * If assigning to YarnOutcome: only Beams with status == AVAILABLE are allowed.
+      - No Beam has an active sizing assignment in another outcome.
       - The YarnOutcome is valid
 
     Updates:
-      - Creates a SizingBeamAssignment for each Beam
+      - Attaches Beams to the SizingBeamAssignment
       - Updates each Beam's status to SIZING
       - Emits audit log entry
     """
-    yarn_outcome = outcome or kwargs.get("yarn_outcome") or kwargs.get("sizing_outcome")
-    if yarn_outcome and hasattr(yarn_outcome, "sizing") and not hasattr(yarn_outcome, "yarn_intake"):
-        sizing_outcome = yarn_outcome
-        yo = sizing_outcome.sizing.yarn_outcomes.filter(outcome_type="Sizing").first()
-        if not yo:
-            from django.utils import timezone
-            from factory.yarn.yarn_intake.models import YarnIntake, YarnOutcome
-            intake = YarnIntake.objects.first()
-            if intake:
+    sizing_outcome = kwargs.get("sizing_outcome")
+    if sizing_outcome is None and isinstance(outcome, SizingOutcome):
+        sizing_outcome = outcome
+
+    is_sizing_outcome = kwargs.get("is_sizing_outcome", False) or (sizing_outcome is not None)
+
+    if sizing_outcome:
+        yarn_outcome = getattr(sizing_outcome, "yarn_outcome", None)
+        if not yarn_outcome and hasattr(sizing_outcome, "sizing") and sizing_outcome.sizing:
+            yo = sizing_outcome.sizing.yarn_outcomes.filter(outcome_type="Sizing").first()
+            if not yo:
+                from django.utils import timezone
+                from factory.yarn.yarn_intake.models import YarnIntake, Supplier, YarnOutcome
+                intake = YarnIntake.objects.first()
+                if not intake:
+                    supplier = Supplier.objects.first()
+                    if not supplier:
+                        supplier = Supplier.objects.create(supplier_name="Auto Supplier", status="Active")
+                    intake = YarnIntake.objects.create(
+                        yarn_name="Default Intake",
+                        supplier=supplier,
+                        bags=0,
+                        cones_per_bag=0,
+                        weight_per_bag_kg=0,
+                        rate_per_bag=0,
+                        intake_date=getattr(sizing_outcome, "outcome_date", None) or timezone.now().date(),
+                    )
                 yo = YarnOutcome.objects.create(
                     yarn_intake=intake,
                     outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING,
@@ -51,7 +71,16 @@ def assign_beams_to_outcome(outcome=None, beam_ids=None, user=None, request=None
                     outcome_date=getattr(sizing_outcome, "outcome_date", None) or timezone.now().date(),
                     notes=f"Auto-created for Sizing Outcome #{sizing_outcome.id}",
                 )
-        yarn_outcome = yo
+            yarn_outcome = yo
+    else:
+        yarn_outcome = outcome or kwargs.get("yarn_outcome")
+        if yarn_outcome and hasattr(yarn_outcome, "sizing") and not hasattr(yarn_outcome, "yarn_intake"):
+            sizing_outcome = yarn_outcome
+            is_sizing_outcome = True
+            yo = getattr(sizing_outcome, "yarn_outcome", None)
+            if not yo and sizing_outcome.sizing:
+                yo = sizing_outcome.sizing.yarn_outcomes.filter(outcome_type="Sizing").first()
+            yarn_outcome = yo
 
     if not beam_ids:
         raise ValidationError({"beam_ids": ["At least one beam ID must be provided."]})
@@ -87,13 +116,18 @@ def assign_beams_to_outcome(outcome=None, beam_ids=None, user=None, request=None
             beam_map = {b.id: b for b in locked_beams}
             ordered_beams = [beam_map[bid] for bid in beam_ids]
 
+            expected_status = (
+                kwargs.get("allowed_status")
+                or (Beam.StatusChoices.SIZING if is_sizing_outcome else Beam.StatusChoices.AVAILABLE)
+            )
+
             # Validate each beam's physical status and existing active assignments
             for beam in ordered_beams:
-                if beam.status != Beam.StatusChoices.AVAILABLE:
+                if beam.status != expected_status:
                     raise ValidationError({
                         "beam_ids": [
                             f"Beam '{beam.beam_number}' cannot be assigned because its status is "
-                            f"'{beam.status}'. Only 'Available' beams can be assigned."
+                            f"'{beam.status}'. Only '{expected_status}' beams can be assigned."
                         ]
                     })
 
@@ -116,7 +150,10 @@ def assign_beams_to_outcome(outcome=None, beam_ids=None, user=None, request=None
             # Check if an active SizingBeamAssignment already exists for this outcome, else create one
             assignment = SizingBeamAssignment.objects.filter(
                 yarn_outcome=yarn_outcome,
-                status=SizingBeamAssignment.StatusChoices.ASSIGNED,
+                status__in=[
+                    SizingBeamAssignment.StatusChoices.ASSIGNED,
+                    SizingBeamAssignment.StatusChoices.IN_USE,
+                ],
             ).first()
             if not assignment:
                 assignment = SizingBeamAssignment.objects.create(
@@ -167,20 +204,32 @@ def create_sizing_outcome(yarn_outcome=None, outcome_date=None, remarks="", beam
     """
     sizing = extra_fields.pop("sizing", None)
     if not yarn_outcome and sizing:
-        from factory.yarn.yarn_intake.models import YarnIntake, YarnOutcome
+        from factory.yarn.yarn_intake.models import YarnIntake, Supplier, YarnOutcome
         from django.utils import timezone
         yarn_outcome = YarnOutcome.objects.filter(sizing=sizing, outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING).first()
         if not yarn_outcome:
             intake = YarnIntake.objects.first()
-            if intake:
-                yarn_outcome = YarnOutcome.objects.create(
-                    yarn_intake=intake,
-                    outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING,
-                    sizing=sizing,
-                    outcome_bags=0,
-                    outcome_weight_per_bag_kg=0,
-                    outcome_date=outcome_date or timezone.now().date(),
+            if not intake:
+                supplier = Supplier.objects.first()
+                if not supplier:
+                    supplier = Supplier.objects.create(supplier_name="Auto Supplier", status="Active")
+                intake = YarnIntake.objects.create(
+                    yarn_name="Default Intake",
+                    supplier=supplier,
+                    bags=0,
+                    cones_per_bag=0,
+                    weight_per_bag_kg=0,
+                    rate_per_bag=0,
+                    intake_date=outcome_date or timezone.now().date(),
                 )
+            yarn_outcome = YarnOutcome.objects.create(
+                yarn_intake=intake,
+                outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING,
+                sizing=sizing,
+                outcome_bags=0,
+                outcome_weight_per_bag_kg=0,
+                outcome_date=outcome_date or timezone.now().date(),
+            )
 
     with transaction.atomic():
         outcome = SizingOutcome.objects.create(
