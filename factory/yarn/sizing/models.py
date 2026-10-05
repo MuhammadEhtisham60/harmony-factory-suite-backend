@@ -228,6 +228,31 @@ class SizingOutcome(models.Model):
         help_text="Total set shortage"
     )
 
+    rate_per_kg = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        default=0,
+        help_text="Rate per KG for sizing"
+    )
+
+    net_weight_kg = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Net weight in KG"
+    )
+
+    total_rate = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Total rate of net weight (net_weight_kg * rate_per_kg)"
+    )
+
     remarks = models.TextField(
         blank=True,
         default=""
@@ -311,6 +336,8 @@ class SizingOutcome(models.Model):
                 self.sizing_name = yo.sizing.sizing_name
         if not self.total_cones and self.total_bags_on_sizing and self.bag_packing_cone:
             self.total_cones = self.total_bags_on_sizing * self.bag_packing_cone
+        if self.rate_per_kg is not None and self.net_weight_kg is not None:
+            self.total_rate = self.rate_per_kg * self.net_weight_kg
         super().save(*args, **kwargs)
 
     @property

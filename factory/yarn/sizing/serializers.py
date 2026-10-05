@@ -288,6 +288,12 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
     count = serializers.CharField(required=False, allow_blank=True, default="")
     totalSetLumbai = serializers.DecimalField(source="total_set_lumbai", max_digits=12, decimal_places=2, required=False, allow_null=True)
     totalSetShortage = serializers.DecimalField(source="total_set_shortage", max_digits=12, decimal_places=2, required=False, allow_null=True)
+    ratePerKg = serializers.DecimalField(source="rate_per_kg", max_digits=12, decimal_places=2, required=False, allow_null=True)
+    rate_per_kg = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
+    netWeightKg = serializers.DecimalField(source="net_weight_kg", max_digits=12, decimal_places=2, required=False, allow_null=True)
+    net_weight_kg = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
+    totalRate = serializers.DecimalField(source="total_rate", max_digits=15, decimal_places=2, required=False, allow_null=True)
+    total_rate = serializers.DecimalField(max_digits=15, decimal_places=2, required=False, allow_null=True)
 
     outcomeDate = serializers.DateField(source="outcome_date", required=False)
     remarks = serializers.CharField(required=False, allow_blank=True, default="")
@@ -362,6 +368,12 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "count",
             "totalSetLumbai",
             "totalSetShortage",
+            "ratePerKg",
+            "rate_per_kg",
+            "netWeightKg",
+            "net_weight_kg",
+            "totalRate",
+            "total_rate",
             "outcomeDate",
             "remarks",
             "beam_ids",
@@ -421,6 +433,9 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "back_beam": "backBeam",
             "total_set_lumbai": "totalSetLumbai",
             "total_set_shortage": "totalSetShortage",
+            "rate_per_kg": "ratePerKg",
+            "net_weight_kg": "netWeightKg",
+            "total_rate": "totalRate",
             "outcome_date": "outcomeDate",
             "sizing_id": "sizingId",
             "yarn_outcome_id": "yarnOutcomeId",
