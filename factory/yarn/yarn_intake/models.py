@@ -228,7 +228,19 @@ class YarnOutcome(models.Model):
         related_name="yarn_outcomes"
     )
 
+    class StatusChoices(models.TextChoices):
+        IN_SIZING = "In Sizing", "In Sizing"
+        RECEIVED = "Received", "Received"
+        DISPATCHED = "Dispatched", "Dispatched"
+        COMPLETED = "Completed", "Completed"
+
     total_price = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+
+    status = models.CharField(
+        max_length=30,
+        choices=StatusChoices.choices,
+        default=StatusChoices.IN_SIZING
+    )
 
     outcome_date = models.DateField()
 

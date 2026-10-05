@@ -269,6 +269,10 @@ def create_sizing_outcome(yarn_outcome=None, outcome_date=None, remarks="", beam
             **extra_fields,
         )
 
+        if yarn_outcome:
+            yarn_outcome.status = "Received"
+            yarn_outcome.save(update_fields=["status", "updated_at"])
+
         assignments = []
         if beam_ids:
             assignments = assign_beams_to_outcome(

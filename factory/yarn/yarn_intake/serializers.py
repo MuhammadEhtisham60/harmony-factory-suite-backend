@@ -128,6 +128,9 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
     )
     beamAssignments = serializers.SerializerMethodField()
     totalBeams = serializers.IntegerField(source="total_beams", read_only=True)
+    status = serializers.SerializerMethodField()
+    sizingOutcome = serializers.SerializerMethodField()
+    isReceived = serializers.SerializerMethodField()
 
     # ── Audit ─────────────────────────────────────────────────────────────
     createdAt = serializers.DateTimeField(source="created_at", read_only=True)
@@ -156,6 +159,9 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
             "sizingDetail",
             "totalPrice",
             "ratePerKg",
+            "status",
+            "sizingOutcome",
+            "isReceived",
             "outcomeDate",
             "notes",
             "beamIds",
@@ -170,7 +176,7 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id", "outcomeWeightKg", "outcomeWeightLb",
-            "beamAssignments", "totalBeams",
+            "beamAssignments", "totalBeams", "status", "sizingOutcome", "isReceived",
             "createdAt", "updatedAt", "createdBy", "updatedBy",
             "yarnBuyerDetail", "sizingDetail",
         ]
@@ -182,6 +188,47 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
                 obj.beam_assignments.all(), many=True, context=self.context
             ).data
         return []
+
+    def get_status(self, obj):
+        if hasattr(obj, "sizing_outcomes") and obj.sizing_outcomes.exists():
+            return "Received"
+        if getattr(obj, "status", None):
+            return obj.status
+        if obj.outcome_type == YarnOutcome.OutcomeTypeChoices.SIZING:
+            return "In Sizing"
+        return "Dispatched"
+
+    def get_isReceived(self, obj):
+        if hasattr(obj, "sizing_outcomes") and obj.sizing_outcomes.exists():
+            return True
+        return getattr(obj, "status", None) == "Received"
+
+    def get_sizingOutcome(self, obj):
+        if hasattr(obj, "sizing_outcomes"):
+            so = obj.sizing_outcomes.order_by("-id").first()
+            if so:
+                return {
+                    "id": so.id,
+                    "setNo": so.set_no,
+                    "setBill": so.set_bill,
+                    "ratePerKg": str(so.rate_per_kg) if so.rate_per_kg is not None else None,
+                    "totalRate": str(so.total_rate) if so.total_rate is not None else None,
+                    "netWeightKg": str(so.net_weight_kg) if so.net_weight_kg is not None else None,
+                    "outcomeDate": so.outcome_date,
+                }
+        return None
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        if hasattr(instance, "sizing_outcomes") and instance.sizing_outcomes.exists():
+            so = instance.sizing_outcomes.order_by("-id").first()
+            if so:
+                if so.rate_per_kg is not None and so.rate_per_kg > 0:
+                    ret["ratePerKg"] = str(so.rate_per_kg)
+                if so.total_rate is not None and so.total_rate > 0:
+                    ret["totalPrice"] = str(so.total_rate)
+                    ret["totalRate"] = str(so.total_rate)
+        return ret
 
     def get_createdBy(self, obj):
         if obj.created_by:
