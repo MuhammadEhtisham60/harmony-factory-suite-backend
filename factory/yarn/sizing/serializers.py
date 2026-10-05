@@ -45,6 +45,8 @@ class BeamMinSerializer(serializers.ModelSerializer):
     warpCount = serializers.IntegerField(source="warp_count")
     totalEnds = serializers.IntegerField(source="total_ends")
     productionOrder = serializers.CharField(source="production_order")
+    beamYarnLength = serializers.SerializerMethodField()
+    beam_yarn_length = serializers.SerializerMethodField()
 
     class Meta:
         model = Beam
@@ -59,7 +61,18 @@ class BeamMinSerializer(serializers.ModelSerializer):
             "weight",
             "productionOrder",
             "status",
+            "beamYarnLength",
+            "beam_yarn_length",
         ]
+
+    def get_beamYarnLength(self, obj):
+        assignment = self.context.get("assignment")
+        if assignment and hasattr(assignment, "get_beam_yarn_length"):
+            return assignment.get_beam_yarn_length(obj.id)
+        return None
+
+    def get_beam_yarn_length(self, obj):
+        return self.get_beamYarnLength(obj)
 
 
 # ── Sizing Unit Serializer ───────────────────────────────────────────────────
@@ -145,15 +158,55 @@ class SizingSerializer(serializers.ModelSerializer):
 class SizingBeamAssignmentSerializer(serializers.ModelSerializer):
     """
     Serializer representing a Beam assignment to a YarnOutcome.
-    Includes rich nested beam information for many-to-many physical Beams.
+    Supports full CRUD operations, nested beam details, and beam_yarn_length validation.
     """
+    yarn_outcome = serializers.PrimaryKeyRelatedField(
+        queryset=YarnOutcome.objects.all(),
+        required=False,
+    )
+    yarnOutcome = serializers.PrimaryKeyRelatedField(
+        queryset=YarnOutcome.objects.all(),
+        source="yarn_outcome",
+        required=False,
+        write_only=True,
+    )
     yarnOutcomeId = serializers.IntegerField(source="yarn_outcome_id", read_only=True)
+    yarn_outcome_id = serializers.IntegerField(required=False, write_only=True)
     sizingOutcomeId = serializers.IntegerField(source="yarn_outcome_id", read_only=True)
+    yarnOutcomeDetail = YarnOutcomeMinSerializer(source="yarn_outcome", read_only=True)
+
+    beam = serializers.PrimaryKeyRelatedField(
+        queryset=Beam.objects.all(),
+        many=True,
+        required=False,
+    )
+    beam_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        write_only=True,
+    )
+    beamIds = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        write_only=True,
+    )
     beamId = serializers.SerializerMethodField()
-    beamIds = serializers.SerializerMethodField()
-    beam = serializers.SerializerMethodField()
-    beams = BeamMinSerializer(source="beam", many=True, read_only=True)
+    beam_yarn_length = serializers.DictField(
+        required=False,
+        default=dict,
+    )
+    beamYarnLength = serializers.DictField(
+        required=False,
+        write_only=True,
+    )
+
+    beams = serializers.SerializerMethodField()
     totalBeams = serializers.SerializerMethodField()
+    status = serializers.ChoiceField(
+        choices=SizingBeamAssignment.StatusChoices.choices,
+        default=SizingBeamAssignment.StatusChoices.ASSIGNED,
+        required=False,
+    )
     assignedAt = serializers.DateTimeField(source="assigned_at", read_only=True)
     releasedAt = serializers.DateTimeField(source="released_at", read_only=True)
     createdAt = serializers.DateTimeField(source="created_at", read_only=True)
@@ -165,11 +218,18 @@ class SizingBeamAssignmentSerializer(serializers.ModelSerializer):
         model = SizingBeamAssignment
         fields = [
             "id",
+            "yarn_outcome",
+            "yarnOutcome",
             "yarnOutcomeId",
+            "yarn_outcome_id",
             "sizingOutcomeId",
-            "beamId",
-            "beamIds",
+            "yarnOutcomeDetail",
             "beam",
+            "beam_ids",
+            "beamIds",
+            "beamId",
+            "beam_yarn_length",
+            "beamYarnLength",
             "beams",
             "totalBeams",
             "status",
@@ -184,12 +244,10 @@ class SizingBeamAssignmentSerializer(serializers.ModelSerializer):
             "id",
             "yarnOutcomeId",
             "sizingOutcomeId",
+            "yarnOutcomeDetail",
             "beamId",
-            "beamIds",
-            "beam",
             "beams",
             "totalBeams",
-            "status",
             "assignedAt",
             "releasedAt",
             "createdBy",
@@ -202,14 +260,12 @@ class SizingBeamAssignmentSerializer(serializers.ModelSerializer):
         first_b = obj.beam.first()
         return first_b.id if first_b else None
 
-    def get_beamIds(self, obj):
-        return list(obj.beam.values_list("id", flat=True))
-
-    def get_beam(self, obj):
-        first_b = obj.beam.first()
-        if first_b:
-            return BeamMinSerializer(first_b).data
-        return None
+    def get_beams(self, obj):
+        return BeamMinSerializer(
+            obj.beam.all(),
+            many=True,
+            context={**self.context, "assignment": obj},
+        ).data
 
     def get_totalBeams(self, obj):
         return obj.beam.count()
@@ -231,6 +287,247 @@ class SizingBeamAssignmentSerializer(serializers.ModelSerializer):
                 "fullName": getattr(obj.updated_by, "full_name", obj.updated_by.username),
             }
         return None
+
+    def validate(self, attrs):
+        # 1. Resolve yarn_outcome
+        yarn_outcome = attrs.get("yarn_outcome")
+        raw_yo_id = (
+            self.initial_data.get("yarn_outcome_id")
+            or self.initial_data.get("yarnOutcomeId")
+            or self.initial_data.get("yarn_outcome")
+            or self.initial_data.get("yarnOutcome")
+        )
+        if not yarn_outcome and raw_yo_id:
+            try:
+                yarn_outcome = YarnOutcome.objects.get(id=raw_yo_id)
+                attrs["yarn_outcome"] = yarn_outcome
+            except (YarnOutcome.DoesNotExist, ValueError):
+                raise serializers.ValidationError({
+                    "yarn_outcome": [f"Yarn outcome with ID {raw_yo_id} does not exist."]
+                })
+
+        if not attrs.get("yarn_outcome") and not self.instance:
+            raise serializers.ValidationError({
+                "yarn_outcome": ["Yarn outcome is required."]
+            })
+
+        # 2. Resolve beam list
+        raw_beams = (
+            attrs.get("beam")
+            or attrs.get("beam_ids")
+            or attrs.get("beamIds")
+            or self.initial_data.get("beam")
+            or self.initial_data.get("beam_ids")
+            or self.initial_data.get("beamIds")
+            or self.initial_data.get("beams")
+        )
+
+        final_beam_ids = None
+        if raw_beams is not None:
+            if isinstance(raw_beams, (int, str)) and str(raw_beams).isdigit():
+                final_beam_ids = [int(raw_beams)]
+            elif isinstance(raw_beams, list):
+                try:
+                    final_beam_ids = [int(x.id if hasattr(x, "id") else x) for x in raw_beams]
+                except (ValueError, TypeError):
+                    raise serializers.ValidationError({
+                        "beam": ["beam must be a list of integer Beam IDs."]
+                    })
+            else:
+                raise serializers.ValidationError({
+                    "beam": ["beam must be a list of valid Beam IDs."]
+                })
+        elif not self.instance:
+            raise serializers.ValidationError({
+                "beam": ["At least one beam must be selected."]
+            })
+        else:
+            final_beam_ids = list(self.instance.beam.values_list("id", flat=True))
+
+        # Check for duplicates
+        seen = set()
+        for bid in final_beam_ids:
+            if bid in seen:
+                raise serializers.ValidationError({
+                    "beam": [f"Duplicate beam ID {bid} provided."]
+                })
+            seen.add(bid)
+
+        # Verify all selected beams exist in DB
+        found_beams = list(Beam.objects.filter(id__in=final_beam_ids))
+        found_ids = {b.id for b in found_beams}
+        missing_ids = set(final_beam_ids) - found_ids
+        if missing_ids:
+            raise serializers.ValidationError({
+                "beam": [f"Beam with ID {mid} does not exist." for mid in sorted(list(missing_ids))]
+            })
+
+        # 3. Resolve & validate beam_yarn_length
+        raw_lengths = (
+            attrs.get("beam_yarn_length")
+            if "beam_yarn_length" in attrs
+            else (
+                attrs.get("beamYarnLength")
+                if "beamYarnLength" in attrs
+                else (
+                    self.initial_data.get("beam_yarn_length")
+                    if "beam_yarn_length" in self.initial_data
+                    else self.initial_data.get("beamYarnLength")
+                )
+            )
+        )
+
+        clean_lengths = {}
+        if raw_lengths is not None:
+            if not isinstance(raw_lengths, dict):
+                raise serializers.ValidationError({
+                    "beam_yarn_length": ["beam_yarn_length must be a dictionary/object."]
+                })
+
+            # Check extra keys in beam_yarn_length not in selected beams
+            extra_keys = []
+            for k in raw_lengths.keys():
+                k_int = int(k) if str(k).isdigit() else None
+                if k_int not in final_beam_ids and k not in final_beam_ids:
+                    extra_keys.append(str(k))
+
+            if extra_keys:
+                raise serializers.ValidationError({
+                    "beam_yarn_length": [
+                        f"Beam ID {k} in beam_yarn_length is not selected." for k in extra_keys
+                    ]
+                })
+
+            # If lengths are provided (or if non-empty), ensure every selected beam has a length
+            if len(raw_lengths) > 0 or (len(final_beam_ids) > 0 and raw_lengths != {}):
+                missing_lengths = []
+                for bid in final_beam_ids:
+                    if str(bid) not in raw_lengths and bid not in raw_lengths:
+                        missing_lengths.append(bid)
+                if missing_lengths:
+                    raise serializers.ValidationError({
+                        "beam_yarn_length": [
+                            f"Missing yarn length for Beam ID {bid}." for bid in missing_lengths
+                        ]
+                    })
+
+            # Validate each length value
+            for k, val in raw_lengths.items():
+                try:
+                    num_val = float(val)
+                except (ValueError, TypeError):
+                    raise serializers.ValidationError({
+                        "beam_yarn_length": [f"Yarn length for Beam {k} must be numeric."]
+                    })
+                if num_val < 0:
+                    raise serializers.ValidationError({
+                        "beam_yarn_length": [f"Yarn length for Beam {k} cannot be negative."]
+                    })
+
+                clean_lengths[str(k)] = int(num_val) if num_val.is_integer() else num_val
+
+            attrs["beam_yarn_length"] = clean_lengths
+        elif self.instance:
+            # On update without new lengths: filter existing lengths to only currently selected beams
+            existing_lengths = self.instance.beam_yarn_length or {}
+            clean_lengths = {
+                str(k): v for k, v in existing_lengths.items()
+                if (int(k) if str(k).isdigit() else k) in final_beam_ids
+            }
+            attrs["beam_yarn_length"] = clean_lengths
+
+        # 4. Check active beam assignments
+        target_status = attrs.get(
+            "status",
+            self.instance.status if self.instance else SizingBeamAssignment.StatusChoices.ASSIGNED
+        )
+        if target_status in [
+            SizingBeamAssignment.StatusChoices.ASSIGNED,
+            SizingBeamAssignment.StatusChoices.IN_USE,
+        ]:
+            for bid in final_beam_ids:
+                active_qs = SizingBeamAssignment.objects.filter(
+                    beam__id=bid,
+                    status__in=[
+                        SizingBeamAssignment.StatusChoices.ASSIGNED,
+                        SizingBeamAssignment.StatusChoices.IN_USE,
+                    ],
+                )
+                if self.instance:
+                    active_qs = active_qs.exclude(id=self.instance.id)
+                if active_qs.exists():
+                    active_inst = active_qs.first()
+                    raise serializers.ValidationError({
+                        "beam": [
+                            f"Beam {bid} is already in an active assignment (Assignment #{active_inst.id})."
+                        ]
+                    })
+
+        attrs["_resolved_beams"] = found_beams
+        attrs["_resolved_beam_ids"] = final_beam_ids
+        return attrs
+
+    def create(self, validated_data):
+        beams = validated_data.pop("_resolved_beams", [])
+        validated_data.pop("_resolved_beam_ids", None)
+        validated_data.pop("beam", None)
+        validated_data.pop("beam_ids", None)
+        validated_data.pop("beamIds", None)
+        validated_data.pop("beamYarnLength", None)
+        validated_data.pop("yarn_outcome_id", None)
+
+        request = self.context.get("request")
+        if request and request.user and request.user.is_authenticated:
+            validated_data["created_by"] = request.user
+            validated_data["updated_by"] = request.user
+
+        assignment = SizingBeamAssignment.objects.create(**validated_data)
+        if beams:
+            assignment.beam.set(beams)
+            for b in beams:
+                if assignment.status in [SizingBeamAssignment.StatusChoices.RECEIVED, SizingBeamAssignment.StatusChoices.IN_USE]:
+                    b.status = Beam.StatusChoices.LOADED
+                elif b.status == Beam.StatusChoices.AVAILABLE:
+                    b.status = Beam.StatusChoices.SIZING
+                b.save(update_fields=["status", "updated_at"])
+        return assignment
+
+    def update(self, instance, validated_data):
+        beams = validated_data.pop("_resolved_beams", None)
+        validated_data.pop("_resolved_beam_ids", None)
+        validated_data.pop("beam", None)
+        validated_data.pop("beam_ids", None)
+        validated_data.pop("beamIds", None)
+        validated_data.pop("beamYarnLength", None)
+        validated_data.pop("yarn_outcome_id", None)
+
+        request = self.context.get("request")
+        if request and request.user and request.user.is_authenticated:
+            validated_data["updated_by"] = request.user
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        instance.save()
+
+        if beams is not None:
+            instance.beam.set(beams)
+
+        return instance
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        # Format beam list of IDs
+        beam_ids = list(instance.beam.values_list("id", flat=True)) if instance.id else []
+        ret["yarn_outcome"] = instance.yarn_outcome_id
+        ret["yarnOutcome"] = instance.yarn_outcome_id
+        ret["yarnOutcomeId"] = instance.yarn_outcome_id
+        ret["beam"] = beam_ids
+        ret["beam_ids"] = beam_ids
+        ret["beamIds"] = beam_ids
+        ret["beam_yarn_length"] = instance.beam_yarn_length or {}
+        ret["beamYarnLength"] = instance.beam_yarn_length or {}
+        return ret
 
 
 # ── SizingOutcome Serializer ─────────────────────────────────────────────────
@@ -309,6 +606,14 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
         required=False,
         write_only=True,
     )
+    beam_yarn_length = serializers.DictField(
+        required=False,
+        write_only=True,
+    )
+    beamYarnLength = serializers.DictField(
+        required=False,
+        write_only=True,
+    )
 
     # Read-only nested beam assignments
     beamAssignments = serializers.SerializerMethodField()
@@ -378,6 +683,8 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "remarks",
             "beam_ids",
             "beamIds",
+            "beam_yarn_length",
+            "beamYarnLength",
             "beamAssignments",
             "totalBeams",
             "createdBy",
@@ -413,6 +720,8 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
                 "username": obj.updated_by.username,
                 "fullName": getattr(obj.updated_by, "full_name", obj.updated_by.username),
             }
+        return None
+
     def to_internal_value(self, data):
         data = data.copy() if hasattr(data, "copy") else dict(data)
         mapping = {
@@ -439,6 +748,7 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "outcome_date": "outcomeDate",
             "sizing_id": "sizingId",
             "yarn_outcome_id": "yarnOutcomeId",
+            "beam_yarn_length": "beamYarnLength",
         }
         for snake, camel in mapping.items():
             if snake in data and camel not in data:
@@ -552,12 +862,29 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
                 })
             attrs["_resolved_beam_ids"] = raw_beam_ids
 
+        # Resolve beam_yarn_length
+        raw_lengths = (
+            attrs.get("beam_yarn_length")
+            or attrs.get("beamYarnLength")
+            or self.initial_data.get("beam_yarn_length")
+            or self.initial_data.get("beamYarnLength")
+        )
+        if raw_lengths is not None:
+            if not isinstance(raw_lengths, dict):
+                raise serializers.ValidationError({
+                    "beam_yarn_length": ["beam_yarn_length must be a dictionary."]
+                })
+            attrs["_resolved_beam_yarn_length"] = raw_lengths
+
         return attrs
 
     def create(self, validated_data):
         resolved_beam_ids = validated_data.pop("_resolved_beam_ids", None)
+        resolved_beam_yarn_length = validated_data.pop("_resolved_beam_yarn_length", None)
         validated_data.pop("beam_ids", None)
         validated_data.pop("beamIds", None)
+        validated_data.pop("beam_yarn_length", None)
+        validated_data.pop("beamYarnLength", None)
         validated_data.pop("sizing_id", None)
         validated_data.pop("sizing", None)
         validated_data.pop("yarn_outcome_id", None)
@@ -574,6 +901,7 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             outcome_date=outcome_date,
             remarks=remarks,
             beam_ids=resolved_beam_ids,
+            beam_yarn_length=resolved_beam_yarn_length,
             user=user,
             request=request,
             **validated_data,
@@ -581,8 +909,11 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         validated_data.pop("_resolved_beam_ids", None)
+        validated_data.pop("_resolved_beam_yarn_length", None)
         validated_data.pop("beam_ids", None)
         validated_data.pop("beamIds", None)
+        validated_data.pop("beam_yarn_length", None)
+        validated_data.pop("beamYarnLength", None)
         validated_data.pop("sizing_id", None)
         validated_data.pop("sizing", None)
         validated_data.pop("yarn_outcome_id", None)
@@ -593,14 +924,13 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
-
 # ── Action Request Serializers ───────────────────────────────────────────────
 
 class AssignBeamsSerializer(serializers.Serializer):
     """
     Payload for assigning additional existing Beams to an existing SizingOutcome.
     Accepts:
-      { "beam_ids": [101, 102] } or { "beamIds": [101, 102] }
+      { "beam_ids": [101, 102], "beam_yarn_length": { "101": 5000, "102": 4500 } }
     """
     beam_ids = serializers.ListField(
         child=serializers.IntegerField(),
@@ -608,6 +938,12 @@ class AssignBeamsSerializer(serializers.Serializer):
     )
     beamIds = serializers.ListField(
         child=serializers.IntegerField(),
+        required=False,
+    )
+    beam_yarn_length = serializers.DictField(
+        required=False,
+    )
+    beamYarnLength = serializers.DictField(
         required=False,
     )
 
@@ -623,6 +959,16 @@ class AssignBeamsSerializer(serializers.Serializer):
                 "beam_ids": ["A non-empty list of beam IDs (beam_ids or beamIds) is required."]
             })
         attrs["beam_ids"] = ids
+
+        lengths = (
+            attrs.get("beam_yarn_length")
+            or attrs.get("beamYarnLength")
+            or self.initial_data.get("beam_yarn_length")
+            or self.initial_data.get("beamYarnLength")
+        )
+        if lengths is not None and isinstance(lengths, dict):
+            attrs["beam_yarn_length"] = lengths
+
         return attrs
 
 
@@ -668,6 +1014,7 @@ class BeamAssignmentHistorySerializer(serializers.ModelSerializer):
     assignmentId = serializers.IntegerField(source="id", read_only=True)
     yarnOutcome = serializers.SerializerMethodField()
     sizingOutcome = serializers.SerializerMethodField()
+    beamYarnLength = serializers.SerializerMethodField()
     assignedAt = serializers.DateTimeField(source="assigned_at", read_only=True)
     releasedAt = serializers.DateTimeField(source="released_at", read_only=True)
     createdBy = serializers.SerializerMethodField()
@@ -680,6 +1027,7 @@ class BeamAssignmentHistorySerializer(serializers.ModelSerializer):
             "status",
             "assignedAt",
             "releasedAt",
+            "beamYarnLength",
             "yarnOutcome",
             "sizingOutcome",
             "createdBy",
@@ -695,6 +1043,12 @@ class BeamAssignmentHistorySerializer(serializers.ModelSerializer):
         if obj.updated_by:
             return {"id": obj.updated_by.id, "username": obj.updated_by.username}
         return None
+
+    def get_beamYarnLength(self, obj):
+        beam_id = self.context.get("beam_id")
+        if beam_id and hasattr(obj, "get_beam_yarn_length"):
+            return obj.get_beam_yarn_length(beam_id)
+        return obj.beam_yarn_length
 
     def get_yarnOutcome(self, obj):
         yo = getattr(obj, "yarn_outcome", None)

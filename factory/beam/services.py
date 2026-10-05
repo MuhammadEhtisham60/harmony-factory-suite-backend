@@ -74,12 +74,12 @@ def load_beam_onto_loom(
                 except SizingOutcome.DoesNotExist:
                     raise ValidationError({"sizing_outcome": [f"Sizing outcome with ID {outcome_id} does not exist."]})
 
-            # Check Beam availability
-            if beam.status != Beam.StatusChoices.AVAILABLE:
+            # Check Beam availability: only beams with status LOADED (received from sizing) can be loaded onto loom
+            if beam.status != Beam.StatusChoices.LOADED:
                 raise ValidationError({
                     "beam": [
                         f"Beam '{beam.beam_number}' cannot be loaded because its status is '{beam.status}'. "
-                        f"Only 'Available' beams can be loaded."
+                        f"Only 'Loaded' beams can be loaded."
                     ]
                 })
 

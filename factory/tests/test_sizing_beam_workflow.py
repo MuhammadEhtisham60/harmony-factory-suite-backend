@@ -286,9 +286,9 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
         self.assertEqual(res.data["data"]["totalBeams"], 1)
 
-        # Beam status must remain SIZING
+        # Beam status must change to LOADED upon return from sizing
         self.beam1.refresh_from_db()
-        self.assertEqual(self.beam1.status, Beam.StatusChoices.SIZING)
+        self.assertEqual(self.beam1.status, Beam.StatusChoices.LOADED)
 
         # Assignment record check
         assignment = SizingBeamAssignment.objects.get(beam=self.beam1)
@@ -348,13 +348,16 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
         self.assertEqual(res.data["data"]["beamAssignments"][0]["beams"][0]["beamNumber"], "32")
         self.assertEqual(res.data["data"]["beamAssignments"][0]["status"], "RECEIVED")
 
+        beam_32.refresh_from_db()
+        self.assertEqual(beam_32.status, Beam.StatusChoices.LOADED)
+
     def test_yarn_outcome_dispatch_and_sizing_outcome_return_workflow(self):
         """
         Tests the complete real-world flow:
         1. YarnOutcome created with outcomeType='Sizing', sizing=<id>, beamIds=[beam.id]
            -> Beam status becomes SIZING, SizingBeamAssignment status is ASSIGNED.
         2. Set returns from Sizing: SizingOutcome created with sizing_id and beam_ids=[beam.id]
-           -> SizingOutcome created successfully, SizingBeamAssignment status updated to RECEIVED without validation error.
+           -> SizingOutcome created successfully, SizingBeamAssignment status updated to RECEIVED, Beam status becomes LOADED.
         """
         beam_32 = Beam.objects.create(
             beam_number="BN-REAL-32",
@@ -405,6 +408,10 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
         assignment.refresh_from_db()
         self.assertEqual(assignment.status, SizingBeamAssignment.StatusChoices.RECEIVED)
 
+        # Beam status must now be LOADED
+        beam_32.refresh_from_db()
+        self.assertEqual(beam_32.status, Beam.StatusChoices.LOADED)
+
     # ── 3. Assign Multiple Existing Beams ─────────────────────────────────────
 
     def test_assign_multiple_existing_beams_at_creation(self):
@@ -419,10 +426,10 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
         self.assertEqual(res.data["data"]["totalBeams"], 3)
 
-        # All 3 beams must now have status SIZING
+        # All 3 beams must now have status LOADED upon return from sizing
         for b in [self.beam1, self.beam2, self.beam3]:
             b.refresh_from_db()
-            self.assertEqual(b.status, Beam.StatusChoices.SIZING)
+            self.assertEqual(b.status, Beam.StatusChoices.LOADED)
 
         # Check nested assignments in response
         assignments = res.data["data"]["beamAssignments"]
@@ -459,8 +466,8 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
 
         self.beam2.refresh_from_db()
         self.beam3.refresh_from_db()
-        self.assertEqual(self.beam2.status, Beam.StatusChoices.SIZING)
-        self.assertEqual(self.beam3.status, Beam.StatusChoices.SIZING)
+        self.assertEqual(self.beam2.status, Beam.StatusChoices.LOADED)
+        self.assertEqual(self.beam3.status, Beam.StatusChoices.LOADED)
 
     # ── 5. Reject Nonexistent Beam ID ─────────────────────────────────────────
 
@@ -597,7 +604,7 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
         assignment = SizingBeamAssignment.objects.get(beam=self.beam1)
         self.assertEqual(assignment.status, SizingBeamAssignment.StatusChoices.RECEIVED)
         self.beam1.refresh_from_db()
-        self.assertEqual(self.beam1.status, Beam.StatusChoices.SIZING)
+        self.assertEqual(self.beam1.status, Beam.StatusChoices.LOADED)
 
         # Step 2: Transition assignment to IN_USE
         res_in_use = self.client.post(
@@ -1080,20 +1087,24 @@ class BeamLoadingAndProductionWorkflowTests(APITestCase):
             intake_date="2026-10-01",
         )
 
-        # Create Beams (reusable physical assets)
+        # Create Beams (reusable physical assets received from sizing)
         self.beam1 = Beam.objects.create(
             beam_number="BEAM-01",
             yarn_count="40/1",
-            status=Beam.StatusChoices.AVAILABLE,
+            status=Beam.StatusChoices.LOADED,
         )
         self.beam2 = Beam.objects.create(
             beam_number="BEAM-02",
             yarn_count="40/1",
-            status=Beam.StatusChoices.AVAILABLE,
+            status=Beam.StatusChoices.LOADED,
         )
         self.beam3 = Beam.objects.create(
             beam_number="BEAM-03",
             yarn_count="40/1",
+            status=Beam.StatusChoices.LOADED,
+        )
+        self.beam_unloaded = Beam.objects.create(
+            beam_number="BEAM-UNLOADED",
             status=Beam.StatusChoices.AVAILABLE,
         )
         self.beam_loaded = Beam.objects.create(
@@ -1270,10 +1281,10 @@ class BeamLoadingAndProductionWorkflowTests(APITestCase):
             b.refresh_from_db()
             self.assertEqual(b.status, Beam.StatusChoices.LOADED)
 
-    # ── TEST 4: Try loading a Beam whose status is not AVAILABLE ───────────────
-    def test_4_try_loading_beam_whose_status_is_not_available(self):
+    # ── TEST 4: Try loading a Beam whose status is not LOADED ─────────────────
+    def test_4_try_loading_beam_whose_status_is_not_loaded(self):
         """
-        TEST 4: Try loading a Beam whose status is not AVAILABLE.
+        TEST 4: Try loading a Beam whose status is not LOADED (e.g. AVAILABLE).
         Expected: Request rejected with HTTP 400 Bad Request.
         """
         outcome = SizingOutcome.objects.create(
@@ -1284,17 +1295,17 @@ class BeamLoadingAndProductionWorkflowTests(APITestCase):
 
         payload = {
             "sizing_outcome": outcome.id,
-            "beam": self.beam_loaded.id,  # Status is LOADED, not AVAILABLE
+            "beam": self.beam_unloaded.id,  # Status is AVAILABLE, not LOADED
             "loom": self.loom1.id,
             "installation_date": "2026-10-03",
         }
 
         res = self.client.post("/api/v1/factory/beam-loadings/", payload, format="json")
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Available", str(res.data))
+        self.assertIn("Loaded", str(res.data))
 
         # No loading created
-        self.assertFalse(BeamLoading.objects.filter(beam=self.beam_loaded).exists())
+        self.assertFalse(BeamLoading.objects.filter(beam=self.beam_unloaded).exists())
 
     # ── TEST 5: After BeamLoading is created, Beam.status == LOADED ────────────
     def test_5_after_beam_loading_is_created_beam_status_is_loaded(self):
@@ -1308,7 +1319,7 @@ class BeamLoadingAndProductionWorkflowTests(APITestCase):
             outcome_date="2026-10-03",
         )
 
-        self.assertEqual(self.beam1.status, Beam.StatusChoices.AVAILABLE)
+        self.assertEqual(self.beam1.status, Beam.StatusChoices.LOADED)
         self.assertEqual(self.loom1.status, Loom.StatusChoices.ACTIVE)
 
         res = self.client.post("/api/v1/factory/beam-loadings/", {
@@ -1468,6 +1479,8 @@ class BeamLoadingAndProductionWorkflowTests(APITestCase):
         outcome_b = SizingOutcome.objects.create(
             sizing=self.sizing, set_no="SET-B", outcome_date="2026-10-10"
         )
+        self.beam1.status = Beam.StatusChoices.LOADED
+        self.beam1.save()
         res_load_b = self.client.post("/api/v1/factory/beam-loadings/", {
             "sizing_outcome": outcome_b.id,
             "beam": self.beam1.id,  # REUSING THE EXACT SAME BEAM RECORD!
@@ -1543,6 +1556,320 @@ class BeamLoadingAndProductionWorkflowTests(APITestCase):
         self.assertEqual(res_filter.status_code, status.HTTP_200_OK)
         results = res_filter.data["results"] if "results" in res_filter.data else res_filter.data["data"]
         self.assertEqual(len(results), 2)
+
+
+class SizingBeamAssignmentJsonFieldTests(APITestCase):
+    """
+    Tests for SizingBeamAssignment with beam_yarn_length JSONField:
+    1. Create assignment with one Beam and one length.
+    2. Create assignment with three Beams and three different lengths.
+    3. Reject missing length (400 validation error).
+    4. Reject extra Beam length (400 validation error).
+    5. Reject negative length (400 validation error).
+    6. Reject non-numeric length (400 validation error).
+    7. Update Beam list and lengths together.
+    8. Verify existing active Beam assignment protection still works.
+    9. Verify GET response contains Beam IDs and their individual lengths.
+    10. Verify existing properties continue working:
+        beam_ids, beam_id, beams, is_active, sizing_outcome, sizing_outcome_id, get_beam_yarn_length.
+    """
+
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            username="admin_json_test",
+            email="admin_json_test@example.com",
+            password="adminpassword123",
+        )
+        self.client.force_authenticate(user=self.admin)
+
+        self.sizing = Sizing.objects.create(
+            sizing_name="Star Sizing Mills",
+            contact_person="Ali Khan",
+            status="Active",
+        )
+        self.supplier = Supplier.objects.create(
+            supplier_name="Premier Yarn Mills",
+            status="Active",
+        )
+        self.yarn_intake = YarnIntake.objects.create(
+            yarn_name="Cotton Warp 20/1",
+            yarn_type="Warp",
+            yarn_count="20/1",
+            supplier=self.supplier,
+            bags=100,
+            cones_per_bag=24,
+            weight_per_bag_kg=Decimal("45.36"),
+            rate_per_bag=Decimal("15000"),
+            intake_date="2026-10-01",
+        )
+        self.yarn_outcome = YarnOutcome.objects.create(
+            yarn_intake=self.yarn_intake,
+            outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING,
+            sizing=self.sizing,
+            outcome_bags=20,
+            outcome_cones_per_bag=24,
+            outcome_weight_per_bag_kg=Decimal("45.36"),
+            outcome_date="2026-10-01",
+        )
+
+        self.beam101 = Beam.objects.create(
+            beam_number="BN-101",
+            yarn_count="20/1",
+            status=Beam.StatusChoices.SIZING,
+        )
+        self.beam102 = Beam.objects.create(
+            beam_number="BN-102",
+            yarn_count="20/1",
+            status=Beam.StatusChoices.SIZING,
+        )
+        self.beam103 = Beam.objects.create(
+            beam_number="BN-103",
+            yarn_count="20/1",
+            status=Beam.StatusChoices.SIZING,
+        )
+        self.beam104 = Beam.objects.create(
+            beam_number="BN-104",
+            yarn_count="20/1",
+            status=Beam.StatusChoices.SIZING,
+        )
+
+    # TEST 1: Create assignment with one Beam and one length
+    def test_1_create_assignment_with_one_beam_and_one_length(self):
+        payload = {
+            "yarn_outcome": self.yarn_outcome.id,
+            "beam": [self.beam101.id],
+            "beam_yarn_length": {
+                str(self.beam101.id): 5000,
+            },
+            "status": "ASSIGNED",
+        }
+        res = self.client.post("/api/v1/sizing-beam-assignments/", payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED, res.data)
+        data = res.data["data"]
+        self.assertEqual(data["yarnOutcome"], self.yarn_outcome.id)
+        self.assertEqual(data["beam"], [self.beam101.id])
+        self.assertEqual(data["beamYarnLength"], {str(self.beam101.id): 5000.0})
+
+        assignment = SizingBeamAssignment.objects.get(id=data["id"])
+        self.assertEqual(assignment.beam.count(), 1)
+        self.assertEqual(assignment.get_beam_yarn_length(self.beam101.id), 5000.0)
+
+    # TEST 2: Create assignment with three Beams and three different lengths
+    def test_2_create_assignment_with_three_beams_and_three_different_lengths(self):
+        payload = {
+            "yarn_outcome": self.yarn_outcome.id,
+            "beam": [self.beam101.id, self.beam102.id, self.beam103.id],
+            "beam_yarn_length": {
+                str(self.beam101.id): 5000,
+                str(self.beam102.id): 4500,
+                str(self.beam103.id): 3800,
+            },
+            "status": "ASSIGNED",
+        }
+        res = self.client.post("/api/v1/sizing-beam-assignments/", payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED, res.data)
+        data = res.data["data"]
+        self.assertEqual(len(data["beam"]), 3)
+        self.assertEqual(
+            data["beamYarnLength"],
+            {
+                str(self.beam101.id): 5000.0,
+                str(self.beam102.id): 4500.0,
+                str(self.beam103.id): 3800.0,
+            },
+        )
+        assignment = SizingBeamAssignment.objects.get(id=data["id"])
+        self.assertEqual(assignment.get_beam_yarn_length(self.beam101.id), 5000.0)
+        self.assertEqual(assignment.get_beam_yarn_length(self.beam102.id), 4500.0)
+        self.assertEqual(assignment.get_beam_yarn_length(self.beam103.id), 3800.0)
+
+    # TEST 3: Reject missing length
+    def test_3_reject_missing_length(self):
+        payload = {
+            "yarn_outcome": self.yarn_outcome.id,
+            "beam": [self.beam101.id, self.beam102.id, self.beam103.id],
+            "beam_yarn_length": {
+                str(self.beam101.id): 5000,
+                str(self.beam102.id): 4500,
+                # beam103 missing
+            },
+            "status": "ASSIGNED",
+        }
+        res = self.client.post("/api/v1/sizing-beam-assignments/", payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("beam_yarn_length", str(res.data))
+
+    # TEST 4: Reject extra Beam length
+    def test_4_reject_extra_beam_length(self):
+        payload = {
+            "yarn_outcome": self.yarn_outcome.id,
+            "beam": [self.beam101.id, self.beam102.id],
+            "beam_yarn_length": {
+                str(self.beam101.id): 5000,
+                str(self.beam102.id): 4500,
+                str(self.beam103.id): 3800,  # extra unselected beam
+            },
+            "status": "ASSIGNED",
+        }
+        res = self.client.post("/api/v1/sizing-beam-assignments/", payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("beam_yarn_length", str(res.data))
+
+    # TEST 5: Reject negative length
+    def test_5_reject_negative_length(self):
+        payload = {
+            "yarn_outcome": self.yarn_outcome.id,
+            "beam": [self.beam101.id],
+            "beam_yarn_length": {
+                str(self.beam101.id): -500,
+            },
+            "status": "ASSIGNED",
+        }
+        res = self.client.post("/api/v1/sizing-beam-assignments/", payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("beam_yarn_length", str(res.data))
+
+    # TEST 6: Reject non-numeric length
+    def test_6_reject_non_numeric_length(self):
+        payload = {
+            "yarn_outcome": self.yarn_outcome.id,
+            "beam": [self.beam101.id],
+            "beam_yarn_length": {
+                str(self.beam101.id): "abc",
+            },
+            "status": "ASSIGNED",
+        }
+        res = self.client.post("/api/v1/sizing-beam-assignments/", payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("beam_yarn_length", str(res.data))
+
+    # TEST 7: Update Beam list and lengths together
+    def test_7_update_beam_list_and_lengths_together(self):
+        # Create initially with beam101 and beam102
+        assignment = SizingBeamAssignment.objects.create(
+            yarn_outcome=self.yarn_outcome,
+            beam_yarn_length={
+                str(self.beam101.id): 5000.0,
+                str(self.beam102.id): 4500.0,
+            },
+            status=SizingBeamAssignment.StatusChoices.ASSIGNED,
+        )
+        assignment.beam.set([self.beam101, self.beam102])
+
+        # Update to beam101 and beam103 with updated lengths
+        patch_payload = {
+            "beam": [self.beam101.id, self.beam103.id],
+            "beam_yarn_length": {
+                str(self.beam101.id): 5200,
+                str(self.beam103.id): 3900,
+            },
+        }
+        res = self.client.patch(
+            f"/api/v1/sizing-beam-assignments/{assignment.id}/", patch_payload, format="json"
+        )
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.data)
+        data = res.data["data"]
+        self.assertEqual(set(data["beam"]), {self.beam101.id, self.beam3.id if hasattr(self, "beam3_id") else self.beam103.id})
+        self.assertEqual(
+            data["beamYarnLength"],
+            {
+                str(self.beam101.id): 5200.0,
+                str(self.beam103.id): 3900.0,
+            },
+        )
+        # Ensure stale beam102 was removed from JSON and relationship
+        assignment.refresh_from_db()
+        self.assertEqual(set(assignment.beam.values_list("id", flat=True)), {self.beam101.id, self.beam103.id})
+        self.assertNotIn(str(self.beam102.id), assignment.beam_yarn_length)
+
+    # TEST 8: Verify existing active Beam assignment protection still works
+    def test_8_verify_existing_active_beam_assignment_protection(self):
+        # First assignment active with beam101
+        assignment1 = SizingBeamAssignment.objects.create(
+            yarn_outcome=self.yarn_outcome,
+            beam_yarn_length={str(self.beam101.id): 5000.0},
+            status=SizingBeamAssignment.StatusChoices.ASSIGNED,
+        )
+        assignment1.beam.set([self.beam101])
+
+        # Attempt to create second assignment with the same beam101
+        payload2 = {
+            "yarn_outcome": self.yarn_outcome.id,
+            "beam": [self.beam101.id],
+            "beam_yarn_length": {str(self.beam101.id): 4800},
+            "status": "ASSIGNED",
+        }
+        res2 = self.client.post("/api/v1/sizing-beam-assignments/", payload2, format="json")
+        self.assertEqual(res2.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("active assignment", str(res2.data))
+
+    # TEST 9: Verify GET response contains Beam IDs and their individual lengths
+    def test_9_verify_get_response_contains_beam_ids_and_lengths(self):
+        assignment = SizingBeamAssignment.objects.create(
+            yarn_outcome=self.yarn_outcome,
+            beam_yarn_length={
+                str(self.beam101.id): 5000.0,
+                str(self.beam102.id): 4500.0,
+            },
+            status=SizingBeamAssignment.StatusChoices.ASSIGNED,
+        )
+        assignment.beam.set([self.beam101, self.beam102])
+
+        res = self.client.get(f"/api/v1/sizing-beam-assignments/{assignment.id}/")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        data = res.data["data"]
+
+        # Top-level fields
+        self.assertEqual(set(data["beam"]), {self.beam101.id, self.beam102.id})
+        self.assertEqual(data["beamYarnLength"][str(self.beam101.id)], 5000.0)
+        self.assertEqual(data["beamYarnLength"][str(self.beam102.id)], 4500.0)
+
+        # Nested beams array
+        self.assertTrue(len(data["beams"]) == 2)
+        beam_lengths_in_nested = {b["id"]: b.get("beamYarnLength") for b in data["beams"]}
+        self.assertEqual(beam_lengths_in_nested[self.beam101.id], 5000.0)
+        self.assertEqual(beam_lengths_in_nested[self.beam102.id], 4500.0)
+
+    # TEST 10: Verify existing properties continue working
+    def test_10_verify_model_properties(self):
+        assignment = SizingBeamAssignment.objects.create(
+            yarn_outcome=self.yarn_outcome,
+            beam_yarn_length={
+                str(self.beam101.id): 5000.0,
+                str(self.beam102.id): 4500.0,
+            },
+            status=SizingBeamAssignment.StatusChoices.ASSIGNED,
+        )
+        assignment.beam.set([self.beam101, self.beam102])
+
+        # Test beam_ids
+        self.assertEqual(set(assignment.beam_ids), {self.beam101.id, self.beam102.id})
+
+        # Test beam_id (first beam id)
+        self.assertEqual(assignment.beam_id, self.beam101.id)
+
+        # Test beams (all beams queryset)
+        self.assertEqual(set(assignment.beams.values_list("id", flat=True)), {self.beam101.id, self.beam102.id})
+
+        # Test is_active
+        self.assertTrue(assignment.is_active)
+        assignment.status = SizingBeamAssignment.StatusChoices.RELEASED
+        self.assertFalse(assignment.is_active)
+
+        # Test sizing_outcome and sizing_outcome_id
+        so = SizingOutcome.objects.create(
+            yarn_outcome=self.yarn_outcome,
+            sizing=self.sizing,
+            outcome_date="2026-10-02",
+        )
+        self.assertEqual(assignment.sizing_outcome, so)
+        self.assertEqual(assignment.sizing_outcome_id, so.id)
+
+        # Test get_beam_yarn_length helper
+        self.assertEqual(assignment.get_beam_yarn_length(self.beam101.id), 5000.0)
+        self.assertEqual(assignment.get_beam_yarn_length(self.beam102.id), 4500.0)
+        self.assertIsNone(assignment.get_beam_yarn_length(9999))
+
 
 
 

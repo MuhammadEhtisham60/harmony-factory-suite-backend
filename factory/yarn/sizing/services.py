@@ -192,8 +192,21 @@ def assign_beams_to_outcome(outcome=None, beam_ids=None, user=None, request=None
 
             assignment.beam.add(*ordered_beams)
 
+            # Store beam_yarn_length if provided
+            beam_yarn_length = kwargs.get("beam_yarn_length")
+            if beam_yarn_length and isinstance(beam_yarn_length, dict):
+                current_byl = assignment.beam_yarn_length.copy() if isinstance(assignment.beam_yarn_length, dict) else {}
+                for k, v in beam_yarn_length.items():
+                    try:
+                        num_v = float(v)
+                        current_byl[str(k)] = int(num_v) if num_v.is_integer() else num_v
+                    except (ValueError, TypeError):
+                        current_byl[str(k)] = v
+                assignment.beam_yarn_length = current_byl
+                assignment.save(update_fields=["beam_yarn_length", "updated_at"])
+
             for beam in ordered_beams:
-                beam.status = Beam.StatusChoices.SIZING
+                beam.status = Beam.StatusChoices.LOADED if is_sizing_outcome else Beam.StatusChoices.SIZING
                 beam.updated_by = user
                 beam.save(update_fields=["status", "updated_by", "updated_at"])
 
@@ -230,6 +243,7 @@ def create_sizing_outcome(yarn_outcome=None, outcome_date=None, remarks="", beam
     Creates a new SizingOutcome and optionally assigns a batch of Beams atomically.
     Supports either yarn_outcome (preferred) or legacy sizing reference.
     """
+    beam_yarn_length = extra_fields.pop("beam_yarn_length", None)
     sizing = extra_fields.pop("sizing", None)
     if not yarn_outcome and sizing:
         from factory.yarn.yarn_intake.models import YarnIntake, Supplier, YarnOutcome
@@ -278,6 +292,7 @@ def create_sizing_outcome(yarn_outcome=None, outcome_date=None, remarks="", beam
             assignments = assign_beams_to_outcome(
                 sizing_outcome=outcome,
                 beam_ids=beam_ids,
+                beam_yarn_length=beam_yarn_length,
                 user=user,
                 request=request,
             )
@@ -367,10 +382,9 @@ def transition_beam_assignment(assignment, new_status, user=None, request=None):
             if new_status == SizingBeamAssignment.StatusChoices.RELEASED:
                 beam.status = Beam.StatusChoices.AVAILABLE
             elif new_status == SizingBeamAssignment.StatusChoices.IN_USE:
-                if beam.status == Beam.StatusChoices.SIZING:
-                    beam.status = Beam.StatusChoices.LOADED
+                beam.status = Beam.StatusChoices.LOADED
             elif new_status == SizingBeamAssignment.StatusChoices.RECEIVED:
-                beam.status = Beam.StatusChoices.SIZING
+                beam.status = Beam.StatusChoices.LOADED
             elif new_status == SizingBeamAssignment.StatusChoices.COMPLETED:
                 beam.status = Beam.StatusChoices.COMPLETED
 

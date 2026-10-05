@@ -390,6 +390,11 @@ class SizingBeamAssignment(models.Model):
         related_name="sizing_assignments"
     )
 
+    beam_yarn_length = models.JSONField(
+        default=dict,
+        blank=True
+    )
+
     status = models.CharField(
         max_length=20,
         choices=StatusChoices.choices,
@@ -449,20 +454,8 @@ class SizingBeamAssignment(models.Model):
             yo = getattr(sizing_outcome, "yarn_outcome", None)
             if not yo and hasattr(sizing_outcome, "sizing") and sizing_outcome.sizing:
                 yo = sizing_outcome.sizing.yarn_outcomes.filter(outcome_type="Sizing").first()
-                if not yo:
-                    from django.utils import timezone
-                    from factory.yarn.yarn_intake.models import YarnIntake, YarnOutcome
-                    intake = YarnIntake.objects.first()
-                    if intake:
-                        yo = YarnOutcome.objects.create(
-                            yarn_intake=intake,
-                            outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING,
-                            sizing=sizing_outcome.sizing,
-                            outcome_bags=0,
-                            outcome_weight_per_bag_kg=0,
-                            outcome_date=getattr(sizing_outcome, "outcome_date", None) or timezone.now().date(),
-                        )
-            kwargs["yarn_outcome"] = yo
+            if yo:
+                kwargs["yarn_outcome"] = yo
         super().__init__(*args, **kwargs)
 
     def save(self, *args, **kwargs):
@@ -489,6 +482,16 @@ class SizingBeamAssignment(models.Model):
     def __str__(self):
         b_count = self.beam.count() if self.id else 0
         return f"Assignment #{self.id}: {b_count} beam(s) -> YarnOutcome #{self.yarn_outcome_id} ({self.status})"
+
+    def get_beam_yarn_length(self, beam_id):
+        if not self.beam_yarn_length or not isinstance(self.beam_yarn_length, dict):
+            return None
+        key_str = str(beam_id)
+        if key_str in self.beam_yarn_length:
+            return self.beam_yarn_length[key_str]
+        if isinstance(beam_id, int) and beam_id in self.beam_yarn_length:
+            return self.beam_yarn_length[beam_id]
+        return None
 
     @property
     def beams(self):

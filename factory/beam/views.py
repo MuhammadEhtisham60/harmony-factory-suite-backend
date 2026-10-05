@@ -342,7 +342,7 @@ class BeamLoadingViewSet(ModelViewSet):
 
     Endpoints:
         GET    /beam-loadings/            – list (filterable by beam, loom, sizing_outcome, status)
-        POST   /beam-loadings/            – create single loading (atomically locks Beam, verifies AVAILABLE, sets LOADED)
+        POST   /beam-loadings/            – create single loading (atomically locks Beam, verifies LOADED from sizing, mounts onto Loom)
         POST   /beam-loadings/batch/      – batch load multiple beams for one SizingOutcome
         GET    /beam-loadings/{id}/       – retrieve
         PATCH  /beam-loadings/{id}/       – partial update

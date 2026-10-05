@@ -431,13 +431,17 @@ class SizingOutcomeViewSet(ModelViewSet):
         })
 
 
-class SizingBeamAssignmentViewSet(ReadOnlyModelViewSet):
+class SizingBeamAssignmentViewSet(ModelViewSet):
     """
-    ViewSet for viewing, transitioning, and releasing Beam Sizing Assignments.
+    ViewSet for viewing, creating, updating, transitioning, and releasing Beam Sizing Assignments.
 
     Endpoints:
         GET    /sizing-beam-assignments/       – list all assignments (filter by beam, outcome, status)
+        POST   /sizing-beam-assignments/       – create assignment with beam and beam_yarn_length
         GET    /sizing-beam-assignments/{id}/  – get assignment detail
+        PUT    /sizing-beam-assignments/{id}/  – update assignment
+        PATCH  /sizing-beam-assignments/{id}/  – partial update assignment
+        DELETE /sizing-beam-assignments/{id}/  – delete assignment
         POST   /sizing-beam-assignments/{id}/transition/ – transition assignment status
         POST   /sizing-beam-assignments/{id}/release/    – release assignment & make beam Available
     """
@@ -465,6 +469,85 @@ class SizingBeamAssignmentViewSet(ReadOnlyModelViewSet):
         "PATCH": "beams.edit",
         "DELETE": "beams.delete",
     }
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save()
+
+        log_activity(
+            request=request,
+            action="Create Beam Assignment",
+            description=f"Created beam assignment #{instance.id} with status '{instance.status}'.",
+            module="Beams – Assignment",
+            status="Success",
+        )
+        return Response(
+            {
+                "success": True,
+                "message": f"Beam assignment #{instance.id} created successfully.",
+                "data": serializer.data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, context={"request": request})
+        return Response({"success": True, "data": serializer.data})
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(
+            instance, data=request.data, partial=partial, context={"request": request}
+        )
+        serializer.is_valid(raise_exception=True)
+        updated = serializer.save()
+
+        log_activity(
+            request=request,
+            action="Update Beam Assignment",
+            description=f"Updated beam assignment #{updated.id}.",
+            module="Beams – Assignment",
+            status="Success",
+        )
+        return Response(
+            {
+                "success": True,
+                "message": f"Beam assignment #{updated.id} updated successfully.",
+                "data": serializer.data,
+            }
+        )
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs["partial"] = True
+        return self.update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        assignment_id = instance.id
+
+        # If active, release beams back to AVAILABLE before deleting
+        if instance.is_active:
+            for b in instance.beam.all():
+                if b.status == Beam.StatusChoices.IN_USE:
+                    b.status = Beam.StatusChoices.AVAILABLE
+                    b.save(update_fields=["status", "updated_at"])
+
+        instance.delete()
+
+        log_activity(
+            request=request,
+            action="Delete Beam Assignment",
+            description=f"Deleted beam assignment #{assignment_id}.",
+            module="Beams – Assignment",
+            status="Success",
+        )
+        return Response(
+            {"success": True, "message": f"Beam assignment #{assignment_id} deleted successfully."},
+            status=status.HTTP_200_OK,
+        )
 
     @action(detail=True, methods=["post"], url_path="transition")
     def transition(self, request, pk=None):
