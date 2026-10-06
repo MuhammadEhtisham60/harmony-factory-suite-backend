@@ -116,20 +116,26 @@ def assign_beams_to_outcome(outcome=None, beam_ids=None, user=None, request=None
             beam_map = {b.id: b for b in locked_beams}
             ordered_beams = [beam_map[bid] for bid in beam_ids]
 
-            expected_status = (
-                kwargs.get("allowed_status")
-                or (Beam.StatusChoices.SIZING if is_sizing_outcome else Beam.StatusChoices.AVAILABLE)
-            )
-
-            # Validate each beam's physical status and existing active assignments
-            for beam in ordered_beams:
-                if beam.status != expected_status:
-                    raise ValidationError({
-                        "beam_ids": [
-                            f"Beam '{beam.beam_number}' cannot be assigned because its status is "
-                            f"'{beam.status}'. Only '{expected_status}' beams can be assigned."
-                        ]
-                    })
+            if is_sizing_outcome:
+                allowed_statuses = [Beam.StatusChoices.SIZING, Beam.StatusChoices.LOADED]
+                for beam in ordered_beams:
+                    if beam.status not in allowed_statuses:
+                        raise ValidationError({
+                            "beam_ids": [
+                                f"Beam '{beam.beam_number}' cannot be assigned because its status is "
+                                f"'{beam.status}'. Only '{Beam.StatusChoices.SIZING}' beams can be assigned."
+                            ]
+                        })
+            else:
+                expected_status = kwargs.get("allowed_status") or Beam.StatusChoices.AVAILABLE
+                for beam in ordered_beams:
+                    if beam.status != expected_status:
+                        raise ValidationError({
+                            "beam_ids": [
+                                f"Beam '{beam.beam_number}' cannot be assigned because its status is "
+                                f"'{beam.status}'. Only '{expected_status}' beams can be assigned."
+                            ]
+                        })
 
                 # Check if beam already has an active assignment in another outcome
                 active_assignment = SizingBeamAssignment.objects.filter(
@@ -209,6 +215,12 @@ def assign_beams_to_outcome(outcome=None, beam_ids=None, user=None, request=None
                 beam.status = Beam.StatusChoices.LOADED if is_sizing_outcome else Beam.StatusChoices.SIZING
                 beam.updated_by = user
                 beam.save(update_fields=["status", "updated_by", "updated_at"])
+
+            if is_sizing_outcome:
+                for b in assignment.beam.filter(status=Beam.StatusChoices.SIZING):
+                    b.status = Beam.StatusChoices.LOADED
+                    b.updated_by = user
+                    b.save(update_fields=["status", "updated_by", "updated_at"])
 
             created_assignments = [assignment]
 
@@ -296,6 +308,70 @@ def create_sizing_outcome(yarn_outcome=None, outcome_date=None, remarks="", beam
                 user=user,
                 request=request,
             )
+        elif yarn_outcome:
+            # If beam_ids were not explicitly provided, find existing active assignments on yarn_outcome
+            existing_assignments = list(
+                SizingBeamAssignment.objects.filter(
+                    yarn_outcome=yarn_outcome,
+                    status__in=[
+                        SizingBeamAssignment.StatusChoices.ASSIGNED,
+                        SizingBeamAssignment.StatusChoices.IN_USE,
+                        SizingBeamAssignment.StatusChoices.RECEIVED,
+                    ],
+                )
+            )
+            for asgn in existing_assignments:
+                save_fields = []
+                if asgn.status != SizingBeamAssignment.StatusChoices.RECEIVED:
+                    asgn.status = SizingBeamAssignment.StatusChoices.RECEIVED
+                    asgn.updated_by = user
+                    save_fields.extend(["status", "updated_by", "updated_at"])
+
+                # Store beam_yarn_length if provided
+                if beam_yarn_length and isinstance(beam_yarn_length, dict):
+                    current_byl = asgn.beam_yarn_length.copy() if isinstance(asgn.beam_yarn_length, dict) else {}
+                    for k, v in beam_yarn_length.items():
+                        try:
+                            num_v = float(v)
+                            current_byl[str(k)] = int(num_v) if num_v.is_integer() else num_v
+                        except (ValueError, TypeError):
+                            current_byl[str(k)] = v
+                    asgn.beam_yarn_length = current_byl
+                    if "beam_yarn_length" not in save_fields:
+                        save_fields.extend(["beam_yarn_length", "updated_at"])
+
+                if save_fields:
+                    asgn.save(update_fields=list(set(save_fields)))
+
+                for beam in asgn.beam.all():
+                    if beam.status == Beam.StatusChoices.SIZING:
+                        beam.status = Beam.StatusChoices.LOADED
+                        beam.updated_by = user
+                        beam.save(update_fields=["status", "updated_by", "updated_at"])
+
+            assignments = existing_assignments
+
+        # Ensure all beams associated with this outcome's yarn_outcome have status changed from SIZING to LOADED
+        if yarn_outcome:
+            sizing_beams = Beam.objects.filter(
+                sizing_assignments__yarn_outcome=yarn_outcome,
+                status=Beam.StatusChoices.SIZING,
+            ).distinct()
+            for b in sizing_beams:
+                b.status = Beam.StatusChoices.LOADED
+                b.updated_by = user
+                b.save(update_fields=["status", "updated_by", "updated_at"])
+
+            for lingering in SizingBeamAssignment.objects.filter(
+                yarn_outcome=yarn_outcome,
+                status__in=[
+                    SizingBeamAssignment.StatusChoices.ASSIGNED,
+                    SizingBeamAssignment.StatusChoices.IN_USE,
+                ],
+            ):
+                lingering.status = SizingBeamAssignment.StatusChoices.RECEIVED
+                lingering.updated_by = user
+                lingering.save(update_fields=["status", "updated_by", "updated_at"])
 
         sizing_title = (
             yarn_outcome.sizing.sizing_name

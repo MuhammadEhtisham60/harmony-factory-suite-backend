@@ -322,9 +322,11 @@ class SizingOutcomeViewSet(ModelViewSet):
         serializer.is_valid(raise_exception=True)
 
         beam_ids = serializer.validated_data["beam_ids"]
+        beam_yarn_length = serializer.validated_data.get("beam_yarn_length")
         created_assignments = assign_beams_to_outcome(
             sizing_outcome=outcome,
             beam_ids=beam_ids,
+            beam_yarn_length=beam_yarn_length,
             user=request.user,
             request=request,
         )
