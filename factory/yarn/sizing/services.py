@@ -154,6 +154,11 @@ def assign_beams_to_outcome(outcome=None, beam_ids=None, user=None, request=None
                         ]
                     ):
                         pass
+                    elif beam.status == Beam.StatusChoices.AVAILABLE:
+                        # Physical beam is available; auto-release previous sizing cycle assignment
+                        active_assignment.status = SizingBeamAssignment.StatusChoices.RELEASED
+                        active_assignment.released_at = timezone.now()
+                        active_assignment.save(update_fields=["status", "released_at", "updated_at"])
                     else:
                         raise ValidationError({
                             "beam_ids": [

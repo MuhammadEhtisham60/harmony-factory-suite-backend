@@ -7,6 +7,7 @@ and audit logging.
 import logging
 from decimal import Decimal
 from django.db import transaction, IntegrityError
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from factory.beam.models import Beam, BeamLoading, Production
@@ -143,7 +144,7 @@ def load_beam_onto_loom(
             )
 
             # Update Beam and Loom statuses
-            beam.status = Beam.StatusChoices.IN_PRODUCTION
+            beam.status = Beam.StatusChoices.LOADED
             beam.updated_by = user
             beam.save(update_fields=["status", "updated_by", "updated_at"])
 
@@ -234,7 +235,6 @@ def record_production_entry(
             loading.updated_by = user
             loading.save(update_fields=["status", "updated_by", "updated_at"])
 
-
             beam.status = Beam.StatusChoices.AVAILABLE
             beam.updated_by = user
             beam.save(update_fields=["status", "updated_by", "updated_at"])
@@ -242,6 +242,17 @@ def record_production_entry(
             loom.status = Loom.StatusChoices.ACTIVE
             loom.updated_by = user
             loom.save(update_fields=["status", "updated_by", "updated_at"])
+
+            # Release any active SizingBeamAssignment for this beam so it can be reassigned to new sizing cycles
+            from factory.yarn.sizing.models import SizingBeamAssignment
+            active_sba_list = SizingBeamAssignment.objects.filter(
+                beam=beam
+            ).exclude(status=SizingBeamAssignment.StatusChoices.RELEASED)
+            for sba in active_sba_list:
+                sba.status = SizingBeamAssignment.StatusChoices.RELEASED
+                sba.released_at = timezone.now()
+                sba.updated_by = user
+                sba.save(update_fields=["status", "released_at", "updated_by", "updated_at"])
         else:
             loading.updated_by = user
             loading.save(update_fields=["status", "updated_by", "updated_at"])
@@ -300,6 +311,17 @@ def mark_beam_empty_and_available(beam_loading_or_id, user=None, request=None):
         loom.status = Loom.StatusChoices.ACTIVE
         loom.updated_by = user
         loom.save(update_fields=["status", "updated_by", "updated_at"])
+
+        # Release any active SizingBeamAssignment for this beam so it can be reassigned to new sizing cycles
+        from factory.yarn.sizing.models import SizingBeamAssignment
+        active_sba_list = SizingBeamAssignment.objects.filter(
+            beam=beam
+        ).exclude(status=SizingBeamAssignment.StatusChoices.RELEASED)
+        for sba in active_sba_list:
+            sba.status = SizingBeamAssignment.StatusChoices.RELEASED
+            sba.released_at = timezone.now()
+            sba.updated_by = user
+            sba.save(update_fields=["status", "released_at", "updated_by", "updated_at"])
 
         log_activity(
             request=request,
