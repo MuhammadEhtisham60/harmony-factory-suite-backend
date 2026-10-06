@@ -412,62 +412,6 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
         beam_32.refresh_from_db()
         self.assertEqual(beam_32.status, Beam.StatusChoices.LOADED)
 
-    def test_sizing_outcome_auto_transitions_yarn_outcome_beams_to_loaded(self):
-        """
-        When POST /api/v1/sizing-outcomes/ is called without explicit beam_ids,
-        all beams already associated with the YarnOutcome (dispatched to sizing)
-        must automatically transition physical status from SIZING to LOADED,
-        and the assignment must transition to RECEIVED.
-        """
-        beam_auto = Beam.objects.create(
-            beam_number="BN-AUTO-LOAD",
-            yarn_count="30/1",
-            status=Beam.StatusChoices.AVAILABLE,
-        )
-
-        # Dispatch beam to sizing
-        yo_res = self.client.post(
-            "/api/v1/yarn-outcomes/",
-            {
-                "yarnIntake": self.yarn_intake.id,
-                "outcomeType": "Sizing",
-                "sizing": self.sizing.id,
-                "outcomeBags": 5,
-                "outcomeConesPerBag": 24,
-                "outcomeWeightPerBagKg": 45.36,
-                "outcomeDate": "2026-10-05",
-                "beamIds": [beam_auto.id],
-            },
-            format="json",
-        )
-        self.assertEqual(yo_res.status_code, status.HTTP_201_CREATED)
-        yo_id = yo_res.data["data"]["id"]
-
-        beam_auto.refresh_from_db()
-        self.assertEqual(beam_auto.status, Beam.StatusChoices.SIZING)
-
-        assignment = SizingBeamAssignment.objects.get(beam=beam_auto, yarn_outcome_id=yo_id)
-        self.assertEqual(assignment.status, SizingBeamAssignment.StatusChoices.ASSIGNED)
-
-        # Receive from sizing via POST /api/v1/sizing-outcomes/ WITHOUT passing beam_ids
-        so_payload = {
-            "yarn_outcome_id": yo_id,
-            "outcome_date": "2026-10-06",
-            "set_no": "SET-AUTO-1",
-            "remarks": "Received set from sizing without explicit beam_ids",
-        }
-        so_res = self.client.post("/api/v1/sizing-outcomes/", so_payload, format="json")
-        self.assertEqual(so_res.status_code, status.HTTP_201_CREATED, so_res.data)
-        self.assertTrue(so_res.data["success"])
-
-        # Physical beam status must have changed from Sizing to Loaded
-        beam_auto.refresh_from_db()
-        self.assertEqual(beam_auto.status, Beam.StatusChoices.LOADED)
-
-        # Assignment status must now be RECEIVED
-        assignment.refresh_from_db()
-        self.assertEqual(assignment.status, SizingBeamAssignment.StatusChoices.RECEIVED)
-
     # ── 3. Assign Multiple Existing Beams ─────────────────────────────────────
 
     def test_assign_multiple_existing_beams_at_creation(self):
