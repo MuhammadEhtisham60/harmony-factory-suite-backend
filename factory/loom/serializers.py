@@ -34,11 +34,24 @@ class LoomListSerializer(serializers.ModelSerializer):
             "installationDate",
             "location",
             "status",
+            "currentBeamId",
+            "currentBeamNo",
             "createdBy",
             "updatedBy",
             "createdAt",
             "updatedAt",
         ]
+
+    currentBeamId = serializers.SerializerMethodField()
+    currentBeamNo = serializers.SerializerMethodField()
+
+    def get_currentBeamId(self, obj):
+        loading = obj.beam_loadings.filter(status__in=["Loaded", "In Production"]).first()
+        return loading.beam.id if loading else None
+
+    def get_currentBeamNo(self, obj):
+        loading = obj.beam_loadings.filter(status__in=["Loaded", "In Production"]).first()
+        return loading.beam.beam_number if loading else None
 
     def get_createdBy(self, obj):
         if obj.created_by:
@@ -91,12 +104,25 @@ class LoomDetailSerializer(serializers.ModelSerializer):
             "location",
             "status",
             "notes",
+            "currentBeamId",
+            "currentBeamNo",
             "createdBy",
             "updatedBy",
             "createdAt",
             "updatedAt",
         ]
         read_only_fields = ["id", "createdAt", "updatedAt", "createdBy", "updatedBy"]
+
+    currentBeamId = serializers.SerializerMethodField()
+    currentBeamNo = serializers.SerializerMethodField()
+
+    def get_currentBeamId(self, obj):
+        loading = obj.beam_loadings.filter(status__in=["Loaded", "In Production"]).first()
+        return loading.beam.id if loading else None
+
+    def get_currentBeamNo(self, obj):
+        loading = obj.beam_loadings.filter(status__in=["Loaded", "In Production"]).first()
+        return loading.beam.beam_number if loading else None
 
     def get_createdBy(self, obj):
         if obj.created_by:
