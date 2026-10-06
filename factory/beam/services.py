@@ -45,7 +45,7 @@ def load_beam_onto_loom(
       4. Validates Beam does not already have an active loading.
       5. Validates Loom does not already have an active loading.
       6. Creates BeamLoading record.
-      7. Updates Beam.status = LOADED.
+      7. Updates Beam.status = IN_PRODUCTION.
       8. Updates Loom.status = PRODUCTION.
       9. Saves everything inside transaction.atomic().
     """
@@ -143,7 +143,7 @@ def load_beam_onto_loom(
             )
 
             # Update Beam and Loom statuses
-            beam.status = Beam.StatusChoices.LOADED
+            beam.status = Beam.StatusChoices.IN_PRODUCTION
             beam.updated_by = user
             beam.save(update_fields=["status", "updated_by", "updated_at"])
 
