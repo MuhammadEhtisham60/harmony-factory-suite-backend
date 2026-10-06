@@ -218,8 +218,6 @@ def record_production_entry(
         # Create Production entry
         production = Production.objects.create(
             beam_loading=loading,
-            beam=beam,
-            loom=loom,
             production_date=production_date,
             shift=shift or "General",
             meters_produced=Decimal(str(meters_produced)),

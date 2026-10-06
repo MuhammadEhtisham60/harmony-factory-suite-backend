@@ -118,8 +118,8 @@ class ProductionAdmin(admin.ModelAdmin):
     list_filter = ["production_date", "shift", "beam_emptied"]
     search_fields = [
         "operator_name",
-        "beam__beam_number",
-        "loom__loom_code",
+        "beam_loading__beam__beam_number",
+        "beam_loading__loom__loom_code",
         "remarks",
     ]
     readonly_fields = ["created_at", "updated_at", "created_by", "updated_by"]

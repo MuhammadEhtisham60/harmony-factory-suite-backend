@@ -623,7 +623,7 @@ class ProductionViewSet(ModelViewSet):
     """
     queryset = (
         Production.objects
-        .select_related("beam_loading", "beam", "loom", "created_by", "updated_by")
+        .select_related("beam_loading", "beam_loading__beam", "beam_loading__loom", "created_by", "updated_by")
         .all()
     )
     permission_classes = [IsAuthenticated, HasERPModulePermission]
@@ -632,8 +632,8 @@ class ProductionViewSet(ModelViewSet):
     filterset_class = ProductionFilter
     search_fields = [
         "operator_name",
-        "beam__beam_number",
-        "loom__loom_code",
+        "beam_loading__beam__beam_number",
+        "beam_loading__loom__loom_code",
         "remarks",
     ]
     ordering_fields = [
@@ -661,12 +661,14 @@ class ProductionViewSet(ModelViewSet):
         serializer.is_valid(raise_exception=True)
         instance = serializer.save()
 
+        loom_code = instance.loom.loom_code if instance.loom else "N/A"
+        beam_no = instance.beam.beam_number if instance.beam else "N/A"
         log_activity(
             request=request,
             action="Record Production",
             description=(
-                f"Recorded {instance.meters_produced}m produced on Loom '{instance.loom.loom_code}' "
-                f"from Beam '{instance.beam.beam_number}' (Shift: {instance.shift})."
+                f"Recorded {instance.meters_produced}m produced on Loom '{loom_code}' "
+                f"from Beam '{beam_no}' (Shift: {instance.shift})."
             ),
             module="Factory – Production",
             status="Success",
@@ -696,10 +698,11 @@ class ProductionViewSet(ModelViewSet):
         serializer.is_valid(raise_exception=True)
         updated = serializer.save()
 
+        loom_code = updated.loom.loom_code if updated.loom else "N/A"
         log_activity(
             request=request,
             action="Update Production Entry",
-            description=f"Updated Production #{updated.id} ({updated.meters_produced}m on Loom '{updated.loom.loom_code}').",
+            description=f"Updated Production #{updated.id} ({updated.meters_produced}m on Loom '{loom_code}').",
             module="Factory – Production",
             status="Success",
         )
@@ -718,7 +721,7 @@ class ProductionViewSet(ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         meters = instance.meters_produced
-        loom_code = instance.loom.loom_code
+        loom_code = instance.loom.loom_code if instance.loom else "N/A"
         instance.delete()
 
         log_activity(

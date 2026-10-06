@@ -276,21 +276,10 @@ class BeamLoading(models.Model):
 class Production(models.Model):
     """
     Records cloth/fabric production built from a loaded Beam on a Loom.
+    Beam and Loom are derived from the associated BeamLoading record.
     """
     beam_loading = models.ForeignKey(
         BeamLoading,
-        on_delete=models.PROTECT,
-        related_name="productions"
-    )
-
-    beam = models.ForeignKey(
-        "factory.Beam",
-        on_delete=models.PROTECT,
-        related_name="productions"
-    )
-
-    loom = models.ForeignKey(
-        "factory.Loom",
         on_delete=models.PROTECT,
         related_name="productions"
     )
@@ -354,11 +343,21 @@ class Production(models.Model):
         related_name="updated_productions"
     )
 
+    @property
+    def beam(self):
+        return self.beam_loading.beam if self.beam_loading else None
+
+    @property
+    def loom(self):
+        return self.beam_loading.loom if self.beam_loading else None
+
     class Meta:
         ordering = ["-production_date", "-id"]
         verbose_name = "Production"
         verbose_name_plural = "Productions"
 
     def __str__(self):
-        return f"Production #{self.id}: Loom {self.loom_id} / Beam {self.beam_id} ({self.meters_produced}m)"
+        loom_code = self.loom.loom_code if self.loom else "N/A"
+        beam_no = self.beam.beam_number if self.beam else "N/A"
+        return f"Production #{self.id}: Loom {loom_code} / Beam {beam_no} ({self.meters_produced}m)"
 

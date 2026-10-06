@@ -521,6 +521,10 @@ class ProductionSerializer(serializers.ModelSerializer):
     )
     beamLoadingId = serializers.IntegerField(source="beam_loading_id", required=False, write_only=True)
 
+    beam = serializers.SerializerMethodField()
+    loom = serializers.SerializerMethodField()
+    beamId = serializers.SerializerMethodField()
+    loomId = serializers.SerializerMethodField()
     beamDetail = serializers.SerializerMethodField()
     loomDetail = serializers.SerializerMethodField()
 
@@ -543,6 +547,10 @@ class ProductionSerializer(serializers.ModelSerializer):
             "id",
             "beamLoading",
             "beamLoadingId",
+            "beam",
+            "loom",
+            "beamId",
+            "loomId",
             "beamDetail",
             "loomDetail",
             "productionDate",
@@ -558,6 +566,10 @@ class ProductionSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id",
+            "beam",
+            "loom",
+            "beamId",
+            "loomId",
             "beamDetail",
             "loomDetail",
             "createdBy",
@@ -566,14 +578,30 @@ class ProductionSerializer(serializers.ModelSerializer):
             "updatedAt",
         ]
 
+    def get_beam(self, obj):
+        beam = obj.beam
+        return beam.id if beam else None
+
+    def get_loom(self, obj):
+        loom = obj.loom
+        return loom.id if loom else None
+
+    def get_beamId(self, obj):
+        return self.get_beam(obj)
+
+    def get_loomId(self, obj):
+        return self.get_loom(obj)
+
     def get_beamDetail(self, obj):
-        if obj.beam:
-            return {"id": obj.beam.id, "beamNumber": obj.beam.beam_number, "status": obj.beam.status}
+        beam = obj.beam
+        if beam:
+            return {"id": beam.id, "beamNumber": beam.beam_number, "status": beam.status}
         return None
 
     def get_loomDetail(self, obj):
-        if obj.loom:
-            return {"id": obj.loom.id, "loomCode": obj.loom.loom_code, "status": obj.loom.status}
+        loom = obj.loom
+        if loom:
+            return {"id": loom.id, "loomCode": loom.loom_code, "status": loom.status}
         return None
 
     def get_createdBy(self, obj):

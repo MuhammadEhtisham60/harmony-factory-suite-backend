@@ -149,8 +149,8 @@ class ProductionFilter(django_filters.FilterSet):
         search             – free-text across operator_name, beam_number, loom_code
     """
     beam_loading = django_filters.NumberFilter(field_name="beam_loading_id")
-    beam = django_filters.NumberFilter(field_name="beam_id")
-    loom = django_filters.NumberFilter(field_name="loom_id")
+    beam = django_filters.NumberFilter(field_name="beam_loading__beam_id")
+    loom = django_filters.NumberFilter(field_name="beam_loading__loom_id")
     production_date = django_filters.DateFilter(field_name="production_date")
     date_after = django_filters.DateFilter(field_name="production_date", lookup_expr="gte")
     date_before = django_filters.DateFilter(field_name="production_date", lookup_expr="lte")
@@ -170,8 +170,8 @@ class ProductionFilter(django_filters.FilterSet):
     def filter_search(self, queryset, name, value):  # noqa: ARG002
         return queryset.filter(
             Q(operator_name__icontains=value)
-            | Q(beam__beam_number__icontains=value)
-            | Q(loom__loom_code__icontains=value)
+            | Q(beam_loading__beam__beam_number__icontains=value)
+            | Q(beam_loading__loom__loom_code__icontains=value)
             | Q(remarks__icontains=value)
         )
 
