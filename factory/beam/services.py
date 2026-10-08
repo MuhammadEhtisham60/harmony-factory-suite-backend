@@ -144,7 +144,7 @@ def load_beam_onto_loom(
             )
 
             # Update Beam and Loom statuses
-            beam.status = Beam.StatusChoices.LOADED
+            beam.status = Beam.StatusChoices.IN_PRODUCTION
             beam.updated_by = user
             beam.save(update_fields=["status", "updated_by", "updated_at"])
 

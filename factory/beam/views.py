@@ -467,22 +467,22 @@ class BeamLoadingViewSet(ModelViewSet):
 
         with transaction.atomic():
             instance.delete()
-            # If the beam is still Loaded and has no other active loading, restore to AVAILABLE
+            # If the beam is still In Production / Loaded and has no other active loading, restore to AVAILABLE
             has_other_active = BeamLoading.objects.filter(
                 beam=beam,
                 status__in=[BeamLoading.StatusChoices.LOADED, BeamLoading.StatusChoices.IN_PRODUCTION]
             ).exists()
-            if not has_other_active and beam.status == Beam.StatusChoices.LOADED:
+            if not has_other_active and beam.status in [Beam.StatusChoices.LOADED, Beam.StatusChoices.IN_PRODUCTION]:
                 beam.status = Beam.StatusChoices.AVAILABLE
                 beam.save(update_fields=["status", "updated_at"])
 
-            # If loom is still IN_USE and has no other active loading, restore to ACTIVE
+            # If loom is still in PRODUCTION / IN_USE and has no other active loading, restore to ACTIVE
             from factory.loom.models import Loom
             has_other_loom = BeamLoading.objects.filter(
                 loom=loom,
                 status__in=[BeamLoading.StatusChoices.LOADED, BeamLoading.StatusChoices.IN_PRODUCTION]
             ).exists()
-            if not has_other_loom and loom.status == Loom.StatusChoices.IN_USE:
+            if not has_other_loom and loom.status in [Loom.StatusChoices.PRODUCTION, Loom.StatusChoices.IN_USE]:
                 loom.status = Loom.StatusChoices.ACTIVE
                 loom.save(update_fields=["status", "updated_at"])
 

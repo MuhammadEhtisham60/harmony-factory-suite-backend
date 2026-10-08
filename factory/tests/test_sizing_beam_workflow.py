@@ -1276,10 +1276,10 @@ class BeamLoadingAndProductionWorkflowTests(APITestCase):
         loaded_beams = {l.beam_id for l in loadings}
         self.assertEqual(loaded_beams, {self.beam1.id, self.beam2.id, self.beam3.id})
 
-        # All 3 beams are now LOADED
+        # All 3 beams are now IN_PRODUCTION
         for b in [self.beam1, self.beam2, self.beam3]:
             b.refresh_from_db()
-            self.assertEqual(b.status, Beam.StatusChoices.LOADED)
+            self.assertEqual(b.status, Beam.StatusChoices.IN_PRODUCTION)
 
     # ── TEST 4: Try loading a Beam whose status is not LOADED ─────────────────
     def test_4_try_loading_beam_whose_status_is_not_loaded(self):
@@ -1307,10 +1307,10 @@ class BeamLoadingAndProductionWorkflowTests(APITestCase):
         # No loading created
         self.assertFalse(BeamLoading.objects.filter(beam=self.beam_unloaded).exists())
 
-    # ── TEST 5: After BeamLoading is created, Beam.status == LOADED ────────────
-    def test_5_after_beam_loading_is_created_beam_status_is_loaded(self):
+    # ── TEST 5: After BeamLoading is created, Beam.status == IN_PRODUCTION ────
+    def test_5_after_beam_loading_is_created_beam_status_is_in_production(self):
         """
-        TEST 5: After BeamLoading is created, physical Beam status must be LOADED,
+        TEST 5: After BeamLoading is created (beam mounted on loom), physical Beam status must be IN_PRODUCTION,
         and Loom status must be PRODUCTION.
         """
         outcome = SizingOutcome.objects.create(
@@ -1331,7 +1331,7 @@ class BeamLoadingAndProductionWorkflowTests(APITestCase):
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
 
         self.beam1.refresh_from_db()
-        self.assertEqual(self.beam1.status, Beam.StatusChoices.LOADED)
+        self.assertEqual(self.beam1.status, Beam.StatusChoices.IN_PRODUCTION)
 
         self.loom1.refresh_from_db()
         self.assertEqual(self.loom1.status, Loom.StatusChoices.PRODUCTION)
@@ -1494,7 +1494,7 @@ class BeamLoadingAndProductionWorkflowTests(APITestCase):
         self.assertEqual(Beam.objects.count(), total_beams_before)
         self.beam1.refresh_from_db()
         self.assertEqual(self.beam1.id, initial_beam_pk)
-        self.assertEqual(self.beam1.status, Beam.StatusChoices.LOADED)
+        self.assertEqual(self.beam1.status, Beam.StatusChoices.IN_PRODUCTION)
 
         # Both BeamLoading records exist and belong to the same beam
         beam_loadings = BeamLoading.objects.filter(beam=self.beam1).order_by("installation_date")
