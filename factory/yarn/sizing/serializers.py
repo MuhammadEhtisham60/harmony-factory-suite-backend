@@ -47,6 +47,9 @@ class BeamMinSerializer(serializers.ModelSerializer):
     productionOrder = serializers.CharField(source="production_order")
     beamYarnLength = serializers.SerializerMethodField()
     beam_yarn_length = serializers.SerializerMethodField()
+    loading = serializers.SerializerMethodField()
+    producedMeters = serializers.SerializerMethodField()
+    latestLoom = serializers.SerializerMethodField()
 
     class Meta:
         model = Beam
@@ -63,7 +66,38 @@ class BeamMinSerializer(serializers.ModelSerializer):
             "status",
             "beamYarnLength",
             "beam_yarn_length",
+            "loading",
+            "producedMeters",
+            "latestLoom",
         ]
+
+    def get_loading(self, obj):
+        from factory.beam.models import BeamLoading
+        from django.db.models import Sum
+        outcome = self.context.get("sizing_outcome")
+        if outcome:
+            loading = BeamLoading.objects.filter(beam=obj, sizing_outcome=outcome).order_by("-id").first()
+        else:
+            loading = BeamLoading.objects.filter(beam=obj).order_by("-id").first()
+        if loading:
+            total_prod = loading.productions.aggregate(Sum("meters_produced"))["meters_produced__sum"] or 0
+            return {
+                "id": loading.id,
+                "loomId": loading.loom_id,
+                "loomCode": loading.loom.loom_code if loading.loom else "",
+                "status": loading.status,
+                "installationDate": loading.installation_date,
+                "producedMeters": float(total_prod),
+            }
+        return None
+
+    def get_producedMeters(self, obj):
+        loading = self.get_loading(obj)
+        return loading.get("producedMeters", 0) if loading else 0
+
+    def get_latestLoom(self, obj):
+        loading = self.get_loading(obj)
+        return loading.get("loomCode", "") if loading else ""
 
     def get_beamYarnLength(self, obj):
         assignment = self.context.get("assignment")
@@ -615,22 +649,31 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
         write_only=True,
     )
 
-    # Read-only nested beam assignments
+    # Read-only nested beam assignments & loadings
     beamAssignments = serializers.SerializerMethodField()
+    beamLoadings = serializers.SerializerMethodField()
     totalBeams = serializers.IntegerField(source="total_beams", read_only=True)
 
     def get_beamAssignments(self, obj):
         if hasattr(obj, "beam_assignments"):
-            return SizingBeamAssignmentSerializer(obj.beam_assignments.all(), many=True, context=self.context).data
+            return SizingBeamAssignmentSerializer(obj.beam_assignments.all(), many=True, context={**self.context, "sizing_outcome": obj}).data
         if obj.yarn_outcome_id:
             from factory.yarn.sizing.models import SizingBeamAssignment
             assignments = SizingBeamAssignment.objects.filter(yarn_outcome_id=obj.yarn_outcome_id).order_by("-assigned_at")
-            return SizingBeamAssignmentSerializer(assignments, many=True, context=self.context).data
+            return SizingBeamAssignmentSerializer(assignments, many=True, context={**self.context, "sizing_outcome": obj}).data
         elif obj.sizing_id:
             from factory.yarn.sizing.models import SizingBeamAssignment
             assignments = SizingBeamAssignment.objects.filter(yarn_outcome__sizing_id=obj.sizing_id).order_by("-assigned_at")
-            return SizingBeamAssignmentSerializer(assignments, many=True, context=self.context).data
+            return SizingBeamAssignmentSerializer(assignments, many=True, context={**self.context, "sizing_outcome": obj}).data
         return []
+
+    def get_beamLoadings(self, obj):
+        from factory.beam.serializers import BeamLoadingSerializer
+        if hasattr(obj, "beam_loadings"):
+            return BeamLoadingSerializer(obj.beam_loadings.all(), many=True, context=self.context).data
+        from factory.beam.models import BeamLoading
+        loadings = BeamLoading.objects.filter(sizing_outcome_id=obj.id).order_by("-id")
+        return BeamLoadingSerializer(loadings, many=True, context=self.context).data
 
     createdAt = serializers.DateTimeField(source="created_at", read_only=True)
     updatedAt = serializers.DateTimeField(source="updated_at", read_only=True)
@@ -686,6 +729,7 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "beam_yarn_length",
             "beamYarnLength",
             "beamAssignments",
+            "beamLoadings",
             "totalBeams",
             "createdBy",
             "updatedBy",
@@ -697,6 +741,7 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "yarnOutcomeDetail",
             "sizingDetail",
             "beamAssignments",
+            "beamLoadings",
             "totalBeams",
             "createdBy",
             "updatedBy",
