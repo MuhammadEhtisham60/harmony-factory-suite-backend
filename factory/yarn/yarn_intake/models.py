@@ -36,8 +36,7 @@ from django.conf import settings
 from factory.yarn.yarn_buyer.models import YarnBuyer
 from factory.purchase.supplier.models import Supplier
 from factory.yarn.sizing.models import Sizing
-
-LB_PER_KG = Decimal("2.20462262")
+from factory.yarn.yarn_stock.models import YarnStock, LB_PER_KG
 
 
 class YarnIntake(models.Model):
@@ -70,6 +69,15 @@ class YarnIntake(models.Model):
         Supplier,
         on_delete=models.PROTECT,
         related_name="yarn_intakes"
+    )
+
+    stock = models.ForeignKey(
+        YarnStock,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="intakes",
+        help_text="Shared inventory pool this intake contributes to."
     )
 
     production_type = models.CharField(
@@ -154,6 +162,19 @@ class YarnIntake(models.Model):
         self.outcome_weight_kg = Decimal("0")
         self.outcome_weight_lb = Decimal("0")
 
+    def save(self, *args, **kwargs):
+        self.calculate_intake_fields()
+        if not self.stock_id:
+            from factory.yarn.yarn_stock.services import get_or_create_yarn_stock
+            self.stock = get_or_create_yarn_stock(
+                yarn_name=self.yarn_name,
+                yarn_type=self.yarn_type,
+                yarn_count=self.yarn_count,
+                production_type=self.production_type,
+                user=self.created_by,
+            )
+        super().save(*args, **kwargs)
+
 
 class YarnOutcome(models.Model):
     """
@@ -187,10 +208,22 @@ class YarnOutcome(models.Model):
         WEFT = "Weft", "Weft"
         SOLD = "Sold", "Sold"
 
+    stock = models.ForeignKey(
+        YarnStock,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="outcomes",
+        help_text="Shared stock pool this outcome is dispatched from."
+    )
+
     yarn_intake = models.ForeignKey(
         YarnIntake,
-        on_delete=models.CASCADE,
-        related_name="outcomes"
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="outcomes",
+        help_text="Optional legacy reference to specific intake batch."
     )
 
     outcome_type = models.CharField(
@@ -272,8 +305,13 @@ class YarnOutcome(models.Model):
         verbose_name_plural = "Yarn Outcomes"
 
     def __str__(self):
+        name = (
+            self.stock.yarn_name
+            if self.stock
+            else (self.yarn_intake.yarn_name if self.yarn_intake else "Yarn")
+        )
         return (
-            f"{self.yarn_intake.yarn_name} - "
+            f"{name} - "
             f"{self.outcome_type} - "
             f"{self.outcome_bags} bags"
         )
@@ -299,6 +337,12 @@ class YarnOutcome(models.Model):
         weight_per_bag = Decimal(str(self.outcome_weight_per_bag_kg))
         self.outcome_weight_kg = outcome_bags * weight_per_bag
         self.outcome_weight_lb = self.outcome_weight_kg * LB_PER_KG
+
+    def save(self, *args, **kwargs):
+        self.calculate_outcome_fields()
+        if not self.stock_id and self.yarn_intake_id:
+            self.stock = self.yarn_intake.stock
+        super().save(*args, **kwargs)
 
     @property
     def total_beams(self):

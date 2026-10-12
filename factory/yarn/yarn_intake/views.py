@@ -137,10 +137,34 @@ class YarnIntakeViewSet(ModelViewSet):
         return self.update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
+        from django.db import transaction
+        from django.db.models import Sum
+        from rest_framework.exceptions import ValidationError
+        from factory.yarn.yarn_stock.models import YarnStock
+        from factory.yarn.yarn_stock.services import recalculate_yarn_stock
+
         instance = self.get_object()
         name = instance.yarn_name
         set_no = instance.set_no
-        instance.delete()
+        stock = instance.stock
+
+        with transaction.atomic():
+            if stock:
+                locked_stock = YarnStock.objects.select_for_update().get(pk=stock.pk)
+                remaining_bags = locked_stock.intakes.exclude(pk=instance.pk).aggregate(Sum("bags"))["bags__sum"] or 0
+                dispatched_bags = locked_stock.outcomes.aggregate(Sum("outcome_bags"))["outcome_bags__sum"] or 0
+                if remaining_bags < dispatched_bags:
+                    raise ValidationError({
+                        "detail": (
+                            f"Cannot delete yarn intake: dispatched outcomes ({dispatched_bags} bags) "
+                            f"would exceed remaining received intake stock ({remaining_bags} bags)."
+                        )
+                    })
+
+                instance.delete()
+                recalculate_yarn_stock(locked_stock)
+            else:
+                instance.delete()
 
         log_activity(
             request=request,

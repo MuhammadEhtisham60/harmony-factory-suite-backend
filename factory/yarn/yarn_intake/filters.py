@@ -12,6 +12,8 @@ class YarnIntakeFilter(django_filters.FilterSet):
     yarn_count = django_filters.CharFilter(field_name="yarn_count", lookup_expr="icontains")
     production_type = django_filters.CharFilter(field_name="production_type", lookup_expr="icontains")
     supplier = django_filters.NumberFilter(field_name="supplier__id")
+    stock = django_filters.NumberFilter(field_name="stock__id")
+    stock_id = django_filters.NumberFilter(field_name="stock__id")
     intake_date_after = django_filters.DateFilter(field_name="intake_date", lookup_expr="gte")
     intake_date_before = django_filters.DateFilter(field_name="intake_date", lookup_expr="lte")
     created_after = django_filters.DateFilter(field_name="created_at", lookup_expr="date__gte")
@@ -20,7 +22,7 @@ class YarnIntakeFilter(django_filters.FilterSet):
 
     class Meta:
         model = YarnIntake
-        fields = ["yarn_type", "yarn_count", "production_type", "supplier"]
+        fields = ["yarn_type", "yarn_count", "production_type", "supplier", "stock"]
 
     def filter_search(self, queryset, name, value):  # noqa: ARG002
         return queryset.filter(

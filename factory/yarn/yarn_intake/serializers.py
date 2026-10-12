@@ -10,11 +10,15 @@ Read-only calculated fields (backend computes, frontend must not submit):
 
 from decimal import Decimal
 
+from django.db import transaction
+from django.db.models import Sum
 from rest_framework import serializers
 
 from factory.purchase.supplier.models import Supplier
 from factory.yarn.yarn_buyer.models import YarnBuyer
 from factory.yarn.sizing.models import Sizing
+from factory.yarn.yarn_stock.models import YarnStock
+from factory.yarn.yarn_stock.serializers import YarnStockMinSerializer
 from .models import YarnIntake, YarnOutcome
 
 
@@ -57,7 +61,8 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
     Writable serializer for YarnOutcome CRUD.
 
     Frontend provides:
-        yarn_intake (id), outcome_type, outcome_bags, outcome_cones_per_bag,
+        stock (or stockId), OR legacy yarn_intake (or yarnIntake/yarnIntakeId),
+        outcome_type, outcome_bags, outcome_cones_per_bag,
         outcome_weight_per_bag_kg, yarn_buyer (id|null), total_price,
         outcome_date, notes
 
@@ -67,9 +72,26 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
     """
 
     # ── Writable FKs ──────────────────────────────────────────────────────
+    stock = serializers.PrimaryKeyRelatedField(
+        queryset=YarnStock.objects.all(),
+        required=False,
+        allow_null=True
+    )
+    stockId = serializers.IntegerField(
+        write_only=True,
+        required=False,
+        allow_null=True
+    )
     yarnIntake = serializers.PrimaryKeyRelatedField(
         source="yarn_intake",
-        queryset=YarnIntake.objects.all()
+        queryset=YarnIntake.objects.all(),
+        required=False,
+        allow_null=True
+    )
+    yarnIntakeId = serializers.IntegerField(
+        write_only=True,
+        required=False,
+        allow_null=True
     )
     yarnBuyer = serializers.PrimaryKeyRelatedField(
         source="yarn_buyer",
@@ -139,6 +161,7 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
     updatedBy = serializers.SerializerMethodField()
 
     # ── Nested display ────────────────────────────────────────────────────
+    stockDetail = serializers.SerializerMethodField()
     yarnBuyerDetail = serializers.SerializerMethodField()
     sizingDetail = serializers.SerializerMethodField()
 
@@ -146,7 +169,11 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         model = YarnOutcome
         fields = [
             "id",
+            "stock",
+            "stockId",
+            "stockDetail",
             "yarnIntake",
+            "yarnIntakeId",
             "outcomeType",
             "outcomeBags",
             "outcomeConesPerBag",
@@ -178,8 +205,13 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
             "id", "outcomeWeightKg", "outcomeWeightLb",
             "beamAssignments", "totalBeams", "status", "sizingOutcome", "isReceived",
             "createdAt", "updatedAt", "createdBy", "updatedBy",
-            "yarnBuyerDetail", "sizingDetail",
+            "stockDetail", "yarnBuyerDetail", "sizingDetail",
         ]
+
+    def get_stockDetail(self, obj):
+        if obj.stock:
+            return YarnStockMinSerializer(obj.stock).data
+        return None
 
     def get_beamAssignments(self, obj):
         if hasattr(obj, "beam_assignments"):
@@ -220,6 +252,13 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)
+        if instance.stock:
+            ret["stock"] = instance.stock_id
+            ret["stockId"] = instance.stock_id
+        if instance.yarn_intake:
+            ret["yarnIntake"] = instance.yarn_intake_id
+            ret["yarnIntakeId"] = instance.yarn_intake_id
+
         if hasattr(instance, "sizing_outcomes") and instance.sizing_outcomes.exists():
             so = instance.sizing_outcomes.order_by("-id").first()
             if so:
@@ -253,6 +292,45 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
     # ── Validation ────────────────────────────────────────────────────────
 
     def validate(self, attrs):
+        # Resolve stock or legacy yarn_intake
+        stock_val = attrs.get("stock")
+        raw_stock = (
+            self.initial_data.get("stockId")
+            or self.initial_data.get("stock_id")
+            or self.initial_data.get("stock")
+        )
+        if not stock_val and raw_stock:
+            try:
+                stock_val = YarnStock.objects.get(pk=raw_stock)
+                attrs["stock"] = stock_val
+            except (YarnStock.DoesNotExist, ValueError):
+                raise serializers.ValidationError({"stock": ["Invalid stock pool ID."]})
+
+        intake_val = attrs.get("yarn_intake")
+        raw_intake = (
+            self.initial_data.get("yarnIntakeId")
+            or self.initial_data.get("yarn_intake_id")
+            or self.initial_data.get("yarnIntake")
+            or self.initial_data.get("yarn_intake")
+        )
+        if not intake_val and raw_intake:
+            try:
+                intake_val = YarnIntake.objects.get(pk=raw_intake)
+                attrs["yarn_intake"] = intake_val
+            except (YarnIntake.DoesNotExist, ValueError):
+                raise serializers.ValidationError({"yarnIntake": ["Invalid yarn intake ID."]})
+
+        # If legacy yarn_intake was passed, resolve to its shared stock pool
+        if not stock_val and intake_val:
+            stock_val = intake_val.stock
+            attrs["stock"] = stock_val
+
+        # If neither provided on creation, reject
+        if not stock_val and not (self.instance and self.instance.stock):
+            raise serializers.ValidationError({
+                "stock": ["A valid YarnStock pool must be selected."]
+            })
+
         outcome_type = attrs.get(
             "outcome_type",
             self.instance.outcome_type if self.instance else YarnOutcome.OutcomeTypeChoices.SIZING
@@ -337,6 +415,8 @@ class YarnIntakeListSerializer(serializers.ModelSerializer):
     setNo = serializers.CharField(source="set_no")
     intakeDate = serializers.DateField(source="intake_date")
     supplierDetail = serializers.SerializerMethodField()
+    stock = serializers.PrimaryKeyRelatedField(read_only=True)
+    stockDetail = serializers.SerializerMethodField()
     productionType = serializers.CharField(source="production_type", read_only=True)
 
     # Intake totals
@@ -367,7 +447,7 @@ class YarnIntakeListSerializer(serializers.ModelSerializer):
         model = YarnIntake
         fields = [
             "id", "yarnName", "yarnType", "yarnCount", "setNo",
-            "intakeDate", "supplierDetail", "productionType",
+            "intakeDate", "supplierDetail", "stock", "stockDetail", "productionType",
             "bags", "conesPerBag", "totalCones",
             "ratePerBag", "totalRate",
             "weightPerBagKg", "netWeightKg", "netWeightLb",
@@ -375,6 +455,11 @@ class YarnIntakeListSerializer(serializers.ModelSerializer):
             "remainingBags", "remainingWeightKg", "remainingWeightLb",
             "createdBy", "updatedBy", "createdAt", "updatedAt",
         ]
+
+    def get_stockDetail(self, obj):
+        if obj.stock:
+            return YarnStockMinSerializer(obj.stock).data
+        return None
 
     def get_supplierDetail(self, obj):
         if obj.supplier:
@@ -427,6 +512,10 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
         source="weight_per_bag_kg", max_digits=12, decimal_places=3
     )
 
+    # ── Read-only stock link ──────────────────────────────────────────────
+    stock = serializers.PrimaryKeyRelatedField(read_only=True)
+    stockDetail = serializers.SerializerMethodField()
+
     # ── Read-only calculated ──────────────────────────────────────────────
     totalCones = serializers.IntegerField(source="total_cones", read_only=True)
     totalRate = serializers.DecimalField(source="total_rate", max_digits=15, decimal_places=2, read_only=True)
@@ -459,6 +548,7 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
             "id",
             "yarnName", "yarnType", "yarnCount", "setNo",
             "intakeDate", "supplier", "supplierDetail", "productionType",
+            "stock", "stockDetail",
             "bags", "conesPerBag", "totalCones",
             "ratePerBag", "totalRate",
             "weightPerBagKg", "netWeightKg", "netWeightLb",
@@ -469,12 +559,18 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id",
+            "stock", "stockDetail",
             "totalCones", "totalRate", "netWeightKg", "netWeightLb",
             "outcomeBags", "outcomeWeightKg", "outcomeWeightLb",
             "remainingBags", "remainingWeightKg", "remainingWeightLb",
             "outcomes", "supplierDetail",
             "createdAt", "updatedAt", "createdBy", "updatedBy",
         ]
+
+    def get_stockDetail(self, obj):
+        if obj.stock:
+            return YarnStockMinSerializer(obj.stock).data
+        return None
 
     def get_supplierDetail(self, obj):
         if obj.supplier:
@@ -493,30 +589,90 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         request = self.context.get("request")
-        if request and request.user and request.user.is_authenticated:
-            validated_data["created_by"] = request.user
-            validated_data["updated_by"] = request.user
+        user = request.user if request and request.user and request.user.is_authenticated else None
+        if user:
+            validated_data["created_by"] = user
+            validated_data["updated_by"] = user
 
-        intake = YarnIntake(**validated_data)
-        intake.calculate_intake_fields()
-        intake.init_remaining_stock()
-        intake.save()
-        return intake
+        with transaction.atomic():
+            from factory.yarn.yarn_stock.services import get_or_create_yarn_stock, recalculate_yarn_stock
+            stock = get_or_create_yarn_stock(
+                yarn_name=validated_data.get("yarn_name"),
+                yarn_type=validated_data.get("yarn_type"),
+                yarn_count=validated_data.get("yarn_count"),
+                production_type=validated_data.get("production_type", ""),
+                user=user,
+            )
+            validated_data["stock"] = stock
+
+            intake = YarnIntake(**validated_data)
+            intake.calculate_intake_fields()
+            intake.init_remaining_stock()
+            intake.save()
+
+            locked_stock = YarnStock.objects.select_for_update().get(pk=stock.pk)
+            recalculate_yarn_stock(locked_stock)
+            return intake
 
     def update(self, instance, validated_data):
         request = self.context.get("request")
-        if request and request.user and request.user.is_authenticated:
-            validated_data["updated_by"] = request.user
+        user = request.user if request and request.user and request.user.is_authenticated else None
+        if user:
+            validated_data["updated_by"] = user
 
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
+        with transaction.atomic():
+            from factory.yarn.yarn_stock.services import get_or_create_yarn_stock, recalculate_yarn_stock
+            old_stock = instance.stock
 
-        instance.calculate_intake_fields()
+            new_yarn_name = validated_data.get("yarn_name", instance.yarn_name)
+            new_yarn_type = validated_data.get("yarn_type", instance.yarn_type)
+            new_yarn_count = validated_data.get("yarn_count", instance.yarn_count)
+            new_prod_type = validated_data.get("production_type", instance.production_type)
 
-        # Recalculate remaining based on current outcome summary
-        from .services import recalculate_yarn_intake_stock
-        instance.save()
-        recalculate_yarn_intake_stock(instance)
-        # Refresh from DB to get updated summary fields
-        instance.refresh_from_db()
-        return instance
+            category_changed = (
+                old_stock and (
+                    old_stock.yarn_name != new_yarn_name.strip()
+                    or old_stock.yarn_type != new_yarn_type.strip()
+                    or old_stock.yarn_count != new_yarn_count.strip()
+                    or old_stock.production_type != (new_prod_type or "").strip()
+                )
+            )
+
+            if category_changed:
+                new_stock = get_or_create_yarn_stock(
+                    yarn_name=new_yarn_name,
+                    yarn_type=new_yarn_type,
+                    yarn_count=new_yarn_count,
+                    production_type=new_prod_type,
+                    user=user,
+                )
+                # Verify old stock won't become negative
+                locked_old = YarnStock.objects.select_for_update().get(pk=old_stock.pk)
+                remaining_bags = locked_old.intakes.exclude(pk=instance.pk).aggregate(Sum("bags"))["bags__sum"] or 0
+                dispatched_bags = locked_old.outcomes.aggregate(Sum("outcome_bags"))["outcome_bags__sum"] or 0
+                if remaining_bags < dispatched_bags:
+                    raise serializers.ValidationError({
+                        "yarnName": [
+                            f"Cannot change yarn category: previous stock pool '{locked_old.yarn_name}' "
+                            f"has dispatched outcomes ({dispatched_bags} bags) exceeding remaining intakes ({remaining_bags} bags)."
+                        ]
+                    })
+                instance.stock = new_stock
+
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+
+            instance.calculate_intake_fields()
+            instance.save()
+
+            if category_changed and old_stock:
+                locked_old = YarnStock.objects.select_for_update().get(pk=old_stock.pk)
+                recalculate_yarn_stock(locked_old)
+            if instance.stock:
+                locked_curr = YarnStock.objects.select_for_update().get(pk=instance.stock.pk)
+                recalculate_yarn_stock(locked_curr)
+
+            from .services import recalculate_yarn_intake_stock
+            recalculate_yarn_intake_stock(instance)
+            instance.refresh_from_db()
+            return instance

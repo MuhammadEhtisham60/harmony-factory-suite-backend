@@ -68,6 +68,14 @@ MODULE_PERMISSIONS = [
         ]
     },
     {
+        "module": "yarn_stock",
+        "name": "Yarn Stock",
+        "permissions": [
+            {"code": "yarn_stock.view", "name": "View Yarn Stock", "description": "View shared yarn inventory pools and stock balance"},
+            {"code": "yarn_stock.edit", "name": "Reconcile Yarn Stock", "description": "Reconcile and adjust yarn stock pools"},
+        ]
+    },
+    {
         "module": "yarn_intake",
         "name": "Yarn Intake",
         "permissions": [
