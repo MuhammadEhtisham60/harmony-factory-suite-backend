@@ -18,6 +18,9 @@ class BeamFilter(django_filters.FilterSet):
         created_before      – YYYY-MM-DD, record created on or before
         min_length          – decimal, filter beams with length >= value
         max_length          – decimal, filter beams with length <= value
+        min_width           – decimal, filter beams with width >= value
+        max_width           – decimal, filter beams with width <= value
+        width               – decimal, exact filter on width
         min_weight          – decimal, filter beams with weight >= value
         max_weight          – decimal, filter beams with weight <= value
     """
@@ -62,6 +65,20 @@ class BeamFilter(django_filters.FilterSet):
         lookup_expr="lte"
     )
 
+    width = django_filters.NumberFilter(
+        field_name="width"
+    )
+
+    min_width = django_filters.NumberFilter(
+        field_name="width",
+        lookup_expr="gte"
+    )
+
+    max_width = django_filters.NumberFilter(
+        field_name="width",
+        lookup_expr="lte"
+    )
+
     min_weight = django_filters.NumberFilter(
         field_name="weight",
         lookup_expr="gte"
@@ -74,7 +91,7 @@ class BeamFilter(django_filters.FilterSet):
 
     class Meta:
         model = Beam
-        fields = ["status", "production_order", "yarn_count"]
+        fields = ["status", "production_order", "yarn_count", "width"]
 
     def filter_search(self, queryset, name, value):  # noqa: ARG002
         return queryset.filter(

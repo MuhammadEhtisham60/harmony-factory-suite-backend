@@ -52,13 +52,16 @@ GET /api/v1/factory/beams/
 | `yarn_count` | string | `"20/1"` | Partial match on yarn count |
 | `min_length` | decimal | `500.00` | Beams with length >= value |
 | `max_length` | decimal | `2000.00` | Beams with length <= value |
+| `min_width` | decimal | `58.00` | Beams with width >= value |
+| `max_width` | decimal | `120.00` | Beams with width <= value |
+| `width` | decimal | `68.00` | Exact match on width |
 | `min_weight` | decimal | `50.00` | Beams with weight >= value |
 | `max_weight` | decimal | `500.00` | Beams with weight <= value |
 | `created_after` | date | `"2026-01-01"` | `YYYY-MM-DD` |
 | `created_before` | date | `"2026-12-31"` | `YYYY-MM-DD` |
 | `ordering` | string | `"-created_at"` | Prefix `-` for descending |
 
-**Orderable fields:** `beam_number`, `beam_name`, `status`, `yarn_count`, `length`, `weight`, `warp_count`, `total_ends`, `created_at`, `updated_at`
+**Orderable fields:** `beam_number`, `beam_name`, `status`, `yarn_count`, `length`, `width`, `weight`, `warp_count`, `total_ends`, `created_at`, `updated_at`
 
 ### Axios Example
 
@@ -92,6 +95,7 @@ const response = await axios.get('/api/v1/factory/beams/', {
       "warpCount": 2400,
       "totalEnds": 2400,
       "length": "1500.00",
+      "width": "68.00",
       "weight": "250.00",
       "productionOrder": "PO-2026-001",
       "status": "Available",
@@ -131,6 +135,7 @@ POST /api/v1/factory/beams/
   "warpCount": 2400,
   "totalEnds": 2400,
   "length": 1500.00,
+  "width": 68.00,
   "weight": 250.00,
   "productionOrder": "PO-2026-001",
   "status": "Available",
@@ -166,6 +171,7 @@ const response = await axios.post('/api/v1/factory/beams/', {
     "warpCount": 2400,
     "totalEnds": 2400,
     "length": "1500.00",
+    "width": "68.00",
     "weight": "250.00",
     "productionOrder": "PO-2026-001",
     "status": "Available",
@@ -231,6 +237,7 @@ Send all fields. Any omitted optional field will be reset to its default.
   "warpCount": 2400,
   "totalEnds": 2400,
   "length": 1500.00,
+  "width": 68.00,
   "weight": 250.00,
   "productionOrder": "PO-2026-001",
   "status": "In Production",
@@ -382,6 +389,7 @@ Call once on page load to populate the `status` dropdown.
 | Warp Count | `warpCount` | integer | — | e.g. `2400` |
 | Total Ends | `totalEnds` | integer | — | e.g. `2400` |
 | Length | `length` | decimal | — | 2 decimal places, e.g. `1500.00` |
+| Width | `width` | decimal | — | 2 decimal places, e.g. `68.00` (in inches) |
 | Weight | `weight` | decimal | — | 2 decimal places, e.g. `250.00` |
 | Production Order | `productionOrder` | string | — | Reference to production order |
 | Status | `status` | string | — | Use values from `/choices/`. Default: `Available` |
@@ -472,6 +480,7 @@ export interface Beam {
   warpCount?: number | null
   totalEnds?: number | null
   length?: number | null    // decimal, e.g. 1500.00
+  width?: number | null     // decimal, e.g. 68.00 (in inches)
   weight?: number | null    // decimal, e.g. 250.00
   productionOrder?: string
   status?: BeamStatus       // default: 'Available'

@@ -41,6 +41,7 @@ class BeamListSerializer(serializers.ModelSerializer):
             "warpCount",
             "totalEnds",
             "length",
+            "width",
             "weight",
             "productionOrder",
             "status",
@@ -90,6 +91,9 @@ class BeamDetailSerializer(serializers.ModelSerializer):
     length = serializers.DecimalField(
         max_digits=12, decimal_places=2, required=False, allow_null=True
     )
+    width = serializers.DecimalField(
+        max_digits=10, decimal_places=2, required=False, allow_null=True
+    )
     weight = serializers.DecimalField(
         max_digits=12, decimal_places=2, required=False, allow_null=True
     )
@@ -111,6 +115,7 @@ class BeamDetailSerializer(serializers.ModelSerializer):
             "warpCount",
             "totalEnds",
             "length",
+            "width",
             "weight",
             "productionOrder",
             "status",
@@ -347,6 +352,7 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
                 "beamName": obj.beam.beam_name,
                 "beamNumber": obj.beam.beam_number,
                 "status": obj.beam.status,
+                "width": obj.beam.width,
             }
         return None
 

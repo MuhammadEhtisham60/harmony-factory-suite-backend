@@ -21,6 +21,7 @@ for i in range(1, 6):
         warp_count=1000,
         total_ends=4000,
         length=2000.0,
+        width=120.0,
         weight=50.0
     )
 

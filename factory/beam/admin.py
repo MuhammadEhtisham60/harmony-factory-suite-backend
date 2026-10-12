@@ -15,6 +15,7 @@ class BeamAdmin(admin.ModelAdmin):
         "warp_count",
         "total_ends",
         "length",
+        "width",
         "weight",
         "status",
         "created_at",
@@ -48,6 +49,7 @@ class BeamAdmin(admin.ModelAdmin):
                     "warp_count",
                     "total_ends",
                     "length",
+                    "width",
                     "weight",
                 )
             },

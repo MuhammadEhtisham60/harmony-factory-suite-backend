@@ -61,6 +61,7 @@ class BeamMinSerializer(serializers.ModelSerializer):
             "warpCount",
             "totalEnds",
             "length",
+            "width",
             "weight",
             "productionOrder",
             "status",

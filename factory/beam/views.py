@@ -64,6 +64,7 @@ class BeamViewSet(ModelViewSet):
         "status",
         "yarn_count",
         "length",
+        "width",
         "weight",
         "warp_count",
         "total_ends",
