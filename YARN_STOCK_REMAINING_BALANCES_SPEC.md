@@ -139,8 +139,14 @@ def calculate_stock_aggregates(stock):
     else:
         weighted_price = Decimal("0.000000")
 
-    if available_boxes > 0:
-        remaining_total_price = (Decimal(str(available_boxes)) * weighted_price).quantize(Decimal("0.000001"))
+    # Deduct outcome valuation: outcome weight in lb multiplied by price in yarn stock
+    total_outcome_value = (total_outcome_weight_lb * weighted_price).quantize(Decimal("0.000001"))
+
+    # Remaining total price: total price in stock minus outcome valuation
+    if available_boxes > 0 and available_weight_kg > Decimal("0.000000"):
+        remaining_total_price = total_intake_rate - total_outcome_value
+        if remaining_total_price < Decimal("0.000000"):
+            remaining_total_price = Decimal("0.000000")
     else:
         remaining_total_price = Decimal("0.000000")
 

@@ -26,6 +26,7 @@ from accounts.permissions import HasERPModulePermission
 from audit_logs.utils import log_activity
 
 from factory.yarn.yarn_stock.models import YarnStock
+from factory.yarn.yarn_stock.serializers import YarnStockMinSerializer
 from factory.yarn.yarn_stock.services import (
     recalculate_yarn_stock,
     validate_outcome_stock_pool,
@@ -218,9 +219,15 @@ class YarnOutcomeViewSet(ModelViewSet):
             status="Success",
         )
 
+        outcome.refresh_from_db()
         out = YarnOutcomeSerializer(outcome, context={"request": request})
         return Response(
-            {"success": True, "message": "Yarn outcome created successfully.", "data": out.data},
+            {
+                "success": True,
+                "message": "Yarn outcome created successfully.",
+                "data": out.data,
+                "stock": YarnStockMinSerializer(outcome.stock).data if outcome.stock else None,
+            },
             status=status.HTTP_201_CREATED,
         )
 
@@ -328,9 +335,15 @@ class YarnOutcomeViewSet(ModelViewSet):
             status="Success",
         )
 
+        locked_outcome.refresh_from_db()
         out = YarnOutcomeSerializer(locked_outcome, context={"request": request})
         return Response(
-            {"success": True, "message": "Yarn outcome updated successfully.", "data": out.data}
+            {
+                "success": True,
+                "message": "Yarn outcome updated successfully.",
+                "data": out.data,
+                "stock": YarnStockMinSerializer(locked_outcome.stock).data if locked_outcome.stock else None,
+            }
         )
 
     def partial_update(self, request, *args, **kwargs):
@@ -401,8 +414,14 @@ class YarnOutcomeViewSet(ModelViewSet):
             status="Success",
         )
 
+        if locked_stock:
+            locked_stock.refresh_from_db()
         return Response(
-            {"success": True, "message": "Yarn outcome deleted successfully. Stock restored."},
+            {
+                "success": True,
+                "message": "Yarn outcome deleted successfully. Stock restored.",
+                "stock": YarnStockMinSerializer(locked_stock).data if locked_stock else None,
+            },
             status=status.HTTP_200_OK,
         )
 
