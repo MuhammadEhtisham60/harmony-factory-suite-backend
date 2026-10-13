@@ -132,6 +132,7 @@ def calculate_stock_aggregates(stock):
         "available_weight_kg": available_weight_kg,
         "available_weight_lb": available_weight_lb,
         "price": weighted_price,
+        "total_price": total_intake_rate,
     }
 
 
@@ -147,6 +148,7 @@ def recalculate_yarn_stock(stock):
     stock.total_weight_kg = aggs["available_weight_kg"]
     stock.total_weight_lb = aggs["available_weight_lb"]
     stock.price = aggs["price"]
+    stock.total_price = aggs["total_price"]
 
     stock.save(update_fields=[
         "total_boxes",
@@ -154,6 +156,7 @@ def recalculate_yarn_stock(stock):
         "total_weight_kg",
         "total_weight_lb",
         "price",
+        "total_price",
         "updated_at",
     ])
     return stock

@@ -98,6 +98,12 @@ class YarnStock(models.Model):
         default=Decimal("0.000000"),
         help_text="Weighted average purchase rate per box/bag from contributing intakes."
     )
+    total_price = models.DecimalField(
+        max_digits=18,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="Total price of yarn of this quality from contributing intakes."
+    )
     total_boxes = models.IntegerField(
         default=0,
         help_text="Current available boxes / bags remaining in stock."

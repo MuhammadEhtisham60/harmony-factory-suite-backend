@@ -87,6 +87,7 @@ class YarnStockViewSet(ReadOnlyModelViewSet):
         "total_weight_kg",
         "total_weight_lb",
         "price",
+        "total_price",
         "created_at",
         "updated_at",
     ]

@@ -21,6 +21,7 @@ class YarnStockMinSerializer(serializers.ModelSerializer):
     yarnCountDetail = serializers.SerializerMethodField()
     productionType = serializers.CharField(source="production_type", read_only=True)
     price = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
+    totalPrice = serializers.DecimalField(source="total_price", max_digits=18, decimal_places=6, read_only=True)
     pricePerKg = serializers.DecimalField(source="price_per_kg", max_digits=15, decimal_places=6, read_only=True)
     totalBoxes = serializers.IntegerField(source="total_boxes", read_only=True)
     cones = serializers.IntegerField(read_only=True)
@@ -42,6 +43,7 @@ class YarnStockMinSerializer(serializers.ModelSerializer):
             "yarnCountDetail",
             "productionType",
             "price",
+            "totalPrice",
             "pricePerKg",
             "totalBoxes",
             "cones",
@@ -83,6 +85,7 @@ class YarnStockListSerializer(serializers.ModelSerializer):
     yarnCountDetail = serializers.SerializerMethodField()
     productionType = serializers.CharField(source="production_type", read_only=True)
     price = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
+    totalPrice = serializers.DecimalField(source="total_price", max_digits=18, decimal_places=6, read_only=True)
     pricePerKg = serializers.DecimalField(source="price_per_kg", max_digits=15, decimal_places=6, read_only=True)
 
     # Current available
@@ -125,6 +128,7 @@ class YarnStockListSerializer(serializers.ModelSerializer):
             "yarnCountDetail",
             "productionType",
             "price",
+            "totalPrice",
             "pricePerKg",
             "totalBoxes",
             "cones",
