@@ -94,8 +94,8 @@ class YarnStock(models.Model):
     # ── Current Available Balances ─────────────────────────────────────────
     price = models.DecimalField(
         max_digits=15,
-        decimal_places=2,
-        default=Decimal("0.00"),
+        decimal_places=6,
+        default=Decimal("0.000000"),
         help_text="Weighted average purchase rate per box/bag from contributing intakes."
     )
     total_boxes = models.IntegerField(
@@ -108,14 +108,14 @@ class YarnStock(models.Model):
     )
     total_weight_kg = models.DecimalField(
         max_digits=15,
-        decimal_places=3,
-        default=Decimal("0.000"),
+        decimal_places=6,
+        default=Decimal("0.000000"),
         help_text="Current available weight in kilograms."
     )
     total_weight_lb = models.DecimalField(
         max_digits=15,
-        decimal_places=3,
-        default=Decimal("0.000"),
+        decimal_places=6,
+        default=Decimal("0.000000"),
         help_text="Current available weight in pounds."
     )
 
@@ -204,12 +204,12 @@ class YarnStock(models.Model):
     @property
     def total_received_weight_kg(self):
         agg = self.intakes.aggregate(models.Sum("net_weight_kg"))
-        return agg["net_weight_kg__sum"] or Decimal("0.000")
+        return agg["net_weight_kg__sum"] or Decimal("0.000000")
 
     @property
     def total_received_weight_lb(self):
         agg = self.intakes.aggregate(models.Sum("net_weight_lb"))
-        return agg["net_weight_lb__sum"] or Decimal("0.000")
+        return agg["net_weight_lb__sum"] or Decimal("0.000000")
 
     @property
     def total_dispatched_boxes(self):
@@ -219,12 +219,12 @@ class YarnStock(models.Model):
     @property
     def total_dispatched_weight_kg(self):
         agg = self.outcomes.aggregate(models.Sum("outcome_weight_kg"))
-        return agg["outcome_weight_kg__sum"] or Decimal("0.000")
+        return agg["outcome_weight_kg__sum"] or Decimal("0.000000")
 
     @property
     def total_dispatched_weight_lb(self):
         agg = self.outcomes.aggregate(models.Sum("outcome_weight_lb"))
-        return agg["outcome_weight_lb__sum"] or Decimal("0.000")
+        return agg["outcome_weight_lb__sum"] or Decimal("0.000000")
 
     @property
     def price_per_kg(self):
@@ -232,5 +232,5 @@ class YarnStock(models.Model):
         total_kg = self.total_received_weight_kg
         if total_kg and total_kg > Decimal("0"):
             total_amt = self.intakes.aggregate(models.Sum("total_rate"))["total_rate__sum"] or Decimal("0")
-            return (total_amt / Decimal(str(total_kg))).quantize(Decimal("0.01"))
-        return Decimal("0.00")
+            return (total_amt / Decimal(str(total_kg))).quantize(Decimal("0.000001"))
+        return Decimal("0.000000")

@@ -120,15 +120,15 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
     )
     outcomeWeightPerBagKg = serializers.DecimalField(
         source="outcome_weight_per_bag_kg",
-        max_digits=12, decimal_places=3
+        max_digits=12, decimal_places=6
     )
     totalPrice = serializers.DecimalField(
         source="total_price",
-        max_digits=15, decimal_places=2,
+        max_digits=15, decimal_places=6,
         required=False, default=0
     )
     ratePerKg = serializers.DecimalField(
-        max_digits=15, decimal_places=2, required=False, allow_null=True
+        max_digits=15, decimal_places=6, required=False, allow_null=True
     )
     outcomeDate = serializers.DateField(source="outcome_date")
     notes = serializers.CharField(required=False, allow_blank=True, default="")
@@ -146,10 +146,10 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
 
     # ── Read-only calculated ──────────────────────────────────────────────
     outcomeWeightKg = serializers.DecimalField(
-        source="outcome_weight_kg", max_digits=15, decimal_places=3, read_only=True
+        source="outcome_weight_kg", max_digits=15, decimal_places=6, read_only=True
     )
     outcomeWeightLb = serializers.DecimalField(
-        source="outcome_weight_lb", max_digits=15, decimal_places=3, read_only=True
+        source="outcome_weight_lb", max_digits=15, decimal_places=6, read_only=True
     )
     beamAssignments = serializers.SerializerMethodField()
     totalBeams = serializers.IntegerField(source="total_beams", read_only=True)
@@ -431,21 +431,21 @@ class YarnIntakeListSerializer(serializers.ModelSerializer):
     # Intake totals
     conesPerBag = serializers.IntegerField(source="cones_per_bag")
     totalCones = serializers.IntegerField(source="total_cones", read_only=True)
-    ratePerBag = serializers.DecimalField(source="rate_per_bag", max_digits=15, decimal_places=2)
-    totalRate = serializers.DecimalField(source="total_rate", max_digits=15, decimal_places=2, read_only=True)
-    weightPerBagKg = serializers.DecimalField(source="weight_per_bag_kg", max_digits=12, decimal_places=3)
-    netWeightKg = serializers.DecimalField(source="net_weight_kg", max_digits=15, decimal_places=3, read_only=True)
-    netWeightLb = serializers.DecimalField(source="net_weight_lb", max_digits=15, decimal_places=3, read_only=True)
+    ratePerBag = serializers.DecimalField(source="rate_per_bag", max_digits=15, decimal_places=6)
+    totalRate = serializers.DecimalField(source="total_rate", max_digits=15, decimal_places=6, read_only=True)
+    weightPerBagKg = serializers.DecimalField(source="weight_per_bag_kg", max_digits=12, decimal_places=6)
+    netWeightKg = serializers.DecimalField(source="net_weight_kg", max_digits=15, decimal_places=6, read_only=True)
+    netWeightLb = serializers.DecimalField(source="net_weight_lb", max_digits=15, decimal_places=6, read_only=True)
 
     # Outcome summary
     outcomeBags = serializers.IntegerField(source="outcome_bags", read_only=True)
-    outcomeWeightKg = serializers.DecimalField(source="outcome_weight_kg", max_digits=15, decimal_places=3, read_only=True)
-    outcomeWeightLb = serializers.DecimalField(source="outcome_weight_lb", max_digits=15, decimal_places=3, read_only=True)
+    outcomeWeightKg = serializers.DecimalField(source="outcome_weight_kg", max_digits=15, decimal_places=6, read_only=True)
+    outcomeWeightLb = serializers.DecimalField(source="outcome_weight_lb", max_digits=15, decimal_places=6, read_only=True)
 
     # Remaining
     remainingBags = serializers.IntegerField(source="remaining_bags", read_only=True)
-    remainingWeightKg = serializers.DecimalField(source="remaining_weight_kg", max_digits=15, decimal_places=3, read_only=True)
-    remainingWeightLb = serializers.DecimalField(source="remaining_weight_lb", max_digits=15, decimal_places=3, read_only=True)
+    remainingWeightKg = serializers.DecimalField(source="remaining_weight_kg", max_digits=15, decimal_places=6, read_only=True)
+    remainingWeightLb = serializers.DecimalField(source="remaining_weight_lb", max_digits=15, decimal_places=6, read_only=True)
 
     createdAt = serializers.DateTimeField(source="created_at", read_only=True)
     updatedAt = serializers.DateTimeField(source="updated_at", read_only=True)
@@ -550,10 +550,10 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
     bags = serializers.IntegerField(min_value=1)
     conesPerBag = serializers.IntegerField(source="cones_per_bag", min_value=0, default=0)
     ratePerBag = serializers.DecimalField(
-        source="rate_per_bag", max_digits=15, decimal_places=2, default=0
+        source="rate_per_bag", max_digits=15, decimal_places=6, default=0
     )
     weightPerBagKg = serializers.DecimalField(
-        source="weight_per_bag_kg", max_digits=12, decimal_places=3
+        source="weight_per_bag_kg", max_digits=12, decimal_places=6
     )
 
     # ── Read-only stock link ──────────────────────────────────────────────
@@ -562,17 +562,17 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
 
     # ── Read-only calculated ──────────────────────────────────────────────
     totalCones = serializers.IntegerField(source="total_cones", read_only=True)
-    totalRate = serializers.DecimalField(source="total_rate", max_digits=15, decimal_places=2, read_only=True)
-    netWeightKg = serializers.DecimalField(source="net_weight_kg", max_digits=15, decimal_places=3, read_only=True)
-    netWeightLb = serializers.DecimalField(source="net_weight_lb", max_digits=15, decimal_places=3, read_only=True)
+    totalRate = serializers.DecimalField(source="total_rate", max_digits=15, decimal_places=6, read_only=True)
+    netWeightKg = serializers.DecimalField(source="net_weight_kg", max_digits=15, decimal_places=6, read_only=True)
+    netWeightLb = serializers.DecimalField(source="net_weight_lb", max_digits=15, decimal_places=6, read_only=True)
 
     outcomeBags = serializers.IntegerField(source="outcome_bags", read_only=True)
-    outcomeWeightKg = serializers.DecimalField(source="outcome_weight_kg", max_digits=15, decimal_places=3, read_only=True)
-    outcomeWeightLb = serializers.DecimalField(source="outcome_weight_lb", max_digits=15, decimal_places=3, read_only=True)
+    outcomeWeightKg = serializers.DecimalField(source="outcome_weight_kg", max_digits=15, decimal_places=6, read_only=True)
+    outcomeWeightLb = serializers.DecimalField(source="outcome_weight_lb", max_digits=15, decimal_places=6, read_only=True)
 
     remainingBags = serializers.IntegerField(source="remaining_bags", read_only=True)
-    remainingWeightKg = serializers.DecimalField(source="remaining_weight_kg", max_digits=15, decimal_places=3, read_only=True)
-    remainingWeightLb = serializers.DecimalField(source="remaining_weight_lb", max_digits=15, decimal_places=3, read_only=True)
+    remainingWeightKg = serializers.DecimalField(source="remaining_weight_kg", max_digits=15, decimal_places=6, read_only=True)
+    remainingWeightLb = serializers.DecimalField(source="remaining_weight_lb", max_digits=15, decimal_places=6, read_only=True)
 
     # ── Nested outcomes (read-only, for GET detail) ───────────────────────
     outcomes = YarnOutcomeSerializer(many=True, read_only=True)

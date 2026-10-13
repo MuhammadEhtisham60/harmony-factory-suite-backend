@@ -46,8 +46,8 @@ def recalculate_yarn_intake_stock(intake):
     )
 
     total_outcome_bags = agg["total_outcome_bags"] or 0
-    total_outcome_weight_kg = agg["total_outcome_weight_kg"] or Decimal("0.000")
-    total_outcome_weight_lb = agg["total_outcome_weight_lb"] or Decimal("0.000")
+    total_outcome_weight_kg = agg["total_outcome_weight_kg"] or Decimal("0.000000")
+    total_outcome_weight_lb = agg["total_outcome_weight_lb"] or Decimal("0.000000")
 
     intake.outcome_bags = total_outcome_bags
     intake.outcome_weight_kg = total_outcome_weight_kg

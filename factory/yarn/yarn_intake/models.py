@@ -140,24 +140,24 @@ class YarnIntake(models.Model):
     # ── Source inputs ──────────────────────────────────────────────────────
     bags = models.PositiveIntegerField(default=0)
     cones_per_bag = models.PositiveIntegerField(default=0)
-    rate_per_bag = models.DecimalField(max_digits=15, decimal_places=2, default=0)
-    weight_per_bag_kg = models.DecimalField(max_digits=12, decimal_places=3, default=0)
+    rate_per_bag = models.DecimalField(max_digits=15, decimal_places=6, default=0)
+    weight_per_bag_kg = models.DecimalField(max_digits=12, decimal_places=6, default=0)
 
     # ── Backend-calculated intake totals ───────────────────────────────────
     total_cones = models.PositiveIntegerField(default=0)
-    total_rate = models.DecimalField(max_digits=15, decimal_places=2, default=0)
-    net_weight_kg = models.DecimalField(max_digits=15, decimal_places=3, default=0)
-    net_weight_lb = models.DecimalField(max_digits=15, decimal_places=3, default=0)
+    total_rate = models.DecimalField(max_digits=15, decimal_places=6, default=0)
+    net_weight_kg = models.DecimalField(max_digits=15, decimal_places=6, default=0)
+    net_weight_lb = models.DecimalField(max_digits=15, decimal_places=6, default=0)
 
     # ── Denormalized outcome summary (recalculated from YarnOutcome) ───────
     outcome_bags = models.PositiveIntegerField(default=0)
-    outcome_weight_kg = models.DecimalField(max_digits=15, decimal_places=3, default=0)
-    outcome_weight_lb = models.DecimalField(max_digits=15, decimal_places=3, default=0)
+    outcome_weight_kg = models.DecimalField(max_digits=15, decimal_places=6, default=0)
+    outcome_weight_lb = models.DecimalField(max_digits=15, decimal_places=6, default=0)
 
     # ── Remaining stock (recalculated from YarnOutcome) ────────────────────
     remaining_bags = models.PositiveIntegerField(default=0)
-    remaining_weight_kg = models.DecimalField(max_digits=15, decimal_places=3, default=0)
-    remaining_weight_lb = models.DecimalField(max_digits=15, decimal_places=3, default=0)
+    remaining_weight_kg = models.DecimalField(max_digits=15, decimal_places=6, default=0)
+    remaining_weight_lb = models.DecimalField(max_digits=15, decimal_places=6, default=0)
 
     # ── Audit ──────────────────────────────────────────────────────────────
     created_at = models.DateTimeField(auto_now_add=True)
@@ -347,13 +347,13 @@ class YarnOutcome(models.Model):
 
     outcome_weight_per_bag_kg = models.DecimalField(
         max_digits=12,
-        decimal_places=3,
+        decimal_places=6,
         default=0
     )
 
     # Backend-calculated
-    outcome_weight_kg = models.DecimalField(max_digits=15, decimal_places=3, default=0)
-    outcome_weight_lb = models.DecimalField(max_digits=15, decimal_places=3, default=0)
+    outcome_weight_kg = models.DecimalField(max_digits=15, decimal_places=6, default=0)
+    outcome_weight_lb = models.DecimalField(max_digits=15, decimal_places=6, default=0)
 
     yarn_buyer = models.ForeignKey(
         YarnBuyer,
@@ -377,7 +377,7 @@ class YarnOutcome(models.Model):
         DISPATCHED = "Dispatched", "Dispatched"
         COMPLETED = "Completed", "Completed"
 
-    total_price = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    total_price = models.DecimalField(max_digits=15, decimal_places=6, default=0)
 
     status = models.CharField(
         max_length=30,

@@ -84,9 +84,9 @@ def calculate_stock_aggregates(stock):
 
     total_intake_bags = intake_agg["total_bags"] or 0
     total_intake_cones = intake_agg["total_cones"] or 0
-    total_intake_weight_kg = intake_agg["total_weight_kg"] or Decimal("0.000")
-    total_intake_weight_lb = intake_agg["total_weight_lb"] or Decimal("0.000")
-    total_intake_rate = intake_agg["total_rate"] or Decimal("0.00")
+    total_intake_weight_kg = intake_agg["total_weight_kg"] or Decimal("0.000000")
+    total_intake_weight_lb = intake_agg["total_weight_lb"] or Decimal("0.000000")
+    total_intake_rate = intake_agg["total_rate"] or Decimal("0.000000")
 
     outcome_cone_expr = ExpressionWrapper(
         F("outcome_bags") * F("outcome_cones_per_bag"),
@@ -103,19 +103,19 @@ def calculate_stock_aggregates(stock):
 
     total_outcome_bags = outcome_agg["total_bags"] or 0
     total_outcome_cones = outcome_agg["total_cones"] or 0
-    total_outcome_weight_kg = outcome_agg["total_weight_kg"] or Decimal("0.000")
-    total_outcome_weight_lb = outcome_agg["total_weight_lb"] or Decimal("0.000")
+    total_outcome_weight_kg = outcome_agg["total_weight_kg"] or Decimal("0.000000")
+    total_outcome_weight_lb = outcome_agg["total_weight_lb"] or Decimal("0.000000")
 
     available_boxes = total_intake_bags - total_outcome_bags
     available_cones = total_intake_cones - total_outcome_cones
     available_weight_kg = total_intake_weight_kg - total_outcome_weight_kg
     # Use standard project conversion constant for exact precision
-    available_weight_lb = (available_weight_kg * LB_PER_KG).quantize(Decimal("0.001"))
+    available_weight_lb = (available_weight_kg * LB_PER_KG).quantize(Decimal("0.000001"))
 
     if total_intake_bags > 0:
-        weighted_price = (total_intake_rate / Decimal(str(total_intake_bags))).quantize(Decimal("0.01"))
+        weighted_price = (total_intake_rate / Decimal(str(total_intake_bags))).quantize(Decimal("0.000001"))
     else:
-        weighted_price = Decimal("0.00")
+        weighted_price = Decimal("0.000000")
 
     return {
         "total_intake_bags": total_intake_bags,
@@ -172,7 +172,7 @@ def validate_outcome_stock_pool(stock, outcome_bags, outcome_weight_kg=None, exc
         total_weight_kg=Sum("net_weight_kg")
     )
     total_intake_bags = intake_agg["total_bags"] or 0
-    total_intake_kg = intake_agg["total_weight_kg"] or Decimal("0.000")
+    total_intake_kg = intake_agg["total_weight_kg"] or Decimal("0.000000")
 
     outcomes_qs = stock.outcomes.all()
     if exclude_outcome_id is not None:
@@ -183,7 +183,7 @@ def validate_outcome_stock_pool(stock, outcome_bags, outcome_weight_kg=None, exc
         dispatched_kg=Sum("outcome_weight_kg")
     )
     dispatched_bags = outcome_agg["dispatched_bags"] or 0
-    dispatched_kg = outcome_agg["dispatched_kg"] or Decimal("0.000")
+    dispatched_kg = outcome_agg["dispatched_kg"] or Decimal("0.000000")
 
     available_bags = total_intake_bags - dispatched_bags
     available_kg = total_intake_kg - dispatched_kg

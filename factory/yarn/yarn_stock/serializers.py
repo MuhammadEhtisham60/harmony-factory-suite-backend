@@ -20,12 +20,12 @@ class YarnStockMinSerializer(serializers.ModelSerializer):
     yarnTypeDetail = serializers.SerializerMethodField()
     yarnCountDetail = serializers.SerializerMethodField()
     productionType = serializers.CharField(source="production_type", read_only=True)
-    price = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
-    pricePerKg = serializers.DecimalField(source="price_per_kg", max_digits=15, decimal_places=2, read_only=True)
+    price = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
+    pricePerKg = serializers.DecimalField(source="price_per_kg", max_digits=15, decimal_places=6, read_only=True)
     totalBoxes = serializers.IntegerField(source="total_boxes", read_only=True)
     cones = serializers.IntegerField(read_only=True)
-    totalWeightKg = serializers.DecimalField(source="total_weight_kg", max_digits=15, decimal_places=3, read_only=True)
-    totalWeightLb = serializers.DecimalField(source="total_weight_lb", max_digits=15, decimal_places=3, read_only=True)
+    totalWeightKg = serializers.DecimalField(source="total_weight_kg", max_digits=15, decimal_places=6, read_only=True)
+    totalWeightLb = serializers.DecimalField(source="total_weight_lb", max_digits=15, decimal_places=6, read_only=True)
 
     class Meta:
         model = YarnStock
@@ -82,25 +82,25 @@ class YarnStockListSerializer(serializers.ModelSerializer):
     yarnTypeDetail = serializers.SerializerMethodField()
     yarnCountDetail = serializers.SerializerMethodField()
     productionType = serializers.CharField(source="production_type", read_only=True)
-    price = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
-    pricePerKg = serializers.DecimalField(source="price_per_kg", max_digits=15, decimal_places=2, read_only=True)
+    price = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
+    pricePerKg = serializers.DecimalField(source="price_per_kg", max_digits=15, decimal_places=6, read_only=True)
 
     # Current available
     totalBoxes = serializers.IntegerField(source="total_boxes", read_only=True)
     cones = serializers.IntegerField(read_only=True)
-    totalWeightKg = serializers.DecimalField(source="total_weight_kg", max_digits=15, decimal_places=3, read_only=True)
-    totalWeightLb = serializers.DecimalField(source="total_weight_lb", max_digits=15, decimal_places=3, read_only=True)
+    totalWeightKg = serializers.DecimalField(source="total_weight_kg", max_digits=15, decimal_places=6, read_only=True)
+    totalWeightLb = serializers.DecimalField(source="total_weight_lb", max_digits=15, decimal_places=6, read_only=True)
 
     # Ledger received totals
     totalReceivedBoxes = serializers.IntegerField(source="total_received_boxes", read_only=True)
     totalReceivedCones = serializers.IntegerField(source="total_received_cones", read_only=True)
-    totalReceivedWeightKg = serializers.DecimalField(source="total_received_weight_kg", max_digits=15, decimal_places=3, read_only=True)
-    totalReceivedWeightLb = serializers.DecimalField(source="total_received_weight_lb", max_digits=15, decimal_places=3, read_only=True)
+    totalReceivedWeightKg = serializers.DecimalField(source="total_received_weight_kg", max_digits=15, decimal_places=6, read_only=True)
+    totalReceivedWeightLb = serializers.DecimalField(source="total_received_weight_lb", max_digits=15, decimal_places=6, read_only=True)
 
     # Ledger dispatched totals
     totalDispatchedBoxes = serializers.IntegerField(source="total_dispatched_boxes", read_only=True)
-    totalDispatchedWeightKg = serializers.DecimalField(source="total_dispatched_weight_kg", max_digits=15, decimal_places=3, read_only=True)
-    totalDispatchedWeightLb = serializers.DecimalField(source="total_dispatched_weight_lb", max_digits=15, decimal_places=3, read_only=True)
+    totalDispatchedWeightKg = serializers.DecimalField(source="total_dispatched_weight_kg", max_digits=15, decimal_places=6, read_only=True)
+    totalDispatchedWeightLb = serializers.DecimalField(source="total_dispatched_weight_lb", max_digits=15, decimal_places=6, read_only=True)
 
     intakesCount = serializers.SerializerMethodField()
     outcomesCount = serializers.SerializerMethodField()
