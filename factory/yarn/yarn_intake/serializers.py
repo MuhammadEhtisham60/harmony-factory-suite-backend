@@ -497,7 +497,9 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
     yarnName = serializers.CharField(source="yarn_name")
     yarnType = serializers.CharField(source="yarn_type")
     yarnCount = serializers.CharField(source="yarn_count")
-    setNo = serializers.CharField(source="set_no")
+    setNo = serializers.CharField(
+        source="set_no", required=False, allow_blank=True, default=""
+    )
     intakeDate = serializers.DateField(source="intake_date")
     supplier = serializers.PrimaryKeyRelatedField(queryset=Supplier.objects.all())
     productionType = serializers.CharField(
@@ -586,6 +588,12 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
         if obj.updated_by:
             return {"id": obj.updated_by.id, "username": obj.updated_by.username}
         return None
+
+    def to_internal_value(self, data):
+        data = data.copy() if hasattr(data, "copy") else dict(data)
+        if "set_no" in data and "setNo" not in data:
+            data["setNo"] = data["set_no"]
+        return super().to_internal_value(data)
 
     def create(self, validated_data):
         request = self.context.get("request")

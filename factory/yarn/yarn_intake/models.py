@@ -60,7 +60,9 @@ class YarnIntake(models.Model):
 
     set_no = models.CharField(
         max_length=100,
-        help_text="Manually entered set number. Not auto-generated."
+        blank=True,
+        default="",
+        help_text="Batch / Set number. Auto-generated like BATCH-01 if left blank."
     )
 
     intake_date = models.DateField()
@@ -162,8 +164,38 @@ class YarnIntake(models.Model):
         self.outcome_weight_kg = Decimal("0")
         self.outcome_weight_lb = Decimal("0")
 
+    @classmethod
+    def generate_next_batch_no(cls):
+        """
+        Auto-generates sequential batch identifiers like BATCH-01, BATCH-02, ...
+        Finds the highest existing numeric suffix matching BATCH-<number>
+        and returns the next formatted number (with at least 2 digits).
+        """
+        import re
+        batch_intakes = cls.objects.filter(set_no__istartswith="BATCH-").values_list("set_no", flat=True)
+        max_num = 0
+        for val in batch_intakes:
+            match = re.match(r"^BATCH-(\d+)$", val, re.IGNORECASE)
+            if match:
+                try:
+                    num = int(match.group(1))
+                    if num > max_num:
+                        max_num = num
+                except ValueError:
+                    pass
+        next_num = max_num + 1
+        candidate = f"BATCH-{next_num:02d}"
+        while cls.objects.filter(set_no__iexact=candidate).exists():
+            next_num += 1
+            candidate = f"BATCH-{next_num:02d}"
+        return candidate
+
     def save(self, *args, **kwargs):
+        if not self.set_no or not str(self.set_no).strip():
+            self.set_no = self.generate_next_batch_no()
         self.calculate_intake_fields()
+        if not self.pk and not self.remaining_bags and self.bags and not self.outcome_bags:
+            self.init_remaining_stock()
         if not self.stock_id:
             from factory.yarn.yarn_stock.services import get_or_create_yarn_stock
             self.stock = get_or_create_yarn_stock(
