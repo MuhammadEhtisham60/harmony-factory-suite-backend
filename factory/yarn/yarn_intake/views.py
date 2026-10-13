@@ -33,7 +33,7 @@ class YarnIntakeViewSet(ModelViewSet):
 
     queryset = (
         YarnIntake.objects
-        .select_related("supplier", "created_by", "updated_by")
+        .select_related("supplier", "created_by", "updated_by", "stock", "yarn_name", "yarn_type", "yarn_count")
         .prefetch_related("outcomes", "outcomes__yarn_buyer")
         .all()
     )
@@ -43,11 +43,11 @@ class YarnIntakeViewSet(ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = YarnIntakeFilter
     search_fields = [
-        "yarn_name", "yarn_type", "yarn_count", "set_no",
+        "yarn_name__name", "yarn_type__name", "yarn_count__name", "set_no",
         "production_type", "supplier__supplier_name",
     ]
     ordering_fields = [
-        "yarn_name", "yarn_type", "yarn_count", "set_no",
+        "yarn_name__name", "yarn_type__name", "yarn_count__name", "set_no",
         "intake_date", "bags", "remaining_bags", "created_at", "updated_at",
     ]
     ordering = ["-intake_date", "-id"]
@@ -144,7 +144,7 @@ class YarnIntakeViewSet(ModelViewSet):
         from factory.yarn.yarn_stock.services import recalculate_yarn_stock
 
         instance = self.get_object()
-        name = instance.yarn_name
+        name = instance.yarn_name.name if instance.yarn_name else ""
         set_no = instance.set_no
         stock = instance.stock
 

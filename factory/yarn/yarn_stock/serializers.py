@@ -10,9 +10,15 @@ class YarnStockMinSerializer(serializers.ModelSerializer):
     """
     Compact representation of a stock pool for select dropdowns and nested objects.
     """
-    yarnName = serializers.CharField(source="yarn_name", read_only=True)
-    yarnType = serializers.CharField(source="yarn_type", read_only=True)
-    yarnCount = serializers.CharField(source="yarn_count", read_only=True)
+    yarnName = serializers.SerializerMethodField()
+    yarnType = serializers.SerializerMethodField()
+    yarnCount = serializers.SerializerMethodField()
+    yarnNameId = serializers.IntegerField(source="yarn_name_id", read_only=True)
+    yarnTypeId = serializers.IntegerField(source="yarn_type_id", read_only=True)
+    yarnCountId = serializers.IntegerField(source="yarn_count_id", read_only=True)
+    yarnNameDetail = serializers.SerializerMethodField()
+    yarnTypeDetail = serializers.SerializerMethodField()
+    yarnCountDetail = serializers.SerializerMethodField()
     productionType = serializers.CharField(source="production_type", read_only=True)
     price = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
     pricePerKg = serializers.DecimalField(source="price_per_kg", max_digits=15, decimal_places=2, read_only=True)
@@ -28,6 +34,12 @@ class YarnStockMinSerializer(serializers.ModelSerializer):
             "yarnName",
             "yarnType",
             "yarnCount",
+            "yarnNameId",
+            "yarnTypeId",
+            "yarnCountId",
+            "yarnNameDetail",
+            "yarnTypeDetail",
+            "yarnCountDetail",
             "productionType",
             "price",
             "pricePerKg",
@@ -37,14 +49,38 @@ class YarnStockMinSerializer(serializers.ModelSerializer):
             "totalWeightLb",
         ]
 
+    def get_yarnName(self, obj):
+        return obj.yarn_name.name if obj.yarn_name else ""
+
+    def get_yarnType(self, obj):
+        return obj.yarn_type.name if obj.yarn_type else ""
+
+    def get_yarnCount(self, obj):
+        return obj.yarn_count.name if obj.yarn_count else ""
+
+    def get_yarnNameDetail(self, obj):
+        return {"id": obj.yarn_name.id, "name": obj.yarn_name.name} if obj.yarn_name else None
+
+    def get_yarnTypeDetail(self, obj):
+        return {"id": obj.yarn_type.id, "name": obj.yarn_type.name} if obj.yarn_type else None
+
+    def get_yarnCountDetail(self, obj):
+        return {"id": obj.yarn_count.id, "name": obj.yarn_count.name} if obj.yarn_count else None
+
 
 class YarnStockListSerializer(serializers.ModelSerializer):
     """
     Serializer for the stock table / inventory listing page.
     """
-    yarnName = serializers.CharField(source="yarn_name", read_only=True)
-    yarnType = serializers.CharField(source="yarn_type", read_only=True)
-    yarnCount = serializers.CharField(source="yarn_count", read_only=True)
+    yarnName = serializers.SerializerMethodField()
+    yarnType = serializers.SerializerMethodField()
+    yarnCount = serializers.SerializerMethodField()
+    yarnNameId = serializers.IntegerField(source="yarn_name_id", read_only=True)
+    yarnTypeId = serializers.IntegerField(source="yarn_type_id", read_only=True)
+    yarnCountId = serializers.IntegerField(source="yarn_count_id", read_only=True)
+    yarnNameDetail = serializers.SerializerMethodField()
+    yarnTypeDetail = serializers.SerializerMethodField()
+    yarnCountDetail = serializers.SerializerMethodField()
     productionType = serializers.CharField(source="production_type", read_only=True)
     price = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
     pricePerKg = serializers.DecimalField(source="price_per_kg", max_digits=15, decimal_places=2, read_only=True)
@@ -81,6 +117,12 @@ class YarnStockListSerializer(serializers.ModelSerializer):
             "yarnName",
             "yarnType",
             "yarnCount",
+            "yarnNameId",
+            "yarnTypeId",
+            "yarnCountId",
+            "yarnNameDetail",
+            "yarnTypeDetail",
+            "yarnCountDetail",
             "productionType",
             "price",
             "pricePerKg",
@@ -102,6 +144,24 @@ class YarnStockListSerializer(serializers.ModelSerializer):
             "createdBy",
             "updatedBy",
         ]
+
+    def get_yarnName(self, obj):
+        return obj.yarn_name.name if obj.yarn_name else ""
+
+    def get_yarnType(self, obj):
+        return obj.yarn_type.name if obj.yarn_type else ""
+
+    def get_yarnCount(self, obj):
+        return obj.yarn_count.name if obj.yarn_count else ""
+
+    def get_yarnNameDetail(self, obj):
+        return {"id": obj.yarn_name.id, "name": obj.yarn_name.name} if obj.yarn_name else None
+
+    def get_yarnTypeDetail(self, obj):
+        return {"id": obj.yarn_type.id, "name": obj.yarn_type.name} if obj.yarn_type else None
+
+    def get_yarnCountDetail(self, obj):
+        return {"id": obj.yarn_count.id, "name": obj.yarn_count.name} if obj.yarn_count else None
 
     def get_intakesCount(self, obj):
         return obj.intakes.count()

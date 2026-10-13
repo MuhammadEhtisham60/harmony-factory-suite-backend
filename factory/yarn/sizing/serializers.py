@@ -1110,8 +1110,8 @@ class BeamAssignmentHistorySerializer(serializers.ModelSerializer):
             "outcomeBags": yo.outcome_bags,
             "outcomeWeightKg": str(yo.outcome_weight_kg),
             "outcomeDate": yo.outcome_date,
-            "yarnName": intake.yarn_name if intake else None,
-            "yarnCount": intake.yarn_count if intake else None,
+            "yarnName": intake.yarn_name.name if intake and intake.yarn_name else None,
+            "yarnCount": intake.yarn_count.name if intake and intake.yarn_count else None,
             "sizing": {
                 "id": sizing.id if sizing else None,
                 "sizingName": sizing.sizing_name if sizing else None,

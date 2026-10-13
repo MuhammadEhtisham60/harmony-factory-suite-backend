@@ -8,9 +8,12 @@ from .models import YarnStock
 
 
 class YarnStockFilter(django_filters.FilterSet):
-    yarn_name = django_filters.CharFilter(field_name="yarn_name", lookup_expr="icontains")
-    yarn_type = django_filters.CharFilter(field_name="yarn_type", lookup_expr="icontains")
-    yarn_count = django_filters.CharFilter(field_name="yarn_count", lookup_expr="icontains")
+    yarn_name = django_filters.CharFilter(field_name="yarn_name__name", lookup_expr="icontains")
+    yarn_name_id = django_filters.NumberFilter(field_name="yarn_name__id")
+    yarn_type = django_filters.CharFilter(field_name="yarn_type__name", lookup_expr="icontains")
+    yarn_type_id = django_filters.NumberFilter(field_name="yarn_type__id")
+    yarn_count = django_filters.CharFilter(field_name="yarn_count__name", lookup_expr="icontains")
+    yarn_count_id = django_filters.NumberFilter(field_name="yarn_count__id")
     production_type = django_filters.CharFilter(field_name="production_type", lookup_expr="icontains")
 
     min_boxes = django_filters.NumberFilter(field_name="total_boxes", lookup_expr="gte")
@@ -23,8 +26,11 @@ class YarnStockFilter(django_filters.FilterSet):
         model = YarnStock
         fields = [
             "yarn_name",
+            "yarn_name_id",
             "yarn_type",
+            "yarn_type_id",
             "yarn_count",
+            "yarn_count_id",
             "production_type",
             "min_boxes",
             "min_weight_kg",
@@ -35,9 +41,9 @@ class YarnStockFilter(django_filters.FilterSet):
         if not value:
             return queryset
         return queryset.filter(
-            Q(yarn_name__icontains=value)
-            | Q(yarn_type__icontains=value)
-            | Q(yarn_count__icontains=value)
+            Q(yarn_name__name__icontains=value)
+            | Q(yarn_type__name__icontains=value)
+            | Q(yarn_count__name__icontains=value)
             | Q(production_type__icontains=value)
         )
 

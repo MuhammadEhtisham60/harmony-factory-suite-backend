@@ -14,6 +14,9 @@ urlpatterns = [
     path('api/v1/', include('factory.beam.urls')),
 
     path('api/v1/', include('factory.yarn.yarn_buyer.urls')),
+    path('api/v1/', include('factory.yarn.yarn_name.urls')),
+    path('api/v1/', include('factory.yarn.yarn_type.urls')),
+    path('api/v1/', include('factory.yarn.yarn_count.urls')),
     path('api/v1/', include('factory.yarn.yarn_stock.urls')),
     path('api/v1/', include('factory.yarn.yarn_intake.urls')),
     path('api/v1/', include('factory.yarn.yarn_outcome.urls')),

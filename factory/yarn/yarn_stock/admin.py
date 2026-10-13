@@ -23,7 +23,7 @@ class YarnStockAdmin(admin.ModelAdmin):
         "updated_at",
     ]
     list_filter = ["yarn_type", "production_type", "created_at"]
-    search_fields = ["yarn_name", "yarn_type", "yarn_count", "production_type"]
+    search_fields = ["yarn_name__name", "yarn_type__name", "yarn_count__name", "production_type"]
     readonly_fields = [
         "created_at",
         "updated_at",

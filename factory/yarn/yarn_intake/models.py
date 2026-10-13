@@ -33,13 +33,47 @@ from decimal import Decimal
 from django.db import models
 from django.conf import settings
 
+from factory.yarn.yarn_name.models import YarnName
+from factory.yarn.yarn_type.models import YarnType
+from factory.yarn.yarn_count.models import YarnCount
 from factory.yarn.yarn_buyer.models import YarnBuyer
 from factory.purchase.supplier.models import Supplier
 from factory.yarn.sizing.models import Sizing
 from factory.yarn.yarn_stock.models import YarnStock, LB_PER_KG
 
 
+class YarnIntakeQuerySet(models.QuerySet):
+    def _resolve_fk_lookups(self, kwargs):
+        new_kwargs = {}
+        for k, v in kwargs.items():
+            if k in ("yarn_name", "yarn_type", "yarn_count") and isinstance(v, str):
+                new_kwargs[f"{k}__name"] = v
+            else:
+                new_kwargs[k] = v
+        return new_kwargs
+
+    def filter(self, *args, **kwargs):
+        return super().filter(*args, **self._resolve_fk_lookups(kwargs))
+
+    def exclude(self, *args, **kwargs):
+        return super().exclude(*args, **self._resolve_fk_lookups(kwargs))
+
+    def get(self, *args, **kwargs):
+        return super().get(*args, **self._resolve_fk_lookups(kwargs))
+
+    def get_or_create(self, defaults=None, **kwargs):
+        for field, model in [
+            ("yarn_name", YarnName),
+            ("yarn_type", YarnType),
+            ("yarn_count", YarnCount),
+        ]:
+            if field in kwargs and isinstance(kwargs[field], str):
+                kwargs[field], _ = model.objects.get_or_create(name=kwargs[field].strip())
+        return super().get_or_create(defaults=defaults, **kwargs)
+
+
 class YarnIntake(models.Model):
+    objects = YarnIntakeQuerySet.as_manager()
     """
     Records a batch of yarn received from a supplier.
 
@@ -54,9 +88,24 @@ class YarnIntake(models.Model):
         remaining_bags, remaining_weight_kg, remaining_weight_lb
     """
 
-    yarn_name = models.CharField(max_length=255)
-    yarn_type = models.CharField(max_length=100)
-    yarn_count = models.CharField(max_length=100)
+    yarn_name = models.ForeignKey(
+        YarnName,
+        on_delete=models.PROTECT,
+        related_name="yarn_intakes",
+        help_text="Yarn Name reference"
+    )
+    yarn_type = models.ForeignKey(
+        YarnType,
+        on_delete=models.PROTECT,
+        related_name="yarn_intakes",
+        help_text="Yarn Type reference"
+    )
+    yarn_count = models.ForeignKey(
+        YarnCount,
+        on_delete=models.PROTECT,
+        related_name="yarn_intakes",
+        help_text="Yarn Count reference"
+    )
 
     set_no = models.CharField(
         max_length=100,
@@ -130,13 +179,42 @@ class YarnIntake(models.Model):
         related_name="updated_yarn_intakes"
     )
 
+    def __init__(self, *args, **kwargs):
+        from factory.yarn.yarn_name.models import YarnName
+        from factory.yarn.yarn_type.models import YarnType
+        from factory.yarn.yarn_count.models import YarnCount
+
+        aliases = [
+            (["yarn_name", "yarnName", "yarn_name_id", "yarnNameId"], "yarn_name", YarnName),
+            (["yarn_type", "yarnType", "yarn_type_id", "yarnTypeId"], "yarn_type", YarnType),
+            (["yarn_count", "yarnCount", "yarn_count_id", "yarnCountId"], "yarn_count", YarnCount),
+        ]
+        for keys, target, model in aliases:
+            val = None
+            for k in keys:
+                if k in kwargs and kwargs[k] not in (None, ""):
+                    val = kwargs.pop(k)
+                    break
+            if val is not None:
+                if isinstance(val, model):
+                    kwargs[target] = val
+                elif isinstance(val, int) or (isinstance(val, str) and val.strip().isdigit()):
+                    kwargs[target] = model.objects.get(pk=int(val))
+                elif isinstance(val, str) and val.strip():
+                    kwargs[target], _ = model.objects.get_or_create(name=val.strip())
+            for k in keys:
+                if k != target:
+                    kwargs.pop(k, None)
+        super().__init__(*args, **kwargs)
+
     class Meta:
         ordering = ["-intake_date", "-id"]
         verbose_name = "Yarn Intake"
         verbose_name_plural = "Yarn Intakes"
 
     def __str__(self):
-        return f"{self.yarn_name} - {self.set_no}"
+        name = self.yarn_name.name if self.yarn_name else ""
+        return f"{name} - {self.set_no}"
 
     def calculate_intake_fields(self):
         """
@@ -338,9 +416,9 @@ class YarnOutcome(models.Model):
 
     def __str__(self):
         name = (
-            self.stock.yarn_name
-            if self.stock
-            else (self.yarn_intake.yarn_name if self.yarn_intake else "Yarn")
+            self.stock.yarn_name.name
+            if self.stock and self.stock.yarn_name
+            else (self.yarn_intake.yarn_name.name if self.yarn_intake and self.yarn_intake.yarn_name else "Yarn")
         )
         return (
             f"{name} - "

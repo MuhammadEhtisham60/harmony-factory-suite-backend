@@ -15,6 +15,9 @@ from django.db.models import Sum
 from rest_framework import serializers
 
 from factory.purchase.supplier.models import Supplier
+from factory.yarn.yarn_name.models import YarnName
+from factory.yarn.yarn_type.models import YarnType
+from factory.yarn.yarn_count.models import YarnCount
 from factory.yarn.yarn_buyer.models import YarnBuyer
 from factory.yarn.sizing.models import Sizing
 from factory.yarn.yarn_stock.models import YarnStock
@@ -409,9 +412,15 @@ class YarnIntakeListSerializer(serializers.ModelSerializer):
     Lightweight serializer for list/table views.
     Does NOT include nested outcomes (too heavy for lists).
     """
-    yarnName = serializers.CharField(source="yarn_name")
-    yarnType = serializers.CharField(source="yarn_type")
-    yarnCount = serializers.CharField(source="yarn_count")
+    yarnName = serializers.SerializerMethodField()
+    yarnType = serializers.SerializerMethodField()
+    yarnCount = serializers.SerializerMethodField()
+    yarnNameId = serializers.IntegerField(source="yarn_name_id", read_only=True)
+    yarnTypeId = serializers.IntegerField(source="yarn_type_id", read_only=True)
+    yarnCountId = serializers.IntegerField(source="yarn_count_id", read_only=True)
+    yarnNameDetail = serializers.SerializerMethodField()
+    yarnTypeDetail = serializers.SerializerMethodField()
+    yarnCountDetail = serializers.SerializerMethodField()
     setNo = serializers.CharField(source="set_no")
     intakeDate = serializers.DateField(source="intake_date")
     supplierDetail = serializers.SerializerMethodField()
@@ -446,7 +455,10 @@ class YarnIntakeListSerializer(serializers.ModelSerializer):
     class Meta:
         model = YarnIntake
         fields = [
-            "id", "yarnName", "yarnType", "yarnCount", "setNo",
+            "id", "yarnName", "yarnType", "yarnCount",
+            "yarnNameId", "yarnTypeId", "yarnCountId",
+            "yarnNameDetail", "yarnTypeDetail", "yarnCountDetail",
+            "setNo",
             "intakeDate", "supplierDetail", "stock", "stockDetail", "productionType",
             "bags", "conesPerBag", "totalCones",
             "ratePerBag", "totalRate",
@@ -455,6 +467,24 @@ class YarnIntakeListSerializer(serializers.ModelSerializer):
             "remainingBags", "remainingWeightKg", "remainingWeightLb",
             "createdBy", "updatedBy", "createdAt", "updatedAt",
         ]
+
+    def get_yarnName(self, obj):
+        return obj.yarn_name.name if obj.yarn_name else ""
+
+    def get_yarnType(self, obj):
+        return obj.yarn_type.name if obj.yarn_type else ""
+
+    def get_yarnCount(self, obj):
+        return obj.yarn_count.name if obj.yarn_count else ""
+
+    def get_yarnNameDetail(self, obj):
+        return {"id": obj.yarn_name.id, "name": obj.yarn_name.name} if obj.yarn_name else None
+
+    def get_yarnTypeDetail(self, obj):
+        return {"id": obj.yarn_type.id, "name": obj.yarn_type.name} if obj.yarn_type else None
+
+    def get_yarnCountDetail(self, obj):
+        return {"id": obj.yarn_count.id, "name": obj.yarn_count.name} if obj.yarn_count else None
 
     def get_stockDetail(self, obj):
         if obj.stock:
@@ -494,9 +524,21 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
         remaining_bags, remaining_weight_kg, remaining_weight_lb
     """
     # ── Writable fields ───────────────────────────────────────────────────
-    yarnName = serializers.CharField(source="yarn_name")
-    yarnType = serializers.CharField(source="yarn_type")
-    yarnCount = serializers.CharField(source="yarn_count")
+    yarn_name = serializers.PrimaryKeyRelatedField(
+        queryset=YarnName.objects.all(), required=False
+    )
+    yarn_type = serializers.PrimaryKeyRelatedField(
+        queryset=YarnType.objects.all(), required=False
+    )
+    yarn_count = serializers.PrimaryKeyRelatedField(
+        queryset=YarnCount.objects.all(), required=False
+    )
+    yarnName = serializers.CharField(required=False, write_only=True)
+    yarnType = serializers.CharField(required=False, write_only=True)
+    yarnCount = serializers.CharField(required=False, write_only=True)
+    yarnNameId = serializers.IntegerField(required=False, write_only=True)
+    yarnTypeId = serializers.IntegerField(required=False, write_only=True)
+    yarnCountId = serializers.IntegerField(required=False, write_only=True)
     setNo = serializers.CharField(
         source="set_no", required=False, allow_blank=True, default=""
     )
@@ -548,7 +590,10 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
         model = YarnIntake
         fields = [
             "id",
-            "yarnName", "yarnType", "yarnCount", "setNo",
+            "yarn_name", "yarn_type", "yarn_count",
+            "yarnName", "yarnType", "yarnCount",
+            "yarnNameId", "yarnTypeId", "yarnCountId",
+            "setNo",
             "intakeDate", "supplier", "supplierDetail", "productionType",
             "stock", "stockDetail",
             "bags", "conesPerBag", "totalCones",
@@ -593,7 +638,39 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
         data = data.copy() if hasattr(data, "copy") else dict(data)
         if "set_no" in data and "setNo" not in data:
             data["setNo"] = data["set_no"]
+
+        resolvers = [
+            (["yarnNameId", "yarn_name_id", "yarnName", "yarn_name"], "yarn_name", YarnName),
+            (["yarnTypeId", "yarn_type_id", "yarnType", "yarn_type"], "yarn_type", YarnType),
+            (["yarnCountId", "yarn_count_id", "yarnCount", "yarn_count"], "yarn_count", YarnCount),
+        ]
+        for src_keys, target_field, model in resolvers:
+            for k in src_keys:
+                if k in data and data[k] not in (None, ""):
+                    val = data[k]
+                    if isinstance(val, int) or (isinstance(val, str) and val.strip().isdigit()):
+                        data[target_field] = int(val)
+                    elif isinstance(val, str) and val.strip():
+                        obj, _ = model.objects.get_or_create(name=val.strip())
+                        data[target_field] = obj.id
+                    elif isinstance(val, model):
+                        data[target_field] = val.id
+                    break
+
         return super().to_internal_value(data)
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        ret["yarnName"] = instance.yarn_name.name if instance.yarn_name else ""
+        ret["yarnType"] = instance.yarn_type.name if instance.yarn_type else ""
+        ret["yarnCount"] = instance.yarn_count.name if instance.yarn_count else ""
+        ret["yarnNameId"] = instance.yarn_name_id
+        ret["yarnTypeId"] = instance.yarn_type_id
+        ret["yarnCountId"] = instance.yarn_count_id
+        ret["yarnNameDetail"] = {"id": instance.yarn_name.id, "name": instance.yarn_name.name} if instance.yarn_name else None
+        ret["yarnTypeDetail"] = {"id": instance.yarn_type.id, "name": instance.yarn_type.name} if instance.yarn_type else None
+        ret["yarnCountDetail"] = {"id": instance.yarn_count.id, "name": instance.yarn_count.name} if instance.yarn_count else None
+        return ret
 
     def create(self, validated_data):
         request = self.context.get("request")
@@ -604,14 +681,23 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
 
         with transaction.atomic():
             from factory.yarn.yarn_stock.services import get_or_create_yarn_stock, recalculate_yarn_stock
+            yarn_name_val = validated_data.pop("yarn_name", None)
+            yarn_type_val = validated_data.pop("yarn_type", None)
+            yarn_count_val = validated_data.pop("yarn_count", None)
+            for k in ["yarnName", "yarnType", "yarnCount", "yarnNameId", "yarnTypeId", "yarnCountId"]:
+                validated_data.pop(k, None)
+
             stock = get_or_create_yarn_stock(
-                yarn_name=validated_data.get("yarn_name"),
-                yarn_type=validated_data.get("yarn_type"),
-                yarn_count=validated_data.get("yarn_count"),
+                yarn_name=yarn_name_val,
+                yarn_type=yarn_type_val,
+                yarn_count=yarn_count_val,
                 production_type=validated_data.get("production_type", ""),
                 user=user,
             )
             validated_data["stock"] = stock
+            validated_data["yarn_name"] = stock.yarn_name
+            validated_data["yarn_type"] = stock.yarn_type
+            validated_data["yarn_count"] = stock.yarn_count
 
             intake = YarnIntake(**validated_data)
             intake.calculate_intake_fields()
@@ -637,11 +723,15 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
             new_yarn_count = validated_data.get("yarn_count", instance.yarn_count)
             new_prod_type = validated_data.get("production_type", instance.production_type)
 
+            new_yarn_name_id = new_yarn_name.id if hasattr(new_yarn_name, "id") else new_yarn_name
+            new_yarn_type_id = new_yarn_type.id if hasattr(new_yarn_type, "id") else new_yarn_type
+            new_yarn_count_id = new_yarn_count.id if hasattr(new_yarn_count, "id") else new_yarn_count
+
             category_changed = (
                 old_stock and (
-                    old_stock.yarn_name != new_yarn_name.strip()
-                    or old_stock.yarn_type != new_yarn_type.strip()
-                    or old_stock.yarn_count != new_yarn_count.strip()
+                    old_stock.yarn_name_id != new_yarn_name_id
+                    or old_stock.yarn_type_id != new_yarn_type_id
+                    or old_stock.yarn_count_id != new_yarn_count_id
                     or old_stock.production_type != (new_prod_type or "").strip()
                 )
             )
@@ -659,13 +749,17 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
                 remaining_bags = locked_old.intakes.exclude(pk=instance.pk).aggregate(Sum("bags"))["bags__sum"] or 0
                 dispatched_bags = locked_old.outcomes.aggregate(Sum("outcome_bags"))["outcome_bags__sum"] or 0
                 if remaining_bags < dispatched_bags:
+                    old_name = locked_old.yarn_name.name if locked_old.yarn_name else ""
                     raise serializers.ValidationError({
                         "yarnName": [
-                            f"Cannot change yarn category: previous stock pool '{locked_old.yarn_name}' "
+                            f"Cannot change yarn category: previous stock pool '{old_name}' "
                             f"has dispatched outcomes ({dispatched_bags} bags) exceeding remaining intakes ({remaining_bags} bags)."
                         ]
                     })
                 instance.stock = new_stock
+
+            for k in ["yarnName", "yarnType", "yarnCount", "yarnNameId", "yarnTypeId", "yarnCountId"]:
+                validated_data.pop(k, None)
 
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)

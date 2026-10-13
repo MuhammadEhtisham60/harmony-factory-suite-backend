@@ -70,11 +70,11 @@ class YarnOutcomeViewSet(ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = YarnOutcomeFilter
     search_fields = [
-        "stock__yarn_name",
-        "stock__yarn_count",
-        "stock__yarn_type",
+        "stock__yarn_name__name",
+        "stock__yarn_count__name",
+        "stock__yarn_type__name",
         "stock__production_type",
-        "yarn_intake__yarn_name",
+        "yarn_intake__yarn_name__name",
         "yarn_intake__set_no",
         "outcome_type",
         "yarn_buyer__buyer_name",
@@ -212,7 +212,7 @@ class YarnOutcomeViewSet(ModelViewSet):
             action="Create Yarn Outcome",
             description=(
                 f"Created {outcome.outcome_type} outcome of {outcome.outcome_bags} bags "
-                f"from stock pool '{locked_stock.yarn_name}' ({locked_stock.yarn_count})."
+                f"from stock pool '{locked_stock.yarn_name.name if locked_stock.yarn_name else ''}' ({locked_stock.yarn_count.name if locked_stock.yarn_count else ''})."
             ),
             module="Yarn – Outcome",
             status="Success",
@@ -322,7 +322,7 @@ class YarnOutcomeViewSet(ModelViewSet):
             action="Update Yarn Outcome",
             description=(
                 f"Updated {locked_outcome.outcome_type} outcome to {locked_outcome.outcome_bags} bags "
-                f"in stock pool '{target_stock.yarn_name}' ({target_stock.yarn_count})."
+                f"in stock pool '{target_stock.yarn_name.name if target_stock.yarn_name else ''}' ({target_stock.yarn_count.name if target_stock.yarn_count else ''})."
             ),
             module="Yarn – Outcome",
             status="Success",
@@ -389,7 +389,7 @@ class YarnOutcomeViewSet(ModelViewSet):
         except Exception as exc:
             raise ValidationError({"detail": str(exc)})
 
-        stock_name = locked_stock.yarn_name if locked_stock else "Unknown"
+        stock_name = locked_stock.yarn_name.name if locked_stock and locked_stock.yarn_name else "Unknown"
         log_activity(
             request=request,
             action="Delete Yarn Outcome",

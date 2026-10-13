@@ -39,23 +39,23 @@ class YarnOutcomeFilter(django_filters.FilterSet):
         ]
 
     def filter_yarn_name(self, queryset, name, value):  # noqa: ARG002
-        return queryset.filter(Q(stock__yarn_name__icontains=value) | Q(yarn_intake__yarn_name__icontains=value))
+        return queryset.filter(Q(stock__yarn_name__name__icontains=value) | Q(yarn_intake__yarn_name__name__icontains=value))
 
     def filter_yarn_type(self, queryset, name, value):  # noqa: ARG002
-        return queryset.filter(Q(stock__yarn_type__icontains=value) | Q(yarn_intake__yarn_type__icontains=value))
+        return queryset.filter(Q(stock__yarn_type__name__icontains=value) | Q(yarn_intake__yarn_type__name__icontains=value))
 
     def filter_yarn_count(self, queryset, name, value):  # noqa: ARG002
-        return queryset.filter(Q(stock__yarn_count__icontains=value) | Q(yarn_intake__yarn_count__icontains=value))
+        return queryset.filter(Q(stock__yarn_count__name__icontains=value) | Q(yarn_intake__yarn_count__name__icontains=value))
 
     def filter_production_type(self, queryset, name, value):  # noqa: ARG002
         return queryset.filter(Q(stock__production_type__icontains=value) | Q(yarn_intake__production_type__icontains=value))
 
     def filter_search(self, queryset, name, value):  # noqa: ARG002
         return queryset.filter(
-            Q(stock__yarn_name__icontains=value)
-            | Q(stock__yarn_count__icontains=value)
-            | Q(stock__yarn_type__icontains=value)
-            | Q(yarn_intake__yarn_name__icontains=value)
+            Q(stock__yarn_name__name__icontains=value)
+            | Q(stock__yarn_count__name__icontains=value)
+            | Q(stock__yarn_type__name__icontains=value)
+            | Q(yarn_intake__yarn_name__name__icontains=value)
             | Q(yarn_intake__set_no__icontains=value)
             | Q(outcome_type__icontains=value)
             | Q(yarn_buyer__buyer_name__icontains=value)

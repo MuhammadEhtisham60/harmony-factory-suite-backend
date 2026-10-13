@@ -13,10 +13,45 @@ from decimal import Decimal
 from django.db import models
 from django.conf import settings
 
+from factory.yarn.yarn_name.models import YarnName
+from factory.yarn.yarn_type.models import YarnType
+from factory.yarn.yarn_count.models import YarnCount
+
 LB_PER_KG = Decimal("2.20462262")
 
 
+class YarnStockQuerySet(models.QuerySet):
+    def _resolve_fk_lookups(self, kwargs):
+        new_kwargs = {}
+        for k, v in kwargs.items():
+            if k in ("yarn_name", "yarn_type", "yarn_count") and isinstance(v, str):
+                new_kwargs[f"{k}__name"] = v
+            else:
+                new_kwargs[k] = v
+        return new_kwargs
+
+    def filter(self, *args, **kwargs):
+        return super().filter(*args, **self._resolve_fk_lookups(kwargs))
+
+    def exclude(self, *args, **kwargs):
+        return super().exclude(*args, **self._resolve_fk_lookups(kwargs))
+
+    def get(self, *args, **kwargs):
+        return super().get(*args, **self._resolve_fk_lookups(kwargs))
+
+    def get_or_create(self, defaults=None, **kwargs):
+        for field, model in [
+            ("yarn_name", YarnName),
+            ("yarn_type", YarnType),
+            ("yarn_count", YarnCount),
+        ]:
+            if field in kwargs and isinstance(kwargs[field], str):
+                kwargs[field], _ = model.objects.get_or_create(name=kwargs[field].strip())
+        return super().get_or_create(defaults=defaults, **kwargs)
+
+
 class YarnStock(models.Model):
+    objects = YarnStockQuerySet.as_manager()
     """
     Shared yarn inventory pool.
 
@@ -31,9 +66,24 @@ class YarnStock(models.Model):
         price:           weighted average intake price per box/bag (Decimal)
     """
 
-    yarn_name = models.CharField(max_length=255)
-    yarn_type = models.CharField(max_length=100)
-    yarn_count = models.CharField(max_length=100)
+    yarn_name = models.ForeignKey(
+        YarnName,
+        on_delete=models.PROTECT,
+        related_name="yarn_stocks",
+        help_text="Yarn Name reference"
+    )
+    yarn_type = models.ForeignKey(
+        YarnType,
+        on_delete=models.PROTECT,
+        related_name="yarn_stocks",
+        help_text="Yarn Type reference"
+    )
+    yarn_count = models.ForeignKey(
+        YarnCount,
+        on_delete=models.PROTECT,
+        related_name="yarn_stocks",
+        help_text="Yarn Count reference"
+    )
     production_type = models.CharField(
         max_length=100,
         blank=True,
@@ -88,8 +138,36 @@ class YarnStock(models.Model):
         related_name="updated_yarn_stocks"
     )
 
+    def __init__(self, *args, **kwargs):
+        from factory.yarn.yarn_name.models import YarnName
+        from factory.yarn.yarn_type.models import YarnType
+        from factory.yarn.yarn_count.models import YarnCount
+
+        aliases = [
+            (["yarn_name", "yarnName", "yarn_name_id", "yarnNameId"], "yarn_name", YarnName),
+            (["yarn_type", "yarnType", "yarn_type_id", "yarnTypeId"], "yarn_type", YarnType),
+            (["yarn_count", "yarnCount", "yarn_count_id", "yarnCountId"], "yarn_count", YarnCount),
+        ]
+        for keys, target, model in aliases:
+            val = None
+            for k in keys:
+                if k in kwargs and kwargs[k] not in (None, ""):
+                    val = kwargs.pop(k)
+                    break
+            if val is not None:
+                if isinstance(val, model):
+                    kwargs[target] = val
+                elif isinstance(val, int) or (isinstance(val, str) and val.strip().isdigit()):
+                    kwargs[target] = model.objects.get(pk=int(val))
+                elif isinstance(val, str) and val.strip():
+                    kwargs[target], _ = model.objects.get_or_create(name=val.strip())
+            for k in keys:
+                if k != target:
+                    kwargs.pop(k, None)
+        super().__init__(*args, **kwargs)
+
     class Meta:
-        ordering = ["yarn_name", "yarn_count", "production_type", "-id"]
+        ordering = ["yarn_name__name", "yarn_count__name", "production_type", "-id"]
         verbose_name = "Yarn Stock"
         verbose_name_plural = "Yarn Stocks"
         constraints = [
@@ -107,7 +185,10 @@ class YarnStock(models.Model):
 
     def __str__(self):
         prod = f" ({self.production_type})" if self.production_type else ""
-        return f"{self.yarn_name} {self.yarn_count} {self.yarn_type}{prod} - {self.total_weight_kg} kg"
+        yname = self.yarn_name.name if self.yarn_name else ""
+        ycount = self.yarn_count.name if self.yarn_count else ""
+        ytype = self.yarn_type.name if self.yarn_type else ""
+        return f"{yname} {ycount} {ytype}{prod} - {self.total_weight_kg} kg"
 
     # ── Derived ledger summaries ───────────────────────────────────────────
     @property

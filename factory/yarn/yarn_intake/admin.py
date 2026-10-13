@@ -23,7 +23,7 @@ class YarnIntakeAdmin(admin.ModelAdmin):
         "bags", "remaining_bags", "status_display", "intake_date",
     ]
     list_filter = ["yarn_type", "intake_date"]
-    search_fields = ["yarn_name", "set_no", "yarn_type", "yarn_count"]
+    search_fields = ["yarn_name__name", "set_no", "yarn_type__name", "yarn_count__name"]
     readonly_fields = [
         "total_cones", "total_rate", "net_weight_kg", "net_weight_lb",
         "outcome_bags", "outcome_weight_kg", "outcome_weight_lb",
@@ -47,5 +47,5 @@ class YarnOutcomeAdmin(admin.ModelAdmin):
         "outcome_weight_kg", "yarn_buyer", "total_price", "outcome_date",
     ]
     list_filter = ["outcome_type", "outcome_date"]
-    search_fields = ["yarn_intake__yarn_name", "yarn_intake__set_no", "yarn_buyer__buyer_name"]
+    search_fields = ["yarn_intake__yarn_name__name", "yarn_intake__set_no", "yarn_buyer__buyer_name"]
     readonly_fields = ["outcome_weight_kg", "outcome_weight_lb", "created_at", "updated_at"]

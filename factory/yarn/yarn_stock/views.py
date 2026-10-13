@@ -59,7 +59,12 @@ class YarnStockViewSet(ReadOnlyModelViewSet):
     POST /yarn-stocks/reconcile-all/  → Reconcile all stock pools
     """
 
-    queryset = YarnStock.objects.prefetch_related("intakes", "outcomes").all()
+    queryset = (
+        YarnStock.objects
+        .select_related("yarn_name", "yarn_type", "yarn_count", "created_by", "updated_by")
+        .prefetch_related("intakes", "outcomes")
+        .all()
+    )
     serializer_class = YarnStockListSerializer
     permission_classes = [IsAuthenticated, YarnStockPermission]
     pagination_class = StandardResultsSetPagination
@@ -67,15 +72,15 @@ class YarnStockViewSet(ReadOnlyModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = YarnStockFilter
     search_fields = [
-        "yarn_name",
-        "yarn_type",
-        "yarn_count",
+        "yarn_name__name",
+        "yarn_type__name",
+        "yarn_count__name",
         "production_type",
     ]
     ordering_fields = [
-        "yarn_name",
-        "yarn_type",
-        "yarn_count",
+        "yarn_name__name",
+        "yarn_type__name",
+        "yarn_count__name",
         "production_type",
         "total_boxes",
         "cones",
@@ -85,7 +90,7 @@ class YarnStockViewSet(ReadOnlyModelViewSet):
         "created_at",
         "updated_at",
     ]
-    ordering = ["yarn_name", "yarn_count", "-id"]
+    ordering = ["yarn_name__name", "yarn_count__name", "-id"]
 
     def get_serializer_class(self):
         if self.action == "retrieve":
@@ -165,7 +170,7 @@ class YarnStockViewSet(ReadOnlyModelViewSet):
         log_activity(
             request=request,
             action="Reconcile Yarn Stock",
-            description=f"Reconciled stock pool #{stock.id} ({stock.yarn_name} {stock.yarn_count}).",
+            description=f"Reconciled stock pool #{stock.id} ({stock.yarn_name.name if stock.yarn_name else ''} {stock.yarn_count.name if stock.yarn_count else ''}).",
             module="Yarn – Stock",
             status="Success",
         )

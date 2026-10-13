@@ -17,14 +17,34 @@ from rest_framework.exceptions import ValidationError
 from factory.yarn.yarn_stock.models import YarnStock, LB_PER_KG
 
 
+def _resolve_model_instance(val, model):
+    if isinstance(val, model):
+        return val
+    if isinstance(val, int):
+        return model.objects.get(pk=val)
+    if isinstance(val, str) and val.strip():
+        if val.strip().isdigit():
+            try:
+                return model.objects.get(pk=int(val.strip()))
+            except model.DoesNotExist:
+                pass
+        obj, _ = model.objects.get_or_create(name=val.strip())
+        return obj
+    return None
+
+
 def normalize_stock_fields(yarn_name, yarn_type, yarn_count, production_type=""):
     """
-    Cleans and standardizes stock-identifying strings.
+    Cleans and standardizes stock-identifying attributes, resolving to model instances.
     """
+    from factory.yarn.yarn_name.models import YarnName
+    from factory.yarn.yarn_type.models import YarnType
+    from factory.yarn.yarn_count.models import YarnCount
+
     return {
-        "yarn_name": (yarn_name or "").strip(),
-        "yarn_type": (yarn_type or "").strip(),
-        "yarn_count": (yarn_count or "").strip(),
+        "yarn_name": _resolve_model_instance(yarn_name, YarnName),
+        "yarn_type": _resolve_model_instance(yarn_type, YarnType),
+        "yarn_count": _resolve_model_instance(yarn_count, YarnCount),
         "production_type": (production_type or "").strip(),
     }
 
