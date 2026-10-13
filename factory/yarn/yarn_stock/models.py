@@ -91,7 +91,7 @@ class YarnStock(models.Model):
         help_text="Production category such as Warp, Weft, etc."
     )
 
-    # ── Current Available Balances ─────────────────────────────────────────
+    # ── Current Available / Remaining Balances ─────────────────────────────
     price = models.DecimalField(
         max_digits=15,
         decimal_places=6,
@@ -104,6 +104,34 @@ class YarnStock(models.Model):
         default=Decimal("0.000000"),
         help_text="Total price of yarn of this quality from contributing intakes."
     )
+    remaining_bags = models.IntegerField(
+        default=0,
+        help_text="Current remaining available boxes / bags in stock."
+    )
+    remaining_cones = models.IntegerField(
+        default=0,
+        help_text="Current remaining available cones in stock."
+    )
+    remaining_weight_kg = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="Current remaining available weight in kilograms."
+    )
+    remaining_weight_lb = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="Current remaining available weight in pounds."
+    )
+    remaining_total_price = models.DecimalField(
+        max_digits=18,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="Current remaining available inventory total price / valuation."
+    )
+
+    # Legacy balance field aliases (maintained for backward compatibility)
     total_boxes = models.IntegerField(
         default=0,
         help_text="Current available boxes / bags remaining in stock."
@@ -171,6 +199,30 @@ class YarnStock(models.Model):
                 if k != target:
                     kwargs.pop(k, None)
         super().__init__(*args, **kwargs)
+
+    def save(self, *args, **kwargs):
+        # Keep remaining fields and legacy balance aliases synchronized
+        if self.remaining_bags and not self.total_boxes:
+            self.total_boxes = self.remaining_bags
+        elif self.total_boxes and not self.remaining_bags:
+            self.remaining_bags = self.total_boxes
+
+        if self.remaining_cones and not self.cones:
+            self.cones = self.remaining_cones
+        elif self.cones and not self.remaining_cones:
+            self.remaining_cones = self.cones
+
+        if self.remaining_weight_kg and not self.total_weight_kg:
+            self.total_weight_kg = self.remaining_weight_kg
+        elif self.total_weight_kg and not self.remaining_weight_kg:
+            self.remaining_weight_kg = self.total_weight_kg
+
+        if self.remaining_weight_lb and not self.total_weight_lb:
+            self.total_weight_lb = self.remaining_weight_lb
+        elif self.total_weight_lb and not self.remaining_weight_lb:
+            self.remaining_weight_lb = self.total_weight_lb
+
+        super().save(*args, **kwargs)
 
     class Meta:
         ordering = ["yarn_name__name", "yarn_count__name", "production_type", "-id"]

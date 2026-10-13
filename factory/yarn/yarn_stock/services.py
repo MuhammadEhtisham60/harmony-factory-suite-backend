@@ -117,6 +117,11 @@ def calculate_stock_aggregates(stock):
     else:
         weighted_price = Decimal("0.000000")
 
+    if available_boxes > 0:
+        remaining_total_price = (Decimal(str(available_boxes)) * weighted_price).quantize(Decimal("0.000001"))
+    else:
+        remaining_total_price = Decimal("0.000000")
+
     return {
         "total_intake_bags": total_intake_bags,
         "total_intake_cones": total_intake_cones,
@@ -133,6 +138,11 @@ def calculate_stock_aggregates(stock):
         "available_weight_lb": available_weight_lb,
         "price": weighted_price,
         "total_price": total_intake_rate,
+        "remaining_bags": available_boxes,
+        "remaining_cones": available_cones,
+        "remaining_weight_kg": available_weight_kg,
+        "remaining_weight_lb": available_weight_lb,
+        "remaining_total_price": remaining_total_price,
     }
 
 
@@ -150,6 +160,12 @@ def recalculate_yarn_stock(stock):
     stock.price = aggs["price"]
     stock.total_price = aggs["total_price"]
 
+    stock.remaining_bags = aggs["remaining_bags"]
+    stock.remaining_cones = aggs["remaining_cones"]
+    stock.remaining_weight_kg = aggs["remaining_weight_kg"]
+    stock.remaining_weight_lb = aggs["remaining_weight_lb"]
+    stock.remaining_total_price = aggs["remaining_total_price"]
+
     stock.save(update_fields=[
         "total_boxes",
         "cones",
@@ -157,6 +173,11 @@ def recalculate_yarn_stock(stock):
         "total_weight_lb",
         "price",
         "total_price",
+        "remaining_bags",
+        "remaining_cones",
+        "remaining_weight_kg",
+        "remaining_weight_lb",
+        "remaining_total_price",
         "updated_at",
     ])
     return stock

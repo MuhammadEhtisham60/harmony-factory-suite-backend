@@ -18,6 +18,8 @@ class YarnStockFilter(django_filters.FilterSet):
 
     min_boxes = django_filters.NumberFilter(field_name="total_boxes", lookup_expr="gte")
     min_weight_kg = django_filters.NumberFilter(field_name="total_weight_kg", lookup_expr="gte")
+    min_remaining_bags = django_filters.NumberFilter(field_name="remaining_bags", lookup_expr="gte")
+    min_remaining_weight_kg = django_filters.NumberFilter(field_name="remaining_weight_kg", lookup_expr="gte")
     in_stock = django_filters.BooleanFilter(method="filter_in_stock")
 
     search = django_filters.CharFilter(method="filter_search", label="Search")
@@ -34,6 +36,8 @@ class YarnStockFilter(django_filters.FilterSet):
             "production_type",
             "min_boxes",
             "min_weight_kg",
+            "min_remaining_bags",
+            "min_remaining_weight_kg",
             "in_stock",
         ]
 
@@ -49,7 +53,17 @@ class YarnStockFilter(django_filters.FilterSet):
 
     def filter_in_stock(self, queryset, name, value):  # noqa: ARG002
         if value is True:
-            return queryset.filter(Q(total_boxes__gt=0) | Q(total_weight_kg__gt=0))
+            return queryset.filter(
+                Q(remaining_bags__gt=0)
+                | Q(remaining_weight_kg__gt=0)
+                | Q(total_boxes__gt=0)
+                | Q(total_weight_kg__gt=0)
+            )
         elif value is False:
-            return queryset.filter(total_boxes__lte=0, total_weight_kg__lte=0)
+            return queryset.filter(
+                remaining_bags__lte=0,
+                remaining_weight_kg__lte=0,
+                total_boxes__lte=0,
+                total_weight_kg__lte=0,
+            )
         return queryset

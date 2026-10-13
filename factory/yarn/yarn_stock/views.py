@@ -88,6 +88,11 @@ class YarnStockViewSet(ReadOnlyModelViewSet):
         "total_weight_lb",
         "price",
         "total_price",
+        "remaining_bags",
+        "remaining_cones",
+        "remaining_weight_kg",
+        "remaining_weight_lb",
+        "remaining_total_price",
         "created_at",
         "updated_at",
     ]
