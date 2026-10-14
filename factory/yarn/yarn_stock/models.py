@@ -286,18 +286,16 @@ class YarnStock(models.Model):
 
     @property
     def price_per_kg(self):
-        """Weighted average rate per kilogram calculated from contributing intakes."""
-        total_kg = self.total_received_weight_kg
-        if total_kg and total_kg > Decimal("0"):
-            total_amt = self.intakes.aggregate(models.Sum("total_rate"))["total_rate__sum"] or Decimal("0")
-            return total_amt / Decimal(str(total_kg))
-        return Decimal("0.000000")
+        """Average rate per kilogram derived from rate per pound."""
+        return (self.price_per_lb * LB_PER_KG).quantize(Decimal("0.000001"))
 
     @property
     def price_per_lb(self):
-        """Weighted average rate per pound calculated from contributing intakes."""
-        total_lb = self.total_received_weight_lb
-        if total_lb and total_lb > Decimal("0"):
-            total_amt = self.intakes.aggregate(models.Sum("total_rate"))["total_rate__sum"] or Decimal("0")
-            return total_amt / Decimal(str(total_lb))
+        """Average rate per pound calculated from contributing intakes (simple average of rate_per_lb)."""
+        intakes_with_rate = self.intakes.filter(rate_per_lb__gt=0)
+        target = intakes_with_rate if intakes_with_rate.exists() else self.intakes
+        agg = target.aggregate(models.Avg("rate_per_lb"))
+        avg_val = agg["rate_per_lb__avg"]
+        if avg_val is not None:
+            return Decimal(str(avg_val)).quantize(Decimal("0.000001"))
         return Decimal("0.000000")

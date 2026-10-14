@@ -203,10 +203,10 @@ class YarnIntakeRatePerLbTests(APITestCase):
         total_value = intake1.total_rate + intake2.total_rate
         expected_weighted_rate = (total_value / total_lb).quantize(Decimal("0.000001"))
 
-        # Since weight per bag is equal, weighted rate = (10*100 + 15*200) / 25 = 4000/25 = 160.000000
-        self.assertEqual(stock.price, Decimal("160.000000"))
-        self.assertEqual(stock.price, expected_weighted_rate)
-        self.assertEqual(stock.price_per_lb, Decimal("160.000000"))
+        # Simple average rate per lb = (100 + 200) / 2 = 150.000000
+        expected_avg_rate = Decimal("150.000000")
+        self.assertEqual(stock.price, expected_avg_rate)
+        self.assertEqual(stock.price_per_lb, expected_avg_rate)
         self.assertEqual(stock.total_price, total_value)
 
     def test_06_outcome_dispatches_and_recalculations_preserve_stock_valuation(self):
