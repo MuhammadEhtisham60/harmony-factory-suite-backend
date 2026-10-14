@@ -112,8 +112,8 @@ def _income_row(yo):
     row = _blank_row()
     row.update(
         {
-            "id": f"IN-{yo.id}",
-            "entry_type": ENTRY_INCOME,
+            "id": f"OUT-{yo.id}",
+            "entry_type": ENTRY_OUTCOME,
             "date": yo.outcome_date,
             "_rank": 0,
             "_created_at": yo.created_at,
@@ -152,8 +152,8 @@ def _outcome_row(so):
     row = _blank_row()
     row.update(
         {
-            "id": f"OUT-{so.id}",
-            "entry_type": ENTRY_OUTCOME,
+            "id": f"IN-{so.id}",
+            "entry_type": ENTRY_INCOME,
             "date": so.outcome_date,
             "_rank": 1,
             "_created_at": so.created_at,
@@ -192,7 +192,7 @@ def _apply_running_balances(rows):
             row["sizing_id"],
             {"bags": ZERO, "cones": ZERO, "kg": ZERO, "charges": ZERO},
         )
-        if row["entry_type"] == ENTRY_INCOME:
+        if row["entry_type"] == ENTRY_OUTCOME:
             bal["bags"] += row["bags_in"]
             bal["cones"] += row["cones_in"]
             bal["kg"] += row["weight_kg_in"]
@@ -326,7 +326,7 @@ def summarize_ledger(rows):
                 },
             )
             p["entries"] += 1
-            if row["entry_type"] == ENTRY_INCOME:
+            if row["entry_type"] == ENTRY_OUTCOME:
                 p["total_bags_in"] += row["bags_in"]
                 p["total_cones_in"] += row["cones_in"]
                 p["total_weight_kg_in"] += row["weight_kg_in"]
