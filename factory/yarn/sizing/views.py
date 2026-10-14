@@ -165,6 +165,16 @@ class SizingViewSet(ModelViewSet):
         serializer = SizingOutcomeSerializer(qs, many=True, context={"request": request})
         return Response({"success": True, "data": serializer.data})
 
+    @action(detail=True, methods=["get"], url_path="ledger")
+    def ledger(self, request, pk=None):
+        """Returns the individual sizing detail ledger for this Sizing unit."""
+        from .ledger_views import SizingLedgerViewSet
+        ledger_view = SizingLedgerViewSet()
+        ledger_view.request = request
+        ledger_view.format_kwarg = None
+        return ledger_view.retrieve(request, pk=pk)
+
+
 
 class SizingOutcomeViewSet(ModelViewSet):
     """

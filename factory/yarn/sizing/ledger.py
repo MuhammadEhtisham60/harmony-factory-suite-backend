@@ -20,10 +20,13 @@ Sizing charge on an outcome row (derived, exact):
 from datetime import date as date_type
 from decimal import Decimal, localcontext
 
+from django.db.models import Sum, Count, F, Q, Value
+from django.db.models.functions import Coalesce
+
 from factory.yarn.yarn_intake.models import YarnOutcome
 from factory.yarn.yarn_stock.models import LB_PER_KG
 
-from .models import SizingOutcome
+from .models import Sizing, SizingOutcome
 
 ZERO = Decimal("0")
 LEDGER_DECIMAL_PRECISION = 60
@@ -363,3 +366,288 @@ def csv_value(value):
     if isinstance(value, date_type):
         return value.isoformat()
     return str(value)
+
+
+MAIN_CSV_COLUMNS = [
+    ("Sizing Name", "sizing_name"),
+    ("Contact Person", "contact_person"),
+    ("Phone", "phone_no"),
+    ("Email", "email"),
+    ("Status", "status"),
+    ("Total Boxes Sent", "total_boxes_sent"),
+    ("Total Boxes Received", "total_boxes_received"),
+    ("Total Boxes Balance", "total_boxes_balance"),
+    ("Total Payables", "total_payables"),
+    ("Total Weight Kg Sent", "total_weight_kg_sent"),
+    ("Total Weight Kg Received", "total_weight_kg_received"),
+    ("Total Weight Kg Balance", "total_weight_kg_balance"),
+    ("Total Cones Sent", "total_cones_sent"),
+    ("Total Cones Received", "total_cones_received"),
+    ("Total Cones Balance", "total_cones_balance"),
+    ("Transactions Count", "transactions_count"),
+]
+
+
+def get_main_sizing_ledger(
+    search=None,
+    status=None,
+    date_from=None,
+    date_to=None,
+    ordering="sizing_name",
+):
+    """
+    Computes the Main Sizing Ledger across all sizing units/parties.
+    Returns:
+        (sizing_items, aggregate_totals)
+    where aggregate_totals contains overall counters across the entire filtered dataset
+    (not just the current page), and sizing_items contains per-sizing records with counters.
+    Calculations avoid cartesian join multiplications by executing independent group-by queries.
+    """
+    with localcontext() as ctx:
+        ctx.prec = LEDGER_DECIMAL_PRECISION
+
+        sizing_qs = Sizing.objects.all()
+        if status:
+            sizing_qs = sizing_qs.filter(status=status)
+        if search:
+            needle = search.strip()
+            sizing_qs = sizing_qs.filter(
+                Q(sizing_name__icontains=needle)
+                | Q(contact_person__icontains=needle)
+                | Q(phone_no__icontains=needle)
+                | Q(email__icontains=needle)
+                | Q(address__icontains=needle)
+            )
+
+        sizing_list = list(sizing_qs)
+        sizing_ids = [s.id for s in sizing_list]
+
+        if not sizing_ids:
+            empty_totals = {
+                "total_payables": ZERO,
+                "total_boxes_sent": ZERO,
+                "total_boxes_received": ZERO,
+                "total_boxes_balance": ZERO,
+                "total_weight_kg_sent": ZERO,
+                "total_weight_kg_received": ZERO,
+                "total_weight_kg_balance": ZERO,
+                "total_cones_sent": ZERO,
+                "total_cones_received": ZERO,
+                "total_cones_balance": ZERO,
+                "total_sizings_count": 0,
+            }
+            return [], empty_totals
+
+        yo_qs = YarnOutcome.objects.filter(
+            outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING,
+            sizing_id__in=sizing_ids,
+        )
+        so_qs = SizingOutcome.objects.filter(
+            yarn_outcome__sizing_id__in=sizing_ids,
+        )
+
+        if date_from is not None:
+            yo_qs = yo_qs.filter(outcome_date__gte=date_from)
+            so_qs = so_qs.filter(outcome_date__gte=date_from)
+        if date_to is not None:
+            yo_qs = yo_qs.filter(outcome_date__lte=date_to)
+            so_qs = so_qs.filter(outcome_date__lte=date_to)
+
+        # 1. Independent aggregation for YarnOutcome (Boxes sent to sizing)
+        yo_grouped = (
+            yo_qs.values("sizing_id")
+            .annotate(
+                boxes_sent=Coalesce(Sum("outcome_bags"), Value(0)),
+                cones_sent=Coalesce(Sum(F("outcome_bags") * F("outcome_cones_per_bag")), Value(0)),
+                weight_kg_sent=Coalesce(Sum("outcome_weight_kg"), Value(Decimal("0"))),
+                weight_lb_sent=Coalesce(Sum("outcome_weight_lb"), Value(Decimal("0"))),
+                tx_count=Count("id"),
+            )
+        )
+        sent_map = {item["sizing_id"]: item for item in yo_grouped}
+
+        # 2. Independent aggregation for SizingOutcome (Boxes received / lagat + sizing charges)
+        so_grouped = (
+            so_qs.values("yarn_outcome__sizing_id")
+            .annotate(
+                boxes_recv=Coalesce(Sum("lagat_bags"), Value(Decimal("0"))),
+                cones_recv=Coalesce(Sum("lagat_cones"), Value(Decimal("0"))),
+                net_weight_kg_recv=Coalesce(Sum("net_weight_kg"), Value(Decimal("0"))),
+                payables=Coalesce(Sum("total_rate"), Value(Decimal("0"))),
+                tx_count=Count("id"),
+            )
+        )
+        recv_map = {item["yarn_outcome__sizing_id"]: item for item in so_grouped}
+
+        # 3. Overall aggregate totals across the entire filtered dataset
+        overall_sent = yo_qs.aggregate(
+            boxes_sent=Coalesce(Sum("outcome_bags"), Value(0)),
+            cones_sent=Coalesce(Sum(F("outcome_bags") * F("outcome_cones_per_bag")), Value(0)),
+            weight_kg_sent=Coalesce(Sum("outcome_weight_kg"), Value(Decimal("0"))),
+            weight_lb_sent=Coalesce(Sum("outcome_weight_lb"), Value(Decimal("0"))),
+        )
+        overall_recv = so_qs.aggregate(
+            boxes_recv=Coalesce(Sum("lagat_bags"), Value(Decimal("0"))),
+            cones_recv=Coalesce(Sum("lagat_cones"), Value(Decimal("0"))),
+            net_weight_kg_recv=Coalesce(Sum("net_weight_kg"), Value(Decimal("0"))),
+            payables=Coalesce(Sum("total_rate"), Value(Decimal("0"))),
+        )
+
+        tot_boxes_sent = _dec(overall_sent["boxes_sent"])
+        tot_boxes_recv = _dec(overall_recv["boxes_recv"])
+        tot_boxes_bal = tot_boxes_sent - tot_boxes_recv
+        tot_payables = _dec(overall_recv["payables"])
+
+        tot_cones_sent = _dec(overall_sent["cones_sent"])
+        tot_cones_recv = _dec(overall_recv["cones_recv"])
+        tot_cones_bal = tot_cones_sent - tot_cones_recv
+
+        tot_weight_kg_sent = _dec(overall_sent["weight_kg_sent"])
+        tot_weight_kg_recv = _dec(overall_recv["net_weight_kg_recv"])
+        tot_weight_kg_bal = tot_weight_kg_sent - tot_weight_kg_recv
+
+        aggregate_totals = {
+            "total_payables": tot_payables,
+            "total_boxes_sent": tot_boxes_sent,
+            "total_boxes_received": tot_boxes_recv,
+            "total_boxes_balance": tot_boxes_bal,
+            "total_weight_kg_sent": tot_weight_kg_sent,
+            "total_weight_kg_received": tot_weight_kg_recv,
+            "total_weight_kg_balance": tot_weight_kg_bal,
+            "total_cones_sent": tot_cones_sent,
+            "total_cones_received": tot_cones_recv,
+            "total_cones_balance": tot_cones_bal,
+            "total_sizings_count": len(sizing_list),
+        }
+
+        # 4. Assemble per-sizing items
+        sizing_items = []
+        for s in sizing_list:
+            s_id = s.id
+            s_sent = sent_map.get(s_id, {})
+            s_recv = recv_map.get(s_id, {})
+
+            b_sent = _dec(s_sent.get("boxes_sent", ZERO))
+            b_recv = _dec(s_recv.get("boxes_recv", ZERO))
+            b_bal = b_sent - b_recv
+
+            pay = _dec(s_recv.get("payables", ZERO))
+
+            c_sent = _dec(s_sent.get("cones_sent", ZERO))
+            c_recv = _dec(s_recv.get("cones_recv", ZERO))
+            c_bal = c_sent - c_recv
+
+            w_sent = _dec(s_sent.get("weight_kg_sent", ZERO))
+            w_recv = _dec(s_recv.get("net_weight_kg_recv", ZERO))
+            w_bal = w_sent - w_recv
+
+            tx_count = s_sent.get("tx_count", 0) + s_recv.get("tx_count", 0)
+
+            sizing_items.append({
+                "id": s.id,
+                "sizing_name": s.sizing_name,
+                "contact_person": s.contact_person,
+                "phone_no": s.phone_no,
+                "email": s.email,
+                "address": s.address,
+                "status": s.status,
+                "notes": s.notes,
+                "total_boxes_sent": b_sent,
+                "total_boxes_received": b_recv,
+                "total_boxes_balance": b_bal,
+                "total_payables": pay,
+                "total_weight_kg_sent": w_sent,
+                "total_weight_kg_received": w_recv,
+                "total_weight_kg_balance": w_bal,
+                "total_cones_sent": c_sent,
+                "total_cones_received": c_recv,
+                "total_cones_balance": c_bal,
+                "transactions_count": tx_count,
+                "created_at": s.created_at,
+                "updated_at": s.updated_at,
+            })
+
+        # 5. Handle ordering
+        rev = False
+        sort_key = ordering or "sizing_name"
+        if sort_key.startswith("-"):
+            rev = True
+            sort_key = sort_key[1:]
+
+        valid_sort_keys = {
+            "sizing_name": lambda x: (x["sizing_name"] or "").lower(),
+            "status": lambda x: (x["status"] or "").lower(),
+            "created_at": lambda x: x["created_at"],
+            "total_boxes_sent": lambda x: x["total_boxes_sent"],
+            "total_boxes_received": lambda x: x["total_boxes_received"],
+            "total_boxes_balance": lambda x: x["total_boxes_balance"],
+            "total_payables": lambda x: x["total_payables"],
+            "transactions_count": lambda x: x["transactions_count"],
+        }
+        key_func = valid_sort_keys.get(sort_key, valid_sort_keys["sizing_name"])
+        sizing_items.sort(key=key_func, reverse=rev)
+
+        return sizing_items, aggregate_totals
+
+
+def get_individual_sizing_ledger_summary(sizing_id, date_from=None, date_to=None):
+    """
+    Computes summary counters specifically for one sizing unit/party.
+    """
+    with localcontext() as ctx:
+        ctx.prec = LEDGER_DECIMAL_PRECISION
+
+        yo_qs = YarnOutcome.objects.filter(
+            outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING,
+            sizing_id=sizing_id,
+        )
+        so_qs = SizingOutcome.objects.filter(
+            yarn_outcome__sizing_id=sizing_id,
+        )
+        if date_from is not None:
+            yo_qs = yo_qs.filter(outcome_date__gte=date_from)
+            so_qs = so_qs.filter(outcome_date__gte=date_from)
+        if date_to is not None:
+            yo_qs = yo_qs.filter(outcome_date__lte=date_to)
+            so_qs = so_qs.filter(outcome_date__lte=date_to)
+
+        yo_agg = yo_qs.aggregate(
+            boxes_sent=Coalesce(Sum("outcome_bags"), Value(0)),
+            cones_sent=Coalesce(Sum(F("outcome_bags") * F("outcome_cones_per_bag")), Value(0)),
+            weight_kg_sent=Coalesce(Sum("outcome_weight_kg"), Value(Decimal("0"))),
+            weight_lb_sent=Coalesce(Sum("outcome_weight_lb"), Value(Decimal("0"))),
+        )
+        so_agg = so_qs.aggregate(
+            boxes_recv=Coalesce(Sum("lagat_bags"), Value(Decimal("0"))),
+            cones_recv=Coalesce(Sum("lagat_cones"), Value(Decimal("0"))),
+            net_weight_kg_recv=Coalesce(Sum("net_weight_kg"), Value(Decimal("0"))),
+            payables=Coalesce(Sum("total_rate"), Value(Decimal("0"))),
+        )
+
+        b_sent = _dec(yo_agg["boxes_sent"])
+        b_recv = _dec(so_agg["boxes_recv"])
+        b_bal = b_sent - b_recv
+
+        pay = _dec(so_agg["payables"])
+
+        c_sent = _dec(yo_agg["cones_sent"])
+        c_recv = _dec(so_agg["cones_recv"])
+        c_bal = c_sent - c_recv
+
+        w_sent = _dec(yo_agg["weight_kg_sent"])
+        w_recv = _dec(so_agg["net_weight_kg_recv"])
+        w_bal = w_sent - w_recv
+
+        return {
+            "total_payables": pay,
+            "total_boxes_sent": b_sent,
+            "total_boxes_received": b_recv,
+            "total_boxes_balance": b_bal,
+            "total_weight_kg_sent": w_sent,
+            "total_weight_kg_received": w_recv,
+            "total_weight_kg_balance": w_bal,
+            "total_cones_sent": c_sent,
+            "total_cones_received": c_recv,
+            "total_cones_balance": c_bal,
+        }
+

@@ -87,3 +87,78 @@ class SizingLedgerPartySummarySerializer(_SummaryBlockSerializer):
 
 class SizingLedgerTotalsSerializer(_SummaryBlockSerializer):
     pass
+
+
+class MainSizingLedgerItemSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    sizingName = serializers.CharField(source="sizing_name")
+    contactPerson = serializers.CharField(source="contact_person", allow_blank=True)
+    contactNumber = serializers.CharField(source="phone_no", allow_blank=True)
+    phoneNo = serializers.CharField(source="phone_no", allow_blank=True)
+    email = serializers.EmailField(allow_blank=True)
+    address = serializers.CharField(allow_blank=True)
+    status = serializers.CharField()
+    notes = serializers.CharField(allow_blank=True)
+
+    totalBoxesSent = ExactDecimalField(source="total_boxes_sent")
+    totalBoxesReceived = ExactDecimalField(source="total_boxes_received")
+    totalBoxesBalance = ExactDecimalField(source="total_boxes_balance")
+    totalPayables = ExactDecimalField(source="total_payables")
+
+    totalWeightKgSent = ExactDecimalField(source="total_weight_kg_sent")
+    totalWeightKgReceived = ExactDecimalField(source="total_weight_kg_received")
+    totalWeightKgBalance = ExactDecimalField(source="total_weight_kg_balance")
+
+    totalConesSent = ExactDecimalField(source="total_cones_sent")
+    totalConesReceived = ExactDecimalField(source="total_cones_received")
+    totalConesBalance = ExactDecimalField(source="total_cones_balance")
+
+    transactionsCount = serializers.IntegerField(source="transactions_count")
+    createdAt = serializers.DateTimeField(source="created_at")
+    updatedAt = serializers.DateTimeField(source="updated_at")
+
+
+class MainSizingLedgerSummarySerializer(serializers.Serializer):
+    totalPayables = ExactDecimalField(source="total_payables")
+    totalBoxesSent = ExactDecimalField(source="total_boxes_sent")
+    totalBoxesReceived = ExactDecimalField(source="total_boxes_received")
+    totalBoxesBalance = ExactDecimalField(source="total_boxes_balance")
+
+    totalWeightKgSent = ExactDecimalField(source="total_weight_kg_sent")
+    totalWeightKgReceived = ExactDecimalField(source="total_weight_kg_received")
+    totalWeightKgBalance = ExactDecimalField(source="total_weight_kg_balance")
+
+    totalConesSent = ExactDecimalField(source="total_cones_sent")
+    totalConesReceived = ExactDecimalField(source="total_cones_received")
+    totalConesBalance = ExactDecimalField(source="total_cones_balance")
+    totalSizingsCount = serializers.IntegerField(source="total_sizings_count")
+
+
+class SizingDetailSummarySerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    sizingName = serializers.CharField(source="sizing_name")
+    contactPerson = serializers.CharField(source="contact_person", allow_blank=True)
+    contactNumber = serializers.CharField(source="phone_no", allow_blank=True)
+    phoneNo = serializers.CharField(source="phone_no", allow_blank=True)
+    email = serializers.EmailField(allow_blank=True)
+    address = serializers.CharField(allow_blank=True)
+    status = serializers.CharField()
+    notes = serializers.CharField(allow_blank=True)
+    createdAt = serializers.DateTimeField(source="created_at")
+    updatedAt = serializers.DateTimeField(source="updated_at")
+
+
+class IndividualSizingSummarySerializer(serializers.Serializer):
+    totalPayables = ExactDecimalField(source="total_payables")
+    totalBoxesSent = ExactDecimalField(source="total_boxes_sent")
+    totalBoxesReceived = ExactDecimalField(source="total_boxes_received")
+    totalBoxesBalance = ExactDecimalField(source="total_boxes_balance")
+
+    totalWeightKgSent = ExactDecimalField(source="total_weight_kg_sent")
+    totalWeightKgReceived = ExactDecimalField(source="total_weight_kg_received")
+    totalWeightKgBalance = ExactDecimalField(source="total_weight_kg_balance")
+
+    totalConesSent = ExactDecimalField(source="total_cones_sent")
+    totalConesReceived = ExactDecimalField(source="total_cones_received")
+    totalConesBalance = ExactDecimalField(source="total_cones_balance")
+

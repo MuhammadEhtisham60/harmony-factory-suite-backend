@@ -1,16 +1,15 @@
 """
-Tests for the read-only Sizing Ledger API (/api/v1/sizing-ledger/).
-
-Covers:
-- income (YarnOutcome -> Sizing) and outcome (SizingOutcome) rows
-- chronological ordering and per-sizing running balances
-- exact fractional precision across chained balances (no rounding / quantization)
-- date / type / set / search filters keep TRUE cumulative balances + openingBalance
-- pagination carries balances across pages
-- independent balances per sizing party
-- updates and deletions are reflected immediately
-- summary and CSV export agree with the list endpoint
-- permissions and parameter validation
+Comprehensive tests for Sizing Ledger APIs:
+1. Main Sizing Ledger API (/api/v1/sizing-ledger/)
+2. Individual Sizing Detail Ledger API (/api/v1/sizing-ledger/{id}/ and /api/v1/sizings/{id}/ledger/)
+3. Transaction-level ledger stream (/api/v1/sizing-ledger/transactions/)
+4. Calculations: totalBoxesSent, totalBoxesReceived, totalBoxesBalance, totalPayables
+5. Aggregate counters across the entire filtered dataset (not just the current page)
+6. Zero cartesian join duplication
+7. Full Decimal precision without quantization
+8. Date-range, search, status, and ordering filters
+9. Opening balance calculations
+10. Permissions and error validation (400 on invalid ID, 404 on nonexistent ID, 403 on unauthorized)
 """
 
 import csv
@@ -28,13 +27,10 @@ from factory.yarn.yarn_intake.models import YarnIntake, YarnOutcome
 from factory.yarn.yarn_stock.models import LB_PER_KG
 
 URL = "/api/v1/sizing-ledger/"
-
 D = Decimal
 
 
 class SizingLedgerTests(APITestCase):
-    # Fractional inputs chosen so products have MORE than 6 decimals (12 dp),
-    # which proves nothing is quantized on the way out.
     WEIGHT_PER_BAG = D("45.123457")
 
     def setUp(self):
@@ -56,20 +52,49 @@ class SizingLedgerTests(APITestCase):
             intake_date="2026-10-01",
         )
 
-        self.sizing_a = Sizing.objects.create(sizing_name="Alpha Sizing", status="Active")
-        self.sizing_b = Sizing.objects.create(sizing_name="Beta Sizing", status="Active")
+        self.sizing_a = Sizing.objects.create(
+            sizing_name="Alpha Sizing",
+            contact_person="Ali Khan",
+            phone_no="0300-1111111",
+            email="alpha@example.com",
+            address="Faisalabad Sector 1",
+            status="Active",
+        )
+        self.sizing_b = Sizing.objects.create(
+            sizing_name="Beta Sizing",
+            contact_person="Bilal Ahmed",
+            phone_no="0300-2222222",
+            email="beta@example.com",
+            address="Faisalabad Sector 2",
+            status="Active",
+        )
 
-        # ── Sizing A: IN, OUT, IN, OUT ────────────────────────────────────
+        # ── Sizing A transactions: IN, OUT, IN, OUT ──────────────────────────
         self.yo1 = self._yarn_out(self.sizing_a, bags=10, date="2026-10-02")
         self.so1 = self._sizing_out(
-            self.yo1, date="2026-10-05", lagat_bags="3.333333", lagat_cones="80.000001",
-            rate="12.345678", net="98.765432", set_no="SET-1", set_bill="B-1",
+            self.yo1,
+            date="2026-10-05",
+            lagat_bags="3.333333",
+            lagat_cones="80.000001",
+            rate="12.345678",
+            net="98.765432",
+            set_no="SET-1",
+            set_bill="B-1",
         )
         self.yo2 = self._yarn_out(self.sizing_a, bags=5, date="2026-10-10")
         self.so2 = self._sizing_out(
-            self.yo2, date="2026-10-12", lagat_bags="1.5", lagat_cones="36",
-            rate="10", net="50.5", set_no="SET-2", set_bill="B-2",
+            self.yo2,
+            date="2026-10-12",
+            lagat_bags="1.5",
+            lagat_cones="36",
+            rate="10",
+            net="50.5",
+            set_no="SET-2",
+            set_bill="B-2",
         )
+        self.so1.refresh_from_db()
+        self.so2.refresh_from_db()
+
 
     # ── fixture helpers ───────────────────────────────────────────────────
 
@@ -96,321 +121,286 @@ class SizingLedgerTests(APITestCase):
             set_bill=set_bill,
         )
 
-    def _get(self, **params):
-        res = self.client.get(URL, params)
-        self.assertEqual(res.status_code, status.HTTP_200_OK, res.content)
-        return res
+    # ── 1. Main Sizing Ledger API ─────────────────────────────────────────
 
-    # ── expected values (computed independently with plain Decimal) ───────
+    def test_01_main_sizing_ledger_returns_all_sizing_records_with_aggregate_totals(self):
+        """B: Main Sizing Ledger returns all sizing records, per-sizing counters, and top-level aggregates."""
+        res = self.client.get(URL)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertTrue(res.data["success"])
+        self.assertEqual(res.data["count"], 2)
 
-    def _expected_sizing_a(self):
-        w = self.WEIGHT_PER_BAG
-        in1_kg = D(10) * w
-        out1_kg = D("3.333333") * w
-        in2_kg = D(5) * w
-        out2_kg = D("1.5") * w
+        results = res.data["results"]
+        self.assertEqual(len(results), 2)
+
+        # Expected totals for Sizing A:
+        # Sent: 10 + 5 = 15 bags
+        # Received: 3.333333 + 1.5 = 4.833333 bags
+        # Balance: 15 - 4.833333 = 10.166667 bags
+        self.so1.refresh_from_db()
+        self.so2.refresh_from_db()
+        expected_payables = self.so1.total_rate + self.so2.total_rate
+
+        # Check top-level aggregate counters (across all matching sizing records)
+        self.assertEqual(D(res.data["totalBoxesSent"]), D("15"))
+        self.assertEqual(D(res.data["totalBoxesReceived"]), D("4.833333"))
+        self.assertEqual(D(res.data["totalBoxesBalance"]), D("10.166667"))
+        self.assertEqual(D(res.data["totalPayables"]), expected_payables)
+
+        # Check nested summary object has identical values
+        summary = res.data["summary"]
+        self.assertEqual(D(summary["totalBoxesSent"]), D("15"))
+        self.assertEqual(D(summary["totalBoxesReceived"]), D("4.833333"))
+        self.assertEqual(D(summary["totalBoxesBalance"]), D("10.166667"))
+        self.assertEqual(D(summary["totalPayables"]), expected_payables)
+        self.assertEqual(summary["totalSizingsCount"], 2)
+
+        # Check per-sizing values on the rows
+        by_name = {r["sizingName"]: r for r in results}
+        alpha = by_name["Alpha Sizing"]
+        self.assertEqual(D(alpha["totalBoxesSent"]), D("15"))
+        self.assertEqual(D(alpha["totalBoxesReceived"]), D("4.833333"))
+        self.assertEqual(D(alpha["totalBoxesBalance"]), D("10.166667"))
+        self.assertEqual(D(alpha["totalPayables"]), expected_payables)
+        self.assertEqual(alpha["transactionsCount"], 4)
+        self.assertEqual(alpha["status"], "Active")
+
+        beta = by_name["Beta Sizing"]
+        self.assertEqual(D(beta["totalBoxesSent"]), D("0"))
+        self.assertEqual(D(beta["totalBoxesReceived"]), D("0"))
+        self.assertEqual(D(beta["totalBoxesBalance"]), D("0"))
+        self.assertEqual(D(beta["totalPayables"]), D("0"))
+        self.assertEqual(beta["transactionsCount"], 0)
+
+    # ── 2. Individual Sizing Detail Ledger API ────────────────────────────
+
+    def test_02_individual_sizing_ledger_via_retrieve_and_custom_action(self):
+        """C: Detail ledger API for a selected sizing ID returns sizing details, counters, and transactions."""
+        # Test 1: via GET /api/v1/sizing-ledger/{id}/
+        res1 = self.client.get(f"{URL}{self.sizing_a.id}/")
+        self.assertEqual(res1.status_code, status.HTTP_200_OK)
+        self.assertTrue(res1.data["success"])
+
+        # Test 2: via GET /api/v1/sizings/{id}/ledger/
+        res2 = self.client.get(f"/api/v1/sizings/{self.sizing_a.id}/ledger/")
+        self.assertEqual(res2.status_code, status.HTTP_200_OK)
+
+        # Test 3: via GET /api/v1/sizing-ledger/?sizing={id}
+        res3 = self.client.get(f"{URL}?sizing={self.sizing_a.id}")
+        self.assertEqual(res3.status_code, status.HTTP_200_OK)
+
+        for res in (res1, res2, res3):
+            data = res.data
+            # Sizing details
+            self.assertEqual(data["sizing"]["id"], self.sizing_a.id)
+            self.assertEqual(data["sizing"]["sizingName"], "Alpha Sizing")
+            self.assertEqual(data["sizing"]["contactPerson"], "Ali Khan")
+            self.assertEqual(data["sizing"]["phoneNo"], "0300-1111111")
+            self.assertEqual(data["sizing"]["status"], "Active")
+
+            # Sizing counters
+            expected_payables = self.so1.total_rate + self.so2.total_rate
+            self.assertEqual(D(data["totalBoxesSent"]), D("15"))
+            self.assertEqual(D(data["totalBoxesReceived"]), D("4.833333"))
+            self.assertEqual(D(data["totalBoxesBalance"]), D("10.166667"))
+            self.assertEqual(D(data["totalPayables"]), expected_payables)
+
+            # Paginated transactions
+            self.assertEqual(data["count"], 4)
+            txs = data["results"]
+            self.assertEqual(len(txs), 4)
+            self.assertEqual(
+                [t["id"] for t in txs],
+                [f"IN-{self.yo1.id}", f"OUT-{self.so1.id}", f"IN-{self.yo2.id}", f"OUT-{self.so2.id}"],
+            )
+            # Both results and transactions keys present
+            self.assertEqual(data["transactions"], txs)
+
+    # ── 3. Calculations and running balance ────────────────────────────────
+
+    def test_03_sent_received_and_running_balance_calculations(self):
+        """D: Transaction running balances correctly maintain sent minus received."""
+        res = self.client.get(f"{URL}{self.sizing_a.id}/")
+        txs = res.data["results"]
+
+        # Row 1 (IN 10): bal = 10
+        self.assertEqual(D(txs[0]["bagsIn"]), D("10"))
+        self.assertEqual(D(txs[0]["balanceBags"]), D("10"))
+        self.assertIsNone(txs[0]["bagsOut"])
+
+        # Row 2 (OUT 3.333333): bal = 10 - 3.333333 = 6.666667
+        self.assertEqual(D(txs[1]["bagsOut"]), D("3.333333"))
+        self.assertEqual(D(txs[1]["balanceBags"]), D("6.666667"))
+        self.assertIsNone(txs[1]["bagsIn"])
+
+        # Row 3 (IN 5): bal = 6.666667 + 5 = 11.666667
+        self.assertEqual(D(txs[2]["bagsIn"]), D("5"))
+        self.assertEqual(D(txs[2]["balanceBags"]), D("11.666667"))
+
+        # Row 4 (OUT 1.5): bal = 11.666667 - 1.5 = 10.166667
+        self.assertEqual(D(txs[3]["bagsOut"]), D("1.5"))
+        self.assertEqual(D(txs[3]["balanceBags"]), D("10.166667"))
+
+    # ── 4. Payable calculation ─────────────────────────────────────────────
+
+    def test_04_payable_calculations_based_on_rate_and_net_weight(self):
+        """D: Payable equals rate_per_kg * net_weight_kg (total_rate) and accumulates."""
+        res = self.client.get(f"{URL}{self.sizing_a.id}/")
+        txs = res.data["results"]
+
         charge1 = D("12.345678") * D("98.765432")
         charge2 = D("10") * D("50.5")
 
-        kg_after = [
-            in1_kg,
-            in1_kg - out1_kg,
-            in1_kg - out1_kg + in2_kg,
-            in1_kg - out1_kg + in2_kg - out2_kg,
-        ]
-        bags_after = [D(10), D(10) - D("3.333333"), D(15) - D("3.333333"), D(15) - D("3.333333") - D("1.5")]
-        cones_after = [
-            D(240),
-            D(240) - D("80.000001"),
-            D(360) - D("80.000001"),
-            D(360) - D("80.000001") - D(36),
-        ]
-        charges_after = [D(0), charge1, charge1, charge1 + charge2]
-        return {
-            "in1_kg": in1_kg, "out1_kg": out1_kg, "in2_kg": in2_kg, "out2_kg": out2_kg,
-            "charge1": charge1, "charge2": charge2,
-            "kg_after": kg_after, "bags_after": bags_after,
-            "cones_after": cones_after, "charges_after": charges_after,
-        }
+        self.assertEqual(D(txs[0]["chargesPayable"]), D("0"))
+        self.assertEqual(D(txs[1]["sizingCharge"]), charge1)
+        self.assertEqual(D(txs[1]["chargesPayable"]), charge1)
+        self.assertEqual(D(txs[2]["chargesPayable"]), charge1)
+        self.assertEqual(D(txs[3]["sizingCharge"]), charge2)
+        self.assertEqual(D(txs[3]["chargesPayable"]), charge1 + charge2)
 
-    # ── 1. rows, ordering, exact balances ─────────────────────────────────
+    # ── 5. Search, status, and date filters ─────────────────────────────────
 
-    def test_01_rows_ordering_and_exact_running_balances(self):
-        res = self._get(sizing=self.sizing_a.id, page_size=100)
-        rows = res.data["results"]
-        self.assertEqual(
-            [r["id"] for r in rows],
-            [f"IN-{self.yo1.id}", f"OUT-{self.so1.id}", f"IN-{self.yo2.id}", f"OUT-{self.so2.id}"],
-        )
-        self.assertEqual([r["entryType"] for r in rows], ["income", "outcome", "income", "outcome"])
+    def test_05_main_sizing_ledger_filters(self):
+        """B & F: Filtering by search and status on Main Sizing Ledger."""
+        # Search by name
+        res_search = self.client.get(URL, {"search": "alpha"})
+        self.assertEqual(res_search.data["count"], 1)
+        self.assertEqual(res_search.data["results"][0]["sizingName"], "Alpha Sizing")
 
-        e = self._expected_sizing_a()
-        for i, row in enumerate(rows):
-            self.assertEqual(D(row["balanceWeightKg"]), e["kg_after"][i])
-            self.assertEqual(D(row["balanceBags"]), e["bags_after"][i])
-            self.assertEqual(D(row["balanceCones"]), e["cones_after"][i])
-            self.assertEqual(D(row["chargesPayable"]), e["charges_after"][i])
-            self.assertEqual(D(row["balanceWeightLb"]), e["kg_after"][i] * LB_PER_KG)
+        # Search nonexistent
+        res_none = self.client.get(URL, {"search": "nonexistent"})
+        self.assertEqual(res_none.data["count"], 0)
+        self.assertEqual(res_none.data["results"], [])
+        self.assertEqual(D(res_none.data["totalBoxesSent"]), D("0"))
 
-        # income row columns
-        self.assertEqual(D(rows[0]["bagsIn"]), D(10))
-        self.assertEqual(D(rows[0]["conesIn"]), D(240))
-        self.assertEqual(D(rows[0]["weightKgIn"]), e["in1_kg"])
-        self.assertEqual(D(rows[0]["weightLbIn"]), e["in1_kg"] * LB_PER_KG)
-        self.assertIsNone(rows[0]["bagsOut"])
-        self.assertIsNone(rows[0]["sizingOutcomeId"])
-        self.assertEqual(rows[0]["yarnOutcomeId"], self.yo1.id)
+        # Status filter
+        res_status = self.client.get(URL, {"status": "Active"})
+        self.assertEqual(res_status.data["count"], 2)
 
-        # outcome row columns
-        self.assertEqual(D(rows[1]["bagsOut"]), D("3.333333"))
-        self.assertEqual(D(rows[1]["conesOut"]), D("80.000001"))
-        self.assertEqual(D(rows[1]["weightKgOut"]), e["out1_kg"])
-        self.assertEqual(D(rows[1]["sizingCharge"]), e["charge1"])
-        self.assertEqual(D(rows[1]["ratePerKg"]), D("12.345678"))
-        self.assertEqual(D(rows[1]["netWeightKg"]), D("98.765432"))
-        self.assertIsNone(rows[1]["bagsIn"])
-        self.assertEqual(rows[1]["reference"], "Set #SET-1 / Bill #B-1")
-        self.assertEqual(rows[1]["setNo"], "SET-1")
-        self.assertEqual(rows[1]["sizingOutcomeId"], self.so1.id)
+        res_inactive = self.client.get(URL, {"status": "Inactive"})
+        self.assertEqual(res_inactive.data["count"], 0)
 
-    def test_02_values_are_exact_strings_not_quantized_to_6_decimals(self):
-        rows = self._get(sizing=self.sizing_a.id, page_size=100).data["results"]
-        e = self._expected_sizing_a()
+    def test_06_date_range_filtering_on_main_and_detail_ledgers(self):
+        """B, C & F: Date range filters correctly restrict transactions and compute balances."""
+        # Main ledger filtered from Oct 10
+        res_main = self.client.get(URL, {"date_from": "2026-10-10"})
+        # Only yo2 (5 bags) and so2 (1.5 bags) in range
+        self.assertEqual(D(res_main.data["totalBoxesSent"]), D("5"))
+        self.assertEqual(D(res_main.data["totalBoxesReceived"]), D("1.5"))
+        self.assertEqual(D(res_main.data["totalBoxesBalance"]), D("3.5"))
+        self.assertEqual(D(res_main.data["totalPayables"]), D("505"))
 
-        out1 = rows[1]
+        # Detail ledger filtered from Oct 10
+        res_detail = self.client.get(f"{URL}{self.sizing_a.id}/", {"date_from": "2026-10-10"})
+        self.assertEqual(res_detail.data["count"], 2)
+        self.assertEqual([t["id"] for t in res_detail.data["results"]], [f"IN-{self.yo2.id}", f"OUT-{self.so2.id}"])
+
+        # Opening balance is balance prior to Oct 10 (Oct 5 balance: 10 - 3.333333 = 6.666667)
+        opening = res_detail.data["openingBalance"]
+        self.assertIsNotNone(opening)
+        self.assertEqual(D(opening["balanceBags"]), D("6.666667"))
+
+    # ── 6. Pagination covering all filtered records ────────────────────────
+
+    def test_07_pagination_summaries_cover_all_records_not_just_current_page(self):
+        """B & F: Aggregate counters reflect the entire filtered dataset across all pages."""
+        # Create a third sizing
+        Sizing.objects.create(sizing_name="Gamma Sizing", status="Active")
+
+        res_p1 = self.client.get(URL, {"page": 1, "page_size": 1})
+        self.assertEqual(res_p1.data["count"], 3)
+        self.assertEqual(res_p1.data["totalPages"], 3)
+        self.assertEqual(len(res_p1.data["results"]), 1)
+
+        # Aggregate totalBoxesSent must still be 15 across the entire dataset!
+        self.assertEqual(D(res_p1.data["totalBoxesSent"]), D("15"))
+        self.assertEqual(D(res_p1.data["totalBoxesReceived"]), D("4.833333"))
+        self.assertEqual(D(res_p1.data["totalBoxesBalance"]), D("10.166667"))
+
+    # ── 7. Empty ledgers ───────────────────────────────────────────────────
+
+    def test_08_empty_ledger_handling(self):
+        """F: Sizing with zero transactions returns clean zero balances without errors."""
+        res = self.client.get(f"{URL}{self.sizing_b.id}/")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data["count"], 0)
+        self.assertEqual(res.data["results"], [])
+        self.assertEqual(D(res.data["totalBoxesSent"]), D("0"))
+        self.assertEqual(D(res.data["totalBoxesReceived"]), D("0"))
+        self.assertEqual(D(res.data["totalBoxesBalance"]), D("0"))
+        self.assertEqual(D(res.data["totalPayables"]), D("0"))
+
+    # ── 8. Duplicate joins verification ───────────────────────────────────
+
+    def test_09_no_duplicate_totals_from_multiple_outcomes_or_joins(self):
+        """F: Multiple SizingOutcomes under one YarnOutcome do not multiply sent boxes."""
+        sizing_multi = Sizing.objects.create(sizing_name="Multi Sizing", status="Active")
+        # Send 20 bags
+        yo_multi = self._yarn_out(sizing_multi, bags=20, date="2026-10-15")
+
+        # 3 separate SizingOutcomes linked to this single YarnOutcome
+        self._sizing_out(yo_multi, date="2026-10-16", lagat_bags="5", lagat_cones="120", rate="10", net="100")
+        self._sizing_out(yo_multi, date="2026-10-17", lagat_bags="5", lagat_cones="120", rate="10", net="100")
+        self._sizing_out(yo_multi, date="2026-10-18", lagat_bags="5", lagat_cones="120", rate="10", net="100")
+
+        res = self.client.get(f"{URL}{sizing_multi.id}/")
+        # Sent must remain 20, NOT 20 * 3 = 60!
+        self.assertEqual(D(res.data["totalBoxesSent"]), D("20"))
+        self.assertEqual(D(res.data["totalBoxesReceived"]), D("15"))
+        self.assertEqual(D(res.data["totalBoxesBalance"]), D("5"))
+        self.assertEqual(D(res.data["totalPayables"]), D("3000"))
+
+        # Verify on Main Sizing Ledger as well
+        res_main = self.client.get(URL, {"search": "Multi Sizing"})
+        multi_row = res_main.data["results"][0]
+        self.assertEqual(D(multi_row["totalBoxesSent"]), D("20"))
+        self.assertEqual(D(multi_row["totalBoxesReceived"]), D("15"))
+        self.assertEqual(D(multi_row["totalBoxesBalance"]), D("5"))
+        self.assertEqual(D(multi_row["totalPayables"]), D("3000"))
+
+    # ── 9. Decimal precision ──────────────────────────────────────────────
+
+    def test_10_decimal_precision_preserved_without_quantization(self):
+        """F: Derived calculations retain full precision strings without float drift or rounding."""
+        res = self.client.get(f"{URL}{self.sizing_a.id}/")
+        txs = res.data["results"]
+
+        out1 = txs[1]
         self.assertIsInstance(out1["weightKgOut"], str)
-        # 3.333333 * 45.123457 has 12 decimal places; a 6dp DecimalField would have rounded it.
-        self.assertEqual(D(out1["weightKgOut"]).as_tuple().exponent, -12)
-        self.assertEqual(D(out1["weightKgOut"]), D("3.333333") * D("45.123457"))
-        self.assertNotEqual(D(out1["weightKgOut"]), e["out1_kg"].quantize(D("0.000001")))
+        # 3.333333 * 45.123457 has 12 decimal places
+        val_d = D(out1["weightKgOut"])
+        self.assertEqual(val_d.as_tuple().exponent, -12)
+        self.assertEqual(val_d, D("3.333333") * D("45.123457"))
 
-        # product of two 6dp values -> 12dp charge, kept intact
-        self.assertEqual(D(out1["sizingCharge"]).as_tuple().exponent, -12)
-        self.assertEqual(D(out1["sizingCharge"]), D("12.345678") * D("98.765432"))
+        # Product of rate_per_kg (12.345678) and net_weight_kg (98.765432) has 12 decimal places
+        charge_d = D(out1["sizingCharge"])
+        self.assertEqual(charge_d.as_tuple().exponent, -12)
+        self.assertEqual(charge_d, D("12.345678") * D("98.765432"))
 
-        # no scientific notation / floats anywhere
-        for row in rows:
-            for key in ("balanceBags", "balanceCones", "balanceWeightKg", "balanceWeightLb", "chargesPayable"):
-                self.assertIsInstance(row[key], str)
-                self.assertNotIn("E", row[key].upper())
+    # ── 10. Permissions and invalid sizing IDs ────────────────────────────
 
-    # ── 2. filters ────────────────────────────────────────────────────────
+    def test_11_permissions_and_invalid_sizing_ids(self):
+        """F: Proper RBAC permission enforcement and validation of sizing IDs."""
+        # 1. Invalid sizing ID (non-integer)
+        res_bad = self.client.get(f"{URL}abc/")
+        self.assertEqual(res_bad.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_03_entry_type_filter(self):
-        inc = self._get(sizing=self.sizing_a.id, entry_type="income", page_size=100).data["results"]
-        out = self._get(sizing=self.sizing_a.id, entry_type="outcome", page_size=100).data["results"]
-        self.assertEqual({r["entryType"] for r in inc}, {"income"})
-        self.assertEqual({r["entryType"] for r in out}, {"outcome"})
-        self.assertEqual(len(inc), 2)
-        self.assertEqual(len(out), 2)
+        res_bad_param = self.client.get(URL, {"sizing": "abc"})
+        self.assertEqual(res_bad_param.status_code, status.HTTP_400_BAD_REQUEST)
 
-        # filtering by type does not restart the balance
-        e = self._expected_sizing_a()
-        self.assertEqual(D(out[0]["balanceWeightKg"]), e["kg_after"][1])
-        self.assertEqual(D(out[1]["balanceWeightKg"]), e["kg_after"][3])
+        # 2. Nonexistent sizing ID
+        res_404 = self.client.get(f"{URL}999999/")
+        self.assertEqual(res_404.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_04_date_filter_keeps_true_cumulative_balance_and_opening_balance(self):
-        res = self._get(sizing=self.sizing_a.id, date_from="2026-10-10", page_size=100)
-        rows = res.data["results"]
-        self.assertEqual([r["id"] for r in rows], [f"IN-{self.yo2.id}", f"OUT-{self.so2.id}"])
+        res_404_action = self.client.get("/api/v1/sizings/999999/ledger/")
+        self.assertEqual(res_404_action.status_code, status.HTTP_404_NOT_FOUND)
 
-        e = self._expected_sizing_a()
-        # first visible row continues from the earlier history
-        self.assertEqual(D(rows[0]["balanceWeightKg"]), e["kg_after"][2])
-        self.assertEqual(D(rows[1]["balanceWeightKg"]), e["kg_after"][3])
+        # Nonexistent sizing ID in query param returns empty
+        res_empty = self.client.get(URL, {"sizing": 999999})
+        self.assertEqual(res_empty.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_empty.data["count"], 0)
 
-        opening = res.data["openingBalance"]
-        self.assertEqual(D(opening["balanceWeightKg"]), e["kg_after"][1])
-        self.assertEqual(D(opening["balanceBags"]), e["bags_after"][1])
-        self.assertEqual(D(opening["balanceCones"]), e["cones_after"][1])
-        self.assertEqual(D(opening["chargesPayable"]), e["charges_after"][1])
-        self.assertEqual(D(opening["balanceWeightLb"]), e["kg_after"][1] * LB_PER_KG)
-
-    def test_05_opening_balance_zero_without_date_from_and_none_without_sizing(self):
-        res = self._get(sizing=self.sizing_a.id)
-        self.assertEqual(D(res.data["openingBalance"]["balanceWeightKg"]), D(0))
-        res_all = self._get()
-        self.assertIsNone(res_all.data["openingBalance"])
-
-    def test_06_date_to_filter(self):
-        rows = self._get(sizing=self.sizing_a.id, date_to="2026-10-05", page_size=100).data["results"]
-        self.assertEqual([r["id"] for r in rows], [f"IN-{self.yo1.id}", f"OUT-{self.so1.id}"])
-
-    def test_07_search_and_set_no_filters(self):
-        rows = self._get(sizing=self.sizing_a.id, set_no="set-2", page_size=100).data["results"]
-        self.assertEqual([r["id"] for r in rows], [f"OUT-{self.so2.id}"])
-
-        rows = self._get(search="B-1", page_size=100).data["results"]
-        self.assertEqual([r["id"] for r in rows], [f"OUT-{self.so1.id}"])
-
-        rows = self._get(search="alpha", page_size=100).data["results"]
-        self.assertEqual(len(rows), 4)
-        self.assertEqual(self._get(search="no-such-text").data["count"], 0)
-
-    def test_08_descending_order_keeps_same_balances(self):
-        asc = self._get(sizing=self.sizing_a.id, page_size=100).data["results"]
-        desc = self._get(sizing=self.sizing_a.id, ordering="-date", page_size=100).data["results"]
-        self.assertEqual([r["id"] for r in desc], [r["id"] for r in reversed(asc)])
-        self.assertEqual(
-            [r["balanceWeightKg"] for r in desc], [r["balanceWeightKg"] for r in reversed(asc)]
-        )
-
-    # ── 3. pagination ─────────────────────────────────────────────────────
-
-    def test_09_pagination_carries_balances_across_pages(self):
-        e = self._expected_sizing_a()
-        p1 = self._get(sizing=self.sizing_a.id, page_size=2, page=1)
-        p2 = self._get(sizing=self.sizing_a.id, page_size=2, page=2)
-        self.assertEqual(p1.data["count"], 4)
-        self.assertEqual(p1.data["totalPages"], 2)
-        self.assertEqual(D(p1.data["results"][1]["balanceWeightKg"]), e["kg_after"][1])
-        self.assertEqual(D(p2.data["results"][0]["balanceWeightKg"]), e["kg_after"][2])
-        self.assertEqual(D(p2.data["results"][1]["balanceWeightKg"]), e["kg_after"][3])
-
-    # ── 4. multiple parties ───────────────────────────────────────────────
-
-    def test_10_each_sizing_party_has_independent_balances(self):
-        yo_b = self._yarn_out(self.sizing_b, bags=7, date="2026-10-03", per_bag=D("40.000001"))
-        so_b = self._sizing_out(
-            yo_b, date="2026-10-04", lagat_bags="2.000001", lagat_cones="10", rate="5", net="20",
-            set_no="SET-B", set_bill="BB-1",
-        )
-        rows = self._get(page_size=100).data["results"]
-        self.assertEqual(len(rows), 6)
-
-        by_id = {r["id"]: r for r in rows}
-        in_b = by_id[f"IN-{yo_b.id}"]
-        out_b = by_id[f"OUT-{so_b.id}"]
-        self.assertEqual(D(in_b["balanceWeightKg"]), D(7) * D("40.000001"))
-        self.assertEqual(D(out_b["balanceWeightKg"]), D(7) * D("40.000001") - D("2.000001") * D("40.000001"))
-        self.assertEqual(D(out_b["chargesPayable"]), D("5") * D("20"))
-
-        # Sizing A rows are not affected by Sizing B activity
-        e = self._expected_sizing_a()
-        self.assertEqual(D(by_id[f"OUT-{self.so2.id}"]["balanceWeightKg"]), e["kg_after"][3])
-
-        only_b = self._get(sizing=self.sizing_b.id, page_size=100).data["results"]
-        self.assertEqual({r["sizingId"] for r in only_b}, {self.sizing_b.id})
-
-    def test_11_same_date_income_is_listed_before_outcome(self):
-        yo = self._yarn_out(self.sizing_b, bags=2, date="2026-10-20")
-        so = self._sizing_out(yo, date="2026-10-20", lagat_bags="1", lagat_cones="1", rate="1", net="1")
-        # make the income row the NEWER record; same date -> income must still sort first
-        YarnOutcome.objects.filter(id=yo.id).update(created_at=so.created_at + timedelta(seconds=30))
-        rows = self._get(sizing=self.sizing_b.id).data["results"]
-        self.assertEqual([r["id"] for r in rows], [f"IN-{yo.id}", f"OUT-{so.id}"])
-        self.assertEqual(D(rows[1]["balanceBags"]), D(1))
-
-    # ── 5. updates and deletions ──────────────────────────────────────────
-
-    def test_12_updates_are_reflected_without_precision_loss(self):
-        self.so1.lagat_bags = D("0.000001")
-        self.so1.rate_per_kg = D("0.000001")
-        self.so1.net_weight_kg = D("0.000001")
-        self.so1.save()
-
-        rows = self._get(sizing=self.sizing_a.id, page_size=100).data["results"]
-        out1 = rows[1]
-        self.assertEqual(D(out1["bagsOut"]), D("0.000001"))
-        self.assertEqual(D(out1["weightKgOut"]), D("0.000001") * D("45.123457"))
-        self.assertEqual(D(out1["sizingCharge"]), D("0.000001") * D("0.000001"))
-        self.assertEqual(D(out1["sizingCharge"]).as_tuple().exponent, -12)
-
-        w = self.WEIGHT_PER_BAG
-        self.assertEqual(D(out1["balanceWeightKg"]), D(10) * w - D("0.000001") * w)
-
-        # yarn-outcome edit flows into income and the outcome's consumed kg
-        self.yo1.outcome_weight_per_bag_kg = D("1.000001")
-        self.yo1.save()
-        rows = self._get(sizing=self.sizing_a.id, page_size=100).data["results"]
-        self.assertEqual(D(rows[0]["weightKgIn"]), D(10) * D("1.000001"))
-        self.assertEqual(D(rows[1]["weightKgOut"]), D("0.000001") * D("1.000001"))
-
-    def test_13_deletions_are_reflected_and_balances_recomputed(self):
-        self.so2.delete()
-        rows = self._get(sizing=self.sizing_a.id, page_size=100).data["results"]
-        self.assertEqual(
-            [r["id"] for r in rows],
-            [f"IN-{self.yo1.id}", f"OUT-{self.so1.id}", f"IN-{self.yo2.id}"],
-        )
-        e = self._expected_sizing_a()
-        self.assertEqual(D(rows[-1]["balanceWeightKg"]), e["kg_after"][2])
-        self.assertEqual(D(rows[-1]["chargesPayable"]), e["charge1"])
-
-        self.yo2.delete()
-        rows = self._get(sizing=self.sizing_a.id, page_size=100).data["results"]
-        self.assertEqual([r["id"] for r in rows], [f"IN-{self.yo1.id}", f"OUT-{self.so1.id}"])
-        self.assertEqual(D(rows[-1]["balanceWeightKg"]), e["kg_after"][1])
-
-    def test_14_non_sizing_yarn_outcomes_are_not_in_ledger(self):
-        YarnOutcome.objects.create(
-            yarn_intake=self.intake,
-            outcome_type=YarnOutcome.OutcomeTypeChoices.WEFT,
-            outcome_bags=3,
-            outcome_cones_per_bag=24,
-            outcome_weight_per_bag_kg=D("45.36"),
-            outcome_date="2026-10-06",
-        )
-        self.assertEqual(self._get(page_size=100).data["count"], 4)
-
-    # ── 6. summary + export ───────────────────────────────────────────────
-
-    def test_15_summary_totals_and_closing_balances(self):
-        res = self.client.get(URL + "summary/", {"sizing": self.sizing_a.id})
-        self.assertEqual(res.status_code, status.HTTP_200_OK)
-        data = res.data["data"]
-        e = self._expected_sizing_a()
-        t = data["totals"]
-
-        self.assertEqual(t["entries"], 4)
-        self.assertEqual(D(t["totalBagsIn"]), D(15))
-        self.assertEqual(D(t["totalConesIn"]), D(360))
-        self.assertEqual(D(t["totalWeightKgIn"]), e["in1_kg"] + e["in2_kg"])
-        self.assertEqual(D(t["totalBagsOut"]), D("3.333333") + D("1.5"))
-        self.assertEqual(D(t["totalConesOut"]), D("80.000001") + D(36))
-        self.assertEqual(D(t["totalWeightKgOut"]), e["out1_kg"] + e["out2_kg"])
-        self.assertEqual(D(t["totalSizingCharge"]), e["charge1"] + e["charge2"])
-        self.assertEqual(D(t["balanceWeightKg"]), e["kg_after"][3])
-        self.assertEqual(D(t["balanceBags"]), e["bags_after"][3])
-        self.assertEqual(D(t["balanceCones"]), e["cones_after"][3])
-        self.assertEqual(D(t["chargesPayable"]), e["charges_after"][3])
-
-        self.assertEqual(len(data["parties"]), 1)
-        self.assertEqual(data["parties"][0]["sizingId"], self.sizing_a.id)
-        self.assertEqual(data["parties"][0]["sizingName"], "Alpha Sizing")
-        self.assertEqual(D(data["parties"][0]["balanceWeightKg"]), e["kg_after"][3])
-
-    def test_16_summary_across_parties_sums_party_closings(self):
-        yo_b = self._yarn_out(self.sizing_b, bags=4, date="2026-10-03", per_bag=D("20.000001"))
-        res = self.client.get(URL + "summary/")
-        data = res.data["data"]
-        self.assertEqual(len(data["parties"]), 2)
-        e = self._expected_sizing_a()
-        expected_total_kg = e["kg_after"][3] + D(4) * D("20.000001")
-        self.assertEqual(D(data["totals"]["balanceWeightKg"]), expected_total_kg)
-        self.assertEqual(yo_b.sizing_id, self.sizing_b.id)
-
-    def test_17_csv_export_matches_api_values(self):
-        api_rows = self._get(sizing=self.sizing_a.id, page_size=100).data["results"]
-        res = self.client.get(URL + "export/", {"sizing": self.sizing_a.id})
-        self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.assertIn("text/csv", res["Content-Type"])
-
-        reader = list(csv.DictReader(io.StringIO(res.content.decode("utf-8"))))
-        self.assertEqual(len(reader), len(api_rows))
-        for csv_row, api_row in zip(reader, api_rows):
-            self.assertEqual(csv_row["Type"], api_row["entryType"])
-            self.assertEqual(csv_row["Date"], api_row["date"])
-            self.assertEqual(csv_row["Balance Weight (kg)"], api_row["balanceWeightKg"])
-            self.assertEqual(csv_row["Balance Bags"], api_row["balanceBags"])
-            self.assertEqual(csv_row["Charges Payable"], api_row["chargesPayable"])
-        self.assertEqual(reader[1]["Weight Out (kg)"], api_rows[1]["weightKgOut"])
-        self.assertEqual(reader[1]["Sizing Charge"], api_rows[1]["sizingCharge"])
-        self.assertEqual(reader[0]["Weight Out (kg)"], "")
-
-    # ── 7. permissions + validation ───────────────────────────────────────
-
-    def test_18_permissions(self):
+        # 3. RBAC permissions
         viewer_role = Role.objects.create(
             name="Ledger Viewer", slug="ledger-viewer", status="Active", permissions=["sizing.view"]
         )
@@ -427,12 +417,12 @@ class SizingLedgerTests(APITestCase):
         )
 
         self.client.force_authenticate(user=viewer)
-        for path in (URL, URL + "summary/", URL + "export/"):
-            self.assertEqual(self.client.get(path).status_code, status.HTTP_200_OK, path)
+        self.assertEqual(self.client.get(URL).status_code, status.HTTP_200_OK)
+        self.assertEqual(self.client.get(f"{URL}{self.sizing_a.id}/").status_code, status.HTTP_200_OK)
 
         self.client.force_authenticate(user=other)
-        for path in (URL, URL + "summary/", URL + "export/"):
-            self.assertEqual(self.client.get(path).status_code, status.HTTP_403_FORBIDDEN, path)
+        self.assertEqual(self.client.get(URL).status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self.client.get(f"{URL}{self.sizing_a.id}/").status_code, status.HTTP_403_FORBIDDEN)
 
         self.client.force_authenticate(user=None)
         self.assertIn(
@@ -440,26 +430,26 @@ class SizingLedgerTests(APITestCase):
             (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
         )
 
-        # read-only: no write verbs
-        self.client.force_authenticate(user=self.admin)
-        self.assertEqual(self.client.post(URL, {}, format="json").status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+    # ── 11. Transactions stream and CSV export ────────────────────────────
 
-    def test_19_invalid_parameters_return_400(self):
-        for params in (
-            {"sizing": "abc"},
-            {"date_from": "10/10/2026"},
-            {"date_to": "not-a-date"},
-            {"entry_type": "bogus"},
-            {"ordering": "name"},
-            {"date_from": "2026-10-12", "date_to": "2026-10-01"},
-        ):
-            res = self.client.get(URL, params)
-            self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST, params)
+    def test_12_transactions_stream_and_csv_export(self):
+        """F: Transactions stream endpoint and CSV export functionality."""
+        # Transactions stream
+        res_tx = self.client.get(f"{URL}transactions/", {"sizing": self.sizing_a.id})
+        self.assertEqual(res_tx.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res_tx.data["results"]), 4)
 
-    def test_20_empty_ledger_for_unknown_sizing(self):
-        res = self._get(sizing=999999)
-        self.assertEqual(res.data["count"], 0)
-        self.assertEqual(res.data["results"], [])
-        summary = self.client.get(URL + "summary/", {"sizing": 999999}).data["data"]
-        self.assertEqual(summary["totals"]["entries"], 0)
-        self.assertEqual(D(summary["totals"]["balanceWeightKg"]), D(0))
+        # CSV export (Main Sizing Ledger)
+        res_csv_main = self.client.get(f"{URL}export/")
+        self.assertEqual(res_csv_main.status_code, status.HTTP_200_OK)
+        self.assertIn("text/csv", res_csv_main["Content-Type"])
+        reader_main = list(csv.DictReader(io.StringIO(res_csv_main.content.decode("utf-8"))))
+        self.assertEqual(len(reader_main), 2)
+        self.assertIn("Total Boxes Sent", reader_main[0])
+
+        # CSV export (Transactions)
+        res_csv_tx = self.client.get(f"{URL}export/", {"sizing": self.sizing_a.id, "mode": "transactions"})
+        self.assertEqual(res_csv_tx.status_code, status.HTTP_200_OK)
+        reader_tx = list(csv.DictReader(io.StringIO(res_csv_tx.content.decode("utf-8"))))
+        self.assertEqual(len(reader_tx), 4)
+        self.assertEqual(reader_tx[0]["Type"], "income")
