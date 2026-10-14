@@ -3,6 +3,7 @@ Sizing model for the Yarn module.
 Represents a sizing unit/party that yarn can be sent to.
 """
 
+from decimal import Decimal
 from django.db import models
 from django.conf import settings
 
@@ -253,6 +254,32 @@ class SizingOutcome(models.Model):
         help_text="Total rate of net weight (net_weight_kg * rate_per_kg)"
     )
 
+    class PaymentStatusChoices(models.TextChoices):
+        UNPAID = "Unpaid", "Unpaid"
+        PARTIALLY_PAID = "Partially Paid", "Partially Paid"
+        PAID = "Paid", "Paid"
+
+    amount_paid = models.DecimalField(
+        max_digits=18,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="Amount paid for sizing charges"
+    )
+
+    amount_due = models.DecimalField(
+        max_digits=18,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="Amount due for sizing charges (total_rate - amount_paid)"
+    )
+
+    payment_status = models.CharField(
+        max_length=30,
+        choices=PaymentStatusChoices.choices,
+        default=PaymentStatusChoices.UNPAID,
+        help_text="Payment status: Unpaid, Partially Paid, Paid"
+    )
+
     remarks = models.TextField(
         blank=True,
         default=""
@@ -338,6 +365,30 @@ class SizingOutcome(models.Model):
             self.total_cones = self.total_bags_on_sizing * self.bag_packing_cone
         if self.rate_per_kg is not None and self.net_weight_kg is not None:
             self.total_rate = self.rate_per_kg * self.net_weight_kg
+
+        # Calculate amount_due and payment_status preserving full precision
+        total = self.total_rate if self.total_rate is not None else Decimal("0.000000")
+        paid = self.amount_paid if self.amount_paid is not None else Decimal("0.000000")
+
+        if total > Decimal("0.000000"):
+            if paid >= total:
+                self.amount_due = Decimal("0.000000")
+                self.payment_status = self.PaymentStatusChoices.PAID
+            elif paid > Decimal("0.000000"):
+                self.amount_due = total - paid
+                self.payment_status = self.PaymentStatusChoices.PARTIALLY_PAID
+            else:
+                self.amount_due = total
+                self.payment_status = self.PaymentStatusChoices.UNPAID
+        else:
+            if paid > Decimal("0.000000"):
+                self.amount_due = Decimal("0.000000")
+                self.payment_status = self.PaymentStatusChoices.PAID
+            else:
+                self.amount_due = Decimal("0.000000")
+                if not self.payment_status:
+                    self.payment_status = self.PaymentStatusChoices.UNPAID
+
         super().save(*args, **kwargs)
 
     @property

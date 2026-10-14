@@ -48,6 +48,9 @@ class SizingLedgerRowSerializer(serializers.Serializer):
     netWeightKg = ExactDecimalField(source="net_weight_kg")
     ratePerKg = ExactDecimalField(source="rate_per_kg")
     sizingCharge = ExactDecimalField(source="sizing_charge")
+    amountPaid = ExactDecimalField(source="amount_paid", required=False, allow_null=True)
+    amountDue = ExactDecimalField(source="amount_due", required=False, allow_null=True)
+    paymentStatus = serializers.CharField(source="payment_status", required=False, allow_null=True)
 
     # Running balances (per sizing party)
     balanceBags = ExactDecimalField(source="balance_bags")

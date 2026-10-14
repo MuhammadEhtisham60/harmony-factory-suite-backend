@@ -20,10 +20,11 @@ class YarnOutcomeMinSerializer(serializers.ModelSerializer):
     yarnCount = serializers.CharField(source="yarn_intake.yarn_count", read_only=True)
     intakeSetNo = serializers.CharField(source="yarn_intake.set_no", read_only=True)
     sizingName = serializers.CharField(source="sizing.sizing_name", read_only=True)
+    status = serializers.CharField(read_only=True)
 
     class Meta:
         model = YarnOutcome
-        fields = ["id", "outcome_type", "outcome_bags", "yarnName", "yarnType", "yarnCount", "intakeSetNo", "sizingName"]
+        fields = ["id", "outcome_type", "outcome_bags", "yarnName", "yarnType", "yarnCount", "intakeSetNo", "sizingName", "status"]
 
 
 class SizingMinSerializer(serializers.ModelSerializer):
@@ -627,6 +628,15 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
     totalRate = serializers.DecimalField(source="total_rate", max_digits=18, decimal_places=6, required=False, allow_null=True)
     total_rate = serializers.DecimalField(max_digits=18, decimal_places=6, required=False, allow_null=True)
 
+    yarnOutcomeStatus = serializers.CharField(source="yarn_outcome.status", read_only=True)
+
+    amountPaid = serializers.DecimalField(source="amount_paid", max_digits=18, decimal_places=6, required=False)
+    amount_paid = serializers.DecimalField(max_digits=18, decimal_places=6, required=False)
+    amountDue = serializers.DecimalField(source="amount_due", max_digits=18, decimal_places=6, read_only=True)
+    amount_due = serializers.DecimalField(max_digits=18, decimal_places=6, read_only=True)
+    paymentStatus = serializers.CharField(source="payment_status", required=False)
+    payment_status = serializers.CharField(required=False)
+
     outcomeDate = serializers.DateField(source="outcome_date", required=False)
     remarks = serializers.CharField(required=False, allow_blank=True, default="")
 
@@ -723,6 +733,13 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "net_weight_kg",
             "totalRate",
             "total_rate",
+            "yarnOutcomeStatus",
+            "amountPaid",
+            "amount_paid",
+            "amountDue",
+            "amount_due",
+            "paymentStatus",
+            "payment_status",
             "outcomeDate",
             "remarks",
             "beam_ids",
@@ -740,6 +757,9 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "yarnOutcomeDetail",
+            "yarnOutcomeStatus",
+            "amountDue",
+            "amount_due",
             "sizingDetail",
             "beamAssignments",
             "beamLoadings",
@@ -791,6 +811,9 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "rate_per_kg": "ratePerKg",
             "net_weight_kg": "netWeightKg",
             "total_rate": "totalRate",
+            "amount_paid": "amountPaid",
+            "amount_due": "amountDue",
+            "payment_status": "paymentStatus",
             "outcome_date": "outcomeDate",
             "sizing_id": "sizingId",
             "yarn_outcome_id": "yarnOutcomeId",
@@ -799,6 +822,8 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
         for snake, camel in mapping.items():
             if snake in data and camel not in data:
                 data[camel] = data[snake]
+            elif camel in data and snake not in data:
+                data[snake] = data[camel]
         return super().to_internal_value(data)
 
     def validate(self, attrs):
@@ -967,7 +992,11 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if request and request.user and request.user.is_authenticated:
             validated_data["updated_by"] = request.user
-        return super().update(instance, validated_data)
+        updated = super().update(instance, validated_data)
+        if updated.yarn_outcome:
+            from .services import sync_yarn_outcome_status
+            sync_yarn_outcome_status(updated.yarn_outcome)
+        return updated
 
 
 # ── Action Request Serializers ───────────────────────────────────────────────

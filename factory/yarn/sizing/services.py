@@ -5,7 +5,9 @@ and audit logging.
 """
 
 import logging
+from decimal import Decimal
 from django.db import transaction, IntegrityError
+from django.db.models import Sum
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
@@ -243,6 +245,56 @@ def assign_beams_to_outcome(outcome=None, beam_ids=None, user=None, request=None
         })
 
 
+def sync_yarn_outcome_status(yarn_outcome):
+    """
+    Synchronizes the status of a YarnOutcome based on its linked SizingOutcome returns.
+    Rules:
+      - If no sizing outcomes exist -> 'In Sizing'
+      - If remaining bags on sizing stock > 0, OR sum of lagat bags is less than outcome_bags
+        (and outcome_bags > 0) -> 'Partially Received'
+      - If all sent bags are consumed/received (sum of lagat_bags >= outcome_bags and remaining_bags_on_sizing_stock == 0) -> 'Received'
+    """
+    if not yarn_outcome:
+        return None
+
+    from factory.yarn.yarn_intake.models import YarnOutcome
+    if isinstance(yarn_outcome, (int, str)):
+        yarn_outcome = YarnOutcome.objects.filter(id=yarn_outcome).first()
+        if not yarn_outcome:
+            return None
+
+    if yarn_outcome.outcome_type != YarnOutcome.OutcomeTypeChoices.SIZING:
+        return yarn_outcome.status
+
+    sizing_outcomes = yarn_outcome.sizing_outcomes.all()
+    if not sizing_outcomes.exists():
+        new_status = YarnOutcome.StatusChoices.IN_SIZING
+    else:
+        total_lagat = sizing_outcomes.aggregate(total=Sum("lagat_bags"))["total"] or Decimal("0")
+        sent_bags = Decimal(str(yarn_outcome.outcome_bags or 0))
+
+        # Check the latest sizing outcome for remaining bags on sizing stock
+        latest_so = sizing_outcomes.order_by("-outcome_date", "-id").first()
+        latest_remaining_stock = (
+            latest_so.remaining_bags_on_sizing_stock
+            if latest_so and latest_so.remaining_bags_on_sizing_stock is not None
+            else 0
+        )
+
+        if total_lagat <= Decimal("0") and latest_remaining_stock == 0:
+            new_status = YarnOutcome.StatusChoices.IN_SIZING
+        elif latest_remaining_stock > 0 or (sent_bags > Decimal("0") and total_lagat < sent_bags):
+            new_status = YarnOutcome.StatusChoices.PARTIALLY_RECEIVED
+        else:
+            new_status = YarnOutcome.StatusChoices.RECEIVED
+
+    if yarn_outcome.status != new_status:
+        yarn_outcome.status = new_status
+        yarn_outcome.save(update_fields=["status", "updated_at"])
+
+    return new_status
+
+
 def create_sizing_outcome(yarn_outcome=None, outcome_date=None, remarks="", beam_ids=None, user=None, request=None, **extra_fields):
     """
     Creates a new SizingOutcome and optionally assigns a batch of Beams atomically.
@@ -289,8 +341,7 @@ def create_sizing_outcome(yarn_outcome=None, outcome_date=None, remarks="", beam
         )
 
         if yarn_outcome:
-            yarn_outcome.status = "Received"
-            yarn_outcome.save(update_fields=["status", "updated_at"])
+            sync_yarn_outcome_status(yarn_outcome)
 
         assignments = []
         if beam_ids:

@@ -379,6 +379,7 @@ class YarnOutcome(models.Model):
 
     class StatusChoices(models.TextChoices):
         IN_SIZING = "In Sizing", "In Sizing"
+        PARTIALLY_RECEIVED = "Partially Received", "Partially Received"
         RECEIVED = "Received", "Received"
         DISPATCHED = "Dispatched", "Dispatched"
         COMPLETED = "Completed", "Completed"

@@ -35,11 +35,12 @@ class SizingOutcomeFilter(django_filters.FilterSet):
     outcome_date = django_filters.DateFilter(field_name="outcome_date")
     start_date = django_filters.DateFilter(field_name="outcome_date", lookup_expr="gte")
     end_date = django_filters.DateFilter(field_name="outcome_date", lookup_expr="lte")
+    payment_status = django_filters.ChoiceFilter(choices=SizingOutcome.PaymentStatusChoices.choices)
     search = django_filters.CharFilter(method="filter_search", label="Search")
 
     class Meta:
         model = SizingOutcome
-        fields = ["yarn_outcome", "sizing", "outcome_date", "set_no", "set_bill"]
+        fields = ["yarn_outcome", "sizing", "outcome_date", "set_no", "set_bill", "payment_status"]
 
     def filter_search(self, queryset, name, value):
         return queryset.filter(

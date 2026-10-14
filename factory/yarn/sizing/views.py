@@ -32,6 +32,7 @@ from .services import (
     assign_beams_to_outcome,
     transition_beam_assignment,
     release_beam_assignment,
+    sync_yarn_outcome_status,
 )
 
 
@@ -204,7 +205,7 @@ class SizingOutcomeViewSet(ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = SizingOutcomeFilter
     search_fields = ["yarn_outcome__sizing__sizing_name", "sizing_name", "set_no", "set_bill", "remarks"]
-    ordering_fields = ["outcome_date", "created_at", "updated_at"]
+    ordering_fields = ["outcome_date", "created_at", "updated_at", "amount_paid", "amount_due", "payment_status"]
     ordering = ["-outcome_date", "-id"]
 
     permission_map = {
@@ -259,6 +260,9 @@ class SizingOutcomeViewSet(ModelViewSet):
         serializer.is_valid(raise_exception=True)
         updated = serializer.save()
 
+        if updated.yarn_outcome:
+            sync_yarn_outcome_status(updated.yarn_outcome)
+
         log_activity(
             request=request,
             action="Update Sizing Outcome",
@@ -301,7 +305,11 @@ class SizingOutcomeViewSet(ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        yarn_outcome = instance.yarn_outcome
         instance.delete()
+        if yarn_outcome:
+            sync_yarn_outcome_status(yarn_outcome)
+
         log_activity(
             request=request,
             action="Delete Sizing Outcome",

@@ -156,6 +156,7 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
     status = serializers.SerializerMethodField()
     sizingOutcome = serializers.SerializerMethodField()
     isReceived = serializers.SerializerMethodField()
+    isPartiallyReceived = serializers.SerializerMethodField()
 
     # ── Audit ─────────────────────────────────────────────────────────────
     createdAt = serializers.DateTimeField(source="created_at", read_only=True)
@@ -192,6 +193,7 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
             "status",
             "sizingOutcome",
             "isReceived",
+            "isPartiallyReceived",
             "outcomeDate",
             "notes",
             "beamIds",
@@ -206,7 +208,7 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id", "outcomeWeightKg", "outcomeWeightLb",
-            "beamAssignments", "totalBeams", "status", "sizingOutcome", "isReceived",
+            "beamAssignments", "totalBeams", "status", "sizingOutcome", "isReceived", "isPartiallyReceived",
             "createdAt", "updatedAt", "createdBy", "updatedBy",
             "stockDetail", "yarnBuyerDetail", "sizingDetail",
         ]
@@ -225,18 +227,20 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         return []
 
     def get_status(self, obj):
-        if hasattr(obj, "sizing_outcomes") and obj.sizing_outcomes.exists():
-            return "Received"
         if getattr(obj, "status", None):
             return obj.status
         if obj.outcome_type == YarnOutcome.OutcomeTypeChoices.SIZING:
-            return "In Sizing"
+            if hasattr(obj, "sizing_outcomes") and obj.sizing_outcomes.exists():
+                from factory.yarn.sizing.services import sync_yarn_outcome_status
+                return sync_yarn_outcome_status(obj)
+            return YarnOutcome.StatusChoices.IN_SIZING
         return "Dispatched"
 
     def get_isReceived(self, obj):
-        if hasattr(obj, "sizing_outcomes") and obj.sizing_outcomes.exists():
-            return True
-        return getattr(obj, "status", None) == "Received"
+        return self.get_status(obj) == YarnOutcome.StatusChoices.RECEIVED
+
+    def get_isPartiallyReceived(self, obj):
+        return self.get_status(obj) == YarnOutcome.StatusChoices.PARTIALLY_RECEIVED
 
     def get_sizingOutcome(self, obj):
         if hasattr(obj, "sizing_outcomes"):

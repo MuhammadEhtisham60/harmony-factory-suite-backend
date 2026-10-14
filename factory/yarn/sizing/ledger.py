@@ -70,6 +70,7 @@ _NULLABLE_OUTCOME_KEYS = (
     "bags_out", "cones_out", "weight_kg_out", "weight_lb_out",
     "set_length_meter", "set_length_gaz", "shortage",
     "net_weight_kg", "rate_per_kg", "sizing_charge",
+    "amount_paid", "amount_due", "payment_status",
 )
 
 
@@ -175,6 +176,9 @@ def _outcome_row(so):
             "net_weight_kg": so.net_weight_kg,
             "rate_per_kg": so.rate_per_kg,
             "sizing_charge": sizing_charge,
+            "amount_paid": so.amount_paid,
+            "amount_due": so.amount_due,
+            "payment_status": so.payment_status,
         }
     )
     return row
