@@ -141,15 +141,15 @@ class SizingOutcome(models.Model):
     )
 
     lagat_bags = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
+        max_digits=15,
+        decimal_places=6,
         default=0,
         help_text="Lagat in bags"
     )
 
     lagat_cones = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
+        max_digits=15,
+        decimal_places=6,
         default=0,
         help_text="Lagat in cones"
     )
@@ -162,24 +162,24 @@ class SizingOutcome(models.Model):
     )
 
     width = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
+        max_digits=15,
+        decimal_places=6,
         null=True,
         blank=True,
         help_text="Fabric / Reed width in inches"
     )
 
     set_length_meter = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
+        max_digits=15,
+        decimal_places=6,
         null=True,
         blank=True,
         help_text="Set length in meters"
     )
 
     set_length_gaz = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
+        max_digits=15,
+        decimal_places=6,
         null=True,
         blank=True,
         help_text="Set length in gaz (yards)"
@@ -213,24 +213,24 @@ class SizingOutcome(models.Model):
     )
 
     total_set_lumbai = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
+        max_digits=15,
+        decimal_places=6,
         null=True,
         blank=True,
         help_text="Total set length / lumbai"
     )
 
     total_set_shortage = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
+        max_digits=15,
+        decimal_places=6,
         null=True,
         blank=True,
         help_text="Total set shortage"
     )
 
     rate_per_kg = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
+        max_digits=15,
+        decimal_places=6,
         null=True,
         blank=True,
         default=0,
@@ -238,16 +238,16 @@ class SizingOutcome(models.Model):
     )
 
     net_weight_kg = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
+        max_digits=15,
+        decimal_places=6,
         null=True,
         blank=True,
         help_text="Net weight in KG"
     )
 
     total_rate = models.DecimalField(
-        max_digits=15,
-        decimal_places=2,
+        max_digits=18,
+        decimal_places=6,
         null=True,
         blank=True,
         help_text="Total rate of net weight (net_weight_kg * rate_per_kg)"

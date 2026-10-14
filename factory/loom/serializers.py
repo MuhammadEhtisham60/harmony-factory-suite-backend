@@ -82,7 +82,7 @@ class LoomDetailSerializer(serializers.ModelSerializer):
         source="model_number", required=False, allow_blank=True, default=""
     )
     width = serializers.DecimalField(
-        max_digits=10, decimal_places=2, required=False, allow_null=True
+        max_digits=15, decimal_places=6, required=False, allow_null=True
     )
     installationDate = serializers.DateField(
         source="installation_date", required=False, allow_null=True

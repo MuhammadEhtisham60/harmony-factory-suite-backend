@@ -32,8 +32,8 @@ class Loom(models.Model):
     )
 
     width = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
+        max_digits=15,
+        decimal_places=6,
         null=True,
         blank=True
     )

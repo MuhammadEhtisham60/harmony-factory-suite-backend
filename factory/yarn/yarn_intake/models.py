@@ -141,9 +141,9 @@ class YarnIntake(models.Model):
     bags = models.PositiveIntegerField(default=0)
     cones_per_bag = models.PositiveIntegerField(default=0)
     rate_per_lb = models.DecimalField(
-        max_digits=12,
-        decimal_places=4,
-        default=Decimal("0.0000"),
+        max_digits=15,
+        decimal_places=6,
+        default=Decimal("0.000000"),
         help_text="Price / Rate per pound (LB) of yarn."
     )
     weight_per_bag_kg = models.DecimalField(max_digits=12, decimal_places=6, default=0)
@@ -225,6 +225,7 @@ class YarnIntake(models.Model):
         """
         Recalculate all derived intake fields from source inputs.
         Call before saving a new or updated YarnIntake.
+        Preserves full decimal precision without rounding intermediate values.
         """
         bags = Decimal(str(self.bags))
         cones_per_bag = Decimal(str(self.cones_per_bag))
@@ -232,9 +233,9 @@ class YarnIntake(models.Model):
         weight_per_bag_kg = Decimal(str(self.weight_per_bag_kg))
 
         self.total_cones = int(bags * cones_per_bag)
-        self.net_weight_kg = (bags * weight_per_bag_kg).quantize(Decimal("0.000001"))
-        self.net_weight_lb = (self.net_weight_kg * LB_PER_KG).quantize(Decimal("0.000001"))
-        self.total_rate = (self.net_weight_lb * rate_per_lb).quantize(Decimal("0.000001"))
+        self.net_weight_kg = bags * weight_per_bag_kg
+        self.net_weight_lb = self.net_weight_kg * LB_PER_KG
+        self.total_rate = self.net_weight_lb * rate_per_lb
 
     def init_remaining_stock(self):
         """

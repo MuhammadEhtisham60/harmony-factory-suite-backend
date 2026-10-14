@@ -110,15 +110,15 @@ def calculate_stock_aggregates(stock):
     available_cones = total_intake_cones - total_outcome_cones
     available_weight_kg = total_intake_weight_kg - total_outcome_weight_kg
     # Use standard project conversion constant for exact precision
-    available_weight_lb = (available_weight_kg * LB_PER_KG).quantize(Decimal("0.000001"))
+    available_weight_lb = available_weight_kg * LB_PER_KG
 
     if total_intake_weight_lb > Decimal("0"):
-        weighted_price = (total_intake_rate / Decimal(str(total_intake_weight_lb))).quantize(Decimal("0.000001"))
+        weighted_price = total_intake_rate / Decimal(str(total_intake_weight_lb))
     else:
         weighted_price = Decimal("0.000000")
 
     # Calculate outcome valuation: outcome weight in lb multiplied by price per lb in yarn stock
-    total_outcome_value = (total_outcome_weight_lb * weighted_price).quantize(Decimal("0.000001"))
+    total_outcome_value = total_outcome_weight_lb * weighted_price
 
     # Remaining total price: total price in stock minus outcome valuation
     if available_boxes > 0 and available_weight_kg > Decimal("0.000000"):
@@ -186,6 +186,7 @@ def recalculate_yarn_stock(stock):
         "remaining_total_price",
         "updated_at",
     ])
+    stock.refresh_from_db()
     return stock
 
 

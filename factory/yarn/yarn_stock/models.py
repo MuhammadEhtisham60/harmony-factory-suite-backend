@@ -290,7 +290,7 @@ class YarnStock(models.Model):
         total_kg = self.total_received_weight_kg
         if total_kg and total_kg > Decimal("0"):
             total_amt = self.intakes.aggregate(models.Sum("total_rate"))["total_rate__sum"] or Decimal("0")
-            return (total_amt / Decimal(str(total_kg))).quantize(Decimal("0.000001"))
+            return total_amt / Decimal(str(total_kg))
         return Decimal("0.000000")
 
     @property
@@ -299,5 +299,5 @@ class YarnStock(models.Model):
         total_lb = self.total_received_weight_lb
         if total_lb and total_lb > Decimal("0"):
             total_amt = self.intakes.aggregate(models.Sum("total_rate"))["total_rate__sum"] or Decimal("0")
-            return (total_amt / Decimal(str(total_lb))).quantize(Decimal("0.000001"))
+            return total_amt / Decimal(str(total_lb))
         return Decimal("0.000000")

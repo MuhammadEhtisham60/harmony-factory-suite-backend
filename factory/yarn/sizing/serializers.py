@@ -88,7 +88,7 @@ class BeamMinSerializer(serializers.ModelSerializer):
                 "loomCode": loading.loom.loom_code if loading.loom else "",
                 "status": loading.status,
                 "installationDate": loading.installation_date,
-                "producedMeters": float(total_prod),
+                "producedMeters": total_prod if total_prod is not None else Decimal("0"),
             }
         return None
 
@@ -608,24 +608,24 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
     totalCones = serializers.IntegerField(source="total_cones", required=False, default=0)
     remainingBagsOnSizingStock = serializers.IntegerField(source="remaining_bags_on_sizing_stock", required=False, default=0)
     remainingConesOnSizingStock = serializers.IntegerField(source="remaining_cones_on_sizing_stock", required=False, default=0)
-    lagatBags = serializers.DecimalField(source="lagat_bags", max_digits=12, decimal_places=2, required=False, default=Decimal("0.00"))
-    lagatCones = serializers.DecimalField(source="lagat_cones", max_digits=12, decimal_places=2, required=False, default=Decimal("0.00"))
+    lagatBags = serializers.DecimalField(source="lagat_bags", max_digits=15, decimal_places=6, required=False, default=Decimal("0.000000"))
+    lagatCones = serializers.DecimalField(source="lagat_cones", max_digits=15, decimal_places=6, required=False, default=Decimal("0.000000"))
     brand = serializers.CharField(required=False, allow_blank=True, default="")
-    width = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
-    setLengthMeter = serializers.DecimalField(source="set_length_meter", max_digits=12, decimal_places=2, required=False, allow_null=True)
-    setLengthGaz = serializers.DecimalField(source="set_length_gaz", max_digits=12, decimal_places=2, required=False, allow_null=True)
+    width = serializers.DecimalField(max_digits=15, decimal_places=6, required=False, allow_null=True)
+    setLengthMeter = serializers.DecimalField(source="set_length_meter", max_digits=15, decimal_places=6, required=False, allow_null=True)
+    setLengthGaz = serializers.DecimalField(source="set_length_gaz", max_digits=15, decimal_places=6, required=False, allow_null=True)
     totalTarr = serializers.IntegerField(source="total_tarr", required=False, allow_null=True)
     yarnBeam = serializers.CharField(source="yarn_beam", required=False, allow_blank=True, default="")
     backBeam = serializers.CharField(source="back_beam", required=False, allow_blank=True, default="")
     count = serializers.CharField(required=False, allow_blank=True, default="")
-    totalSetLumbai = serializers.DecimalField(source="total_set_lumbai", max_digits=12, decimal_places=2, required=False, allow_null=True)
-    totalSetShortage = serializers.DecimalField(source="total_set_shortage", max_digits=12, decimal_places=2, required=False, allow_null=True)
-    ratePerKg = serializers.DecimalField(source="rate_per_kg", max_digits=12, decimal_places=2, required=False, allow_null=True)
-    rate_per_kg = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
-    netWeightKg = serializers.DecimalField(source="net_weight_kg", max_digits=12, decimal_places=2, required=False, allow_null=True)
-    net_weight_kg = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
-    totalRate = serializers.DecimalField(source="total_rate", max_digits=15, decimal_places=2, required=False, allow_null=True)
-    total_rate = serializers.DecimalField(max_digits=15, decimal_places=2, required=False, allow_null=True)
+    totalSetLumbai = serializers.DecimalField(source="total_set_lumbai", max_digits=15, decimal_places=6, required=False, allow_null=True)
+    totalSetShortage = serializers.DecimalField(source="total_set_shortage", max_digits=15, decimal_places=6, required=False, allow_null=True)
+    ratePerKg = serializers.DecimalField(source="rate_per_kg", max_digits=15, decimal_places=6, required=False, allow_null=True)
+    rate_per_kg = serializers.DecimalField(max_digits=15, decimal_places=6, required=False, allow_null=True)
+    netWeightKg = serializers.DecimalField(source="net_weight_kg", max_digits=15, decimal_places=6, required=False, allow_null=True)
+    net_weight_kg = serializers.DecimalField(max_digits=15, decimal_places=6, required=False, allow_null=True)
+    totalRate = serializers.DecimalField(source="total_rate", max_digits=18, decimal_places=6, required=False, allow_null=True)
+    total_rate = serializers.DecimalField(max_digits=18, decimal_places=6, required=False, allow_null=True)
 
     outcomeDate = serializers.DateField(source="outcome_date", required=False)
     remarks = serializers.CharField(required=False, allow_blank=True, default="")

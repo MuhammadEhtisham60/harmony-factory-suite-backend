@@ -89,13 +89,13 @@ class BeamDetailSerializer(serializers.ModelSerializer):
         source="total_ends", required=False, allow_null=True
     )
     length = serializers.DecimalField(
-        max_digits=12, decimal_places=2, required=False, allow_null=True
+        max_digits=15, decimal_places=6, required=False, allow_null=True
     )
     width = serializers.DecimalField(
-        max_digits=10, decimal_places=2, required=False, allow_null=True
+        max_digits=15, decimal_places=6, required=False, allow_null=True
     )
     weight = serializers.DecimalField(
-        max_digits=12, decimal_places=2, required=False, allow_null=True
+        max_digits=15, decimal_places=6, required=False, allow_null=True
     )
     productionOrder = serializers.CharField(
         source="production_order", required=False, allow_blank=True, default=""
@@ -255,13 +255,13 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
     # Spec fields
     warpCount = serializers.CharField(source="warp_count", required=False, allow_blank=True, default="")
     weftCount = serializers.CharField(source="weft_count", required=False, allow_blank=True, default="")
-    reedWidth = serializers.DecimalField(source="reed_width", max_digits=10, decimal_places=2, required=False, allow_null=True)
-    pick = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
-    reedCount = serializers.DecimalField(source="reed_count", max_digits=10, decimal_places=2, required=False, allow_null=True)
-    pickCount = serializers.DecimalField(source="pick_count", max_digits=10, decimal_places=2, required=False, allow_null=True)
-    shortage = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
-    width = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
-    lakhai = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+    reedWidth = serializers.DecimalField(source="reed_width", max_digits=15, decimal_places=6, required=False, allow_null=True)
+    pick = serializers.DecimalField(max_digits=15, decimal_places=6, required=False, allow_null=True)
+    reedCount = serializers.DecimalField(source="reed_count", max_digits=15, decimal_places=6, required=False, allow_null=True)
+    pickCount = serializers.DecimalField(source="pick_count", max_digits=15, decimal_places=6, required=False, allow_null=True)
+    shortage = serializers.DecimalField(max_digits=15, decimal_places=6, required=False, allow_null=True)
+    width = serializers.DecimalField(max_digits=15, decimal_places=6, required=False, allow_null=True)
+    lakhai = serializers.DecimalField(max_digits=15, decimal_places=6, required=False, allow_null=True)
     installationDate = serializers.DateField(source="installation_date", required=False, allow_null=True)
 
     totalMetersProduced = serializers.SerializerMethodField()
@@ -536,7 +536,7 @@ class ProductionSerializer(serializers.ModelSerializer):
 
     productionDate = serializers.DateField(source="production_date", required=False)
     shift = serializers.CharField(required=False, allow_blank=True, default="General")
-    metersProduced = serializers.DecimalField(source="meters_produced", max_digits=12, decimal_places=2)
+    metersProduced = serializers.DecimalField(source="meters_produced", max_digits=15, decimal_places=6)
     operatorName = serializers.CharField(source="operator_name", required=False, allow_blank=True, default="")
     remarks = serializers.CharField(required=False, allow_blank=True, default="")
     beamEmptied = serializers.BooleanField(source="beam_emptied", required=False, default=False)

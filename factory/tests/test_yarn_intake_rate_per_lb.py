@@ -97,10 +97,11 @@ class YarnIntakeRatePerLbTests(APITestCase):
         # Update rate_per_lb to 150.0000
         intake.rate_per_lb = Decimal("150.0000")
         intake.save()
+        expected_net_lb = Decimal(str(intake.bags)) * intake.weight_per_bag_kg * LB_PER_KG
+        expected_total_unrounded = expected_net_lb * Decimal("150.0000")
+        self.assertEqual(intake.total_rate, expected_total_unrounded)
         intake.refresh_from_db()
-
-        expected_total = (intake.net_weight_lb * Decimal("150.0000")).quantize(Decimal("0.000001"))
-        self.assertEqual(intake.total_rate, expected_total)
+        self.assertEqual(intake.total_rate, expected_total_unrounded.quantize(Decimal("0.000001")))
         self.assertNotEqual(intake.total_rate, initial_total)
 
     def test_03_api_post_accepts_rate_per_lb_and_ignores_client_total_rate(self):

@@ -45,23 +45,23 @@ class Beam(models.Model):
     )
 
     length = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
+        max_digits=15,
+        decimal_places=6,
         null=True,
         blank=True
     )
 
     width = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
+        max_digits=15,
+        decimal_places=6,
         null=True,
         blank=True,
         help_text="Beam / fabric width in inches"
     )
 
     weight = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
+        max_digits=15,
+        decimal_places=6,
         null=True,
         blank=True
     )
@@ -164,56 +164,56 @@ class BeamLoading(models.Model):
     )
 
     reed_width = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
+        max_digits=15,
+        decimal_places=6,
         null=True,
         blank=True,
         help_text="Reed width in inches"
     )
 
     pick = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
+        max_digits=15,
+        decimal_places=6,
         null=True,
         blank=True,
         help_text="Pick / PPI"
     )
 
     reed_count = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
+        max_digits=15,
+        decimal_places=6,
         null=True,
         blank=True,
         help_text="Reed count"
     )
 
     pick_count = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
+        max_digits=15,
+        decimal_places=6,
         null=True,
         blank=True,
         help_text="Pick count"
     )
 
     shortage = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
+        max_digits=15,
+        decimal_places=6,
         null=True,
         blank=True,
         help_text="Expected / observed shortage"
     )
 
     width = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
+        max_digits=15,
+        decimal_places=6,
         null=True,
         blank=True,
         help_text="Fabric width in inches"
     )
 
     lakhai = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
+        max_digits=15,
+        decimal_places=6,
         null=True,
         blank=True,
         help_text="Lakhai (drawing-in / drafting cost or measurement)"
@@ -304,8 +304,8 @@ class Production(models.Model):
     )
 
     meters_produced = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
+        max_digits=15,
+        decimal_places=6,
         default=0,
         help_text="Fabric length produced in meters"
     )
