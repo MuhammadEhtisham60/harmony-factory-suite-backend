@@ -862,7 +862,7 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
                                 bags=0,
                                 cones_per_bag=0,
                                 weight_per_bag_kg=0,
-                                rate_per_bag=0,
+                                rate_per_lb=0,
                                 intake_date=attrs.get("outcome_date") or timezone.now().date(),
                             )
                         yo = YarnOutcome.objects.create(

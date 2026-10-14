@@ -148,7 +148,7 @@ Authorization: Bearer <token>
   "bags": 50,
   "conesPerBag": 24,
   "weightPerBagKg": "45.360",
-  "ratePerBag": "16500.00"
+  "ratePerLb": "165.0000"
 }
 ```
 *(Notice `setNo` is completely omitted)*
@@ -171,8 +171,8 @@ Authorization: Bearer <token>
     "weightPerBagKg": "45.360",
     "netWeightKg": "2268.000",
     "netWeightLb": "5000.084",
-    "ratePerBag": "16500.00",
-    "totalRate": "825000.00",
+    "ratePerLb": "165.0000",
+    "totalRate": "825013.860000",
     "remainingBags": 50,
     "remainingWeightKg": "2268.000",
     "remainingWeightLb": "5000.084",
@@ -199,7 +199,7 @@ Authorization: Bearer <token>
   "bags": 20,
   "conesPerBag": 24,
   "weightPerBagKg": "45.360",
-  "ratePerBag": "16500.00"
+  "ratePerLb": "165.0000"
 }
 ```
 

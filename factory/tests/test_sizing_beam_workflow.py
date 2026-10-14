@@ -156,7 +156,7 @@ class SizingBeamAssignmentWorkflowTests(APITestCase):
             bags=100,
             cones_per_bag=24,
             weight_per_bag_kg=Decimal("45.36"),
-            rate_per_bag=Decimal("15000"),
+            rate_per_lb=Decimal("150"),
             intake_date="2026-10-01",
         )
 
@@ -1083,7 +1083,7 @@ class BeamLoadingAndProductionWorkflowTests(APITestCase):
             bags=100,
             cones_per_bag=24,
             weight_per_bag_kg=Decimal("45.36"),
-            rate_per_bag=Decimal("15000"),
+            rate_per_lb=Decimal("150"),
             intake_date="2026-10-01",
         )
 
@@ -1599,7 +1599,7 @@ class SizingBeamAssignmentJsonFieldTests(APITestCase):
             bags=100,
             cones_per_bag=24,
             weight_per_bag_kg=Decimal("45.36"),
-            rate_per_bag=Decimal("15000"),
+            rate_per_lb=Decimal("150"),
             intake_date="2026-10-01",
         )
         self.yarn_outcome = YarnOutcome.objects.create(

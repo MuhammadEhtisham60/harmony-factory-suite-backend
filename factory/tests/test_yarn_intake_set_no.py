@@ -37,7 +37,7 @@ class YarnIntakeSetNoAutoGenerateTests(APITestCase):
             bags=20,
             cones_per_bag=24,
             weight_per_bag_kg=Decimal("45.36"),
-            rate_per_bag=Decimal("15000"),
+            rate_per_lb=Decimal("150.0000"),
         )
         self.assertEqual(intake1.set_no, "BATCH-01")
 
@@ -50,7 +50,7 @@ class YarnIntakeSetNoAutoGenerateTests(APITestCase):
             bags=10,
             cones_per_bag=24,
             weight_per_bag_kg=Decimal("45.36"),
-            rate_per_bag=Decimal("15000"),
+            rate_per_lb=Decimal("150.0000"),
         )
         self.assertEqual(intake2.set_no, "BATCH-02")
 
@@ -63,7 +63,7 @@ class YarnIntakeSetNoAutoGenerateTests(APITestCase):
             bags=15,
             cones_per_bag=24,
             weight_per_bag_kg=Decimal("45.36"),
-            rate_per_bag=Decimal("18000"),
+            rate_per_lb=Decimal("180.0000"),
             set_no="",  # Explicit empty string
         )
         self.assertEqual(intake3.set_no, "BATCH-03")
@@ -79,7 +79,7 @@ class YarnIntakeSetNoAutoGenerateTests(APITestCase):
             bags=5,
             cones_per_bag=24,
             weight_per_bag_kg=Decimal("45.36"),
-            rate_per_bag=Decimal("12000"),
+            rate_per_lb=Decimal("120.0000"),
             set_no="CUSTOM-LOT-88",
         )
         self.assertEqual(custom_intake.set_no, "CUSTOM-LOT-88")
@@ -94,7 +94,7 @@ class YarnIntakeSetNoAutoGenerateTests(APITestCase):
             bags=5,
             cones_per_bag=24,
             weight_per_bag_kg=Decimal("45.36"),
-            rate_per_bag=Decimal("12000"),
+            rate_per_lb=Decimal("120.0000"),
             set_no="BATCH-05",
         )
         self.assertEqual(manual_batch5.set_no, "BATCH-05")
@@ -109,7 +109,7 @@ class YarnIntakeSetNoAutoGenerateTests(APITestCase):
             bags=5,
             cones_per_bag=24,
             weight_per_bag_kg=Decimal("45.36"),
-            rate_per_bag=Decimal("12000"),
+            rate_per_lb=Decimal("120.0000"),
         )
         self.assertEqual(next_intake.set_no, "BATCH-06")
 
@@ -123,7 +123,7 @@ class YarnIntakeSetNoAutoGenerateTests(APITestCase):
             "intakeDate": "2026-10-13",
             "bags": 30,
             "conesPerBag": 24,
-            "ratePerBag": "16000.00",
+            "ratePerLb": "160.0000",
             "weightPerBagKg": "45.360",
         }
         response = self.client.post("/api/v1/yarn-intakes/", payload, format="json")
@@ -151,7 +151,7 @@ class YarnIntakeSetNoAutoGenerateTests(APITestCase):
             "intakeDate": "2026-10-13",
             "bags": 10,
             "conesPerBag": 24,
-            "ratePerBag": "15000.00",
+            "ratePerLb": "150.0000",
             "weightPerBagKg": "45.360",
         }
         response = self.client.post("/api/v1/yarn-intakes/", payload, format="json")
@@ -169,7 +169,7 @@ class YarnIntakeSetNoAutoGenerateTests(APITestCase):
             bags=20,
             cones_per_bag=24,
             weight_per_bag_kg=Decimal("45.36"),
-            rate_per_bag=Decimal("15000"),
+            rate_per_lb=Decimal("150.0000"),
         )
         res = self.client.get("/api/v1/yarn-intakes/", {"set_no": intake.set_no})
         self.assertEqual(res.status_code, status.HTTP_200_OK)

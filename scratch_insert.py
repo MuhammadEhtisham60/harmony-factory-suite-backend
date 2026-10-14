@@ -18,7 +18,7 @@ payload_template = {
     "bags": 120,
     "conesPerBag": 24,
     "weightPerBagKg": "45.360",
-    "ratePerBag": "125000.00",
+    "ratePerLb": "1250.0000",
     "intakeDate": "2026-10-06",
     "notes": "",
     "yarn_name": "cotton",
@@ -27,7 +27,7 @@ payload_template = {
     "set_no": "LOT-YRN-412",
     "cones_per_bag": 24,
     "weight_per_bag_kg": "45.360",
-    "rate_per_bag": "125000.00",
+    "rate_per_lb": "1250.0000",
     "intake_date": "2026-10-06"
 }
 

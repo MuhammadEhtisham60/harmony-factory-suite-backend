@@ -431,7 +431,7 @@ class YarnIntakeListSerializer(serializers.ModelSerializer):
     # Intake totals
     conesPerBag = serializers.IntegerField(source="cones_per_bag")
     totalCones = serializers.IntegerField(source="total_cones", read_only=True)
-    ratePerBag = serializers.DecimalField(source="rate_per_bag", max_digits=15, decimal_places=6)
+    ratePerLb = serializers.DecimalField(source="rate_per_lb", max_digits=12, decimal_places=4, read_only=True)
     totalRate = serializers.DecimalField(source="total_rate", max_digits=15, decimal_places=6, read_only=True)
     weightPerBagKg = serializers.DecimalField(source="weight_per_bag_kg", max_digits=12, decimal_places=6)
     netWeightKg = serializers.DecimalField(source="net_weight_kg", max_digits=15, decimal_places=6, read_only=True)
@@ -461,7 +461,7 @@ class YarnIntakeListSerializer(serializers.ModelSerializer):
             "setNo",
             "intakeDate", "supplierDetail", "stock", "stockDetail", "productionType",
             "bags", "conesPerBag", "totalCones",
-            "ratePerBag", "totalRate",
+            "ratePerLb", "totalRate",
             "weightPerBagKg", "netWeightKg", "netWeightLb",
             "outcomeBags", "outcomeWeightKg", "outcomeWeightLb",
             "remainingBags", "remainingWeightKg", "remainingWeightLb",
@@ -516,7 +516,7 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
 
     Frontend provides:
         yarn_name, yarn_type, yarn_count, set_no, intake_date, supplier (id),
-        production_type, bags, cones_per_bag, rate_per_bag, weight_per_bag_kg
+        production_type, bags, cones_per_bag, rate_per_lb, weight_per_bag_kg
 
     Backend calculates (read-only, ignored if submitted):
         total_cones, total_rate, net_weight_kg, net_weight_lb,
@@ -549,8 +549,8 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
     )
     bags = serializers.IntegerField(min_value=1)
     conesPerBag = serializers.IntegerField(source="cones_per_bag", min_value=0, default=0)
-    ratePerBag = serializers.DecimalField(
-        source="rate_per_bag", max_digits=15, decimal_places=6, default=0
+    ratePerLb = serializers.DecimalField(
+        source="rate_per_lb", max_digits=12, decimal_places=4, default=Decimal("0.0000")
     )
     weightPerBagKg = serializers.DecimalField(
         source="weight_per_bag_kg", max_digits=12, decimal_places=6
@@ -597,7 +597,7 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
             "intakeDate", "supplier", "supplierDetail", "productionType",
             "stock", "stockDetail",
             "bags", "conesPerBag", "totalCones",
-            "ratePerBag", "totalRate",
+            "ratePerLb", "totalRate",
             "weightPerBagKg", "netWeightKg", "netWeightLb",
             "outcomeBags", "outcomeWeightKg", "outcomeWeightLb",
             "remainingBags", "remainingWeightKg", "remainingWeightLb",

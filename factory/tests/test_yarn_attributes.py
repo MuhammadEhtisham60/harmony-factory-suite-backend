@@ -142,7 +142,7 @@ class YarnAttributeModelsAndAPITests(APITestCase):
             "supplier": self.supplier.id,
             "bags": 15,
             "conesPerBag": 24,
-            "ratePerBag": "25000.00",
+            "ratePerLb": "250.0000",
             "weightPerBagKg": "45.000",
         }, format="json")
 
@@ -183,7 +183,7 @@ class YarnAttributeModelsAndAPITests(APITestCase):
             "supplier": self.supplier.id,
             "bags": 5,
             "conesPerBag": 12,
-            "ratePerBag": "9000.00",
+            "ratePerLb": "90.0000",
             "weightPerBagKg": "25.000",
         }, format="json")
 
@@ -219,7 +219,7 @@ class YarnAttributeModelsAndAPITests(APITestCase):
             bags=10,
             cones_per_bag=20,
             weight_per_bag_kg=Decimal("20.000"),
-            rate_per_bag=Decimal("15000.00"),
+            rate_per_lb=Decimal("150.0000"),
         )
 
         stock_res = self.client.get(f"/api/v1/yarn-stocks/{intake.stock.id}/")

@@ -307,7 +307,7 @@ class SizingOutcome(models.Model):
                         bags=0,
                         cones_per_bag=0,
                         weight_per_bag_kg=0,
-                        rate_per_bag=0,
+                        rate_per_lb=0,
                         intake_date=kwargs.get("outcome_date") or timezone.now().date(),
                     )
                 yo_inst = YarnOutcome.objects.create(

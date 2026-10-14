@@ -112,12 +112,12 @@ def calculate_stock_aggregates(stock):
     # Use standard project conversion constant for exact precision
     available_weight_lb = (available_weight_kg * LB_PER_KG).quantize(Decimal("0.000001"))
 
-    if total_intake_bags > 0:
-        weighted_price = (total_intake_rate / Decimal(str(total_intake_bags))).quantize(Decimal("0.000001"))
+    if total_intake_weight_lb > Decimal("0"):
+        weighted_price = (total_intake_rate / Decimal(str(total_intake_weight_lb))).quantize(Decimal("0.000001"))
     else:
         weighted_price = Decimal("0.000000")
 
-    # Calculate outcome valuation: outcome weight in lb multiplied by price in yarn stock
+    # Calculate outcome valuation: outcome weight in lb multiplied by price per lb in yarn stock
     total_outcome_value = (total_outcome_weight_lb * weighted_price).quantize(Decimal("0.000001"))
 
     # Remaining total price: total price in stock minus outcome valuation

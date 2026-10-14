@@ -87,7 +87,7 @@ class SharedYarnStockTests(TransactionTestCase):
             "supplier": self.supplier.id,
             "bags": 10,
             "conesPerBag": 24,
-            "ratePerBag": "15000.00",
+            "ratePerLb": "150.0000",
             "weightPerBagKg": "45.360",
         }
         res = self.client.post("/api/v1/yarn-intakes/", payload, format="json")
@@ -103,9 +103,9 @@ class SharedYarnStockTests(TransactionTestCase):
         self.assertEqual(stock.total_boxes, 10)
         self.assertEqual(stock.cones, 240)
         self.assertEqual(stock.total_weight_kg, Decimal("453.600"))
-        expected_lb = (Decimal("453.600") * LB_PER_KG).quantize(Decimal("0.001"))
+        expected_lb = (Decimal("453.600") * LB_PER_KG).quantize(Decimal("0.000001"))
         self.assertEqual(stock.total_weight_lb, expected_lb)
-        self.assertEqual(stock.price, Decimal("15000.00"))
+        self.assertEqual(stock.price, Decimal("150.000000"))
 
         # Verify intake has FK to this stock
         intake = YarnIntake.objects.get(pk=res.data["data"]["id"])
@@ -126,12 +126,12 @@ class SharedYarnStockTests(TransactionTestCase):
             supplier=self.supplier,
             bags=10,
             cones_per_bag=24,
-            rate_per_bag=Decimal("15000.00"),
+            rate_per_lb=Decimal("150.0000"),
             weight_per_bag_kg=Decimal("45.360"),
         )
         recalculate_yarn_stock(intake1.stock)
 
-        # Intake 2: 15 bags @ 16,000 PKR = 240,000 PKR
+        # Intake 2: 15 bags @ 160 PKR/lb
         payload = {
             "yarnName": "Cotton",
             "yarnType": "Carded",
@@ -142,7 +142,7 @@ class SharedYarnStockTests(TransactionTestCase):
             "supplier": self.supplier.id,
             "bags": 15,
             "conesPerBag": 24,
-            "ratePerBag": "16000.00",
+            "ratePerLb": "160.0000",
             "weightPerBagKg": "45.360",
         }
         res = self.client.post("/api/v1/yarn-intakes/", payload, format="json")
@@ -157,8 +157,8 @@ class SharedYarnStockTests(TransactionTestCase):
         self.assertEqual(stock.cones, 600)  # 25 * 24
         self.assertEqual(stock.total_weight_kg, Decimal("1134.000"))  # 25 * 45.360
 
-        # Weighted price: (150,000 + 240,000) / 25 = 390,000 / 25 = 15,600.00
-        self.assertEqual(stock.price, Decimal("15600.00"))
+        # Weighted price: (10*150 + 15*160) / 25 = 156.000000
+        self.assertEqual(stock.price, Decimal("156.000000"))
 
     # ──────────────────────────────────────────────────────────────────────────
     # 3. Different yarn counts create separate pools
@@ -175,7 +175,7 @@ class SharedYarnStockTests(TransactionTestCase):
             "supplier": self.supplier.id,
             "bags": 10,
             "conesPerBag": 20,
-            "ratePerBag": "10000.00",
+            "ratePerLb": "100.0000",
             "weightPerBagKg": "10.000",
         }, format="json")
 
@@ -190,7 +190,7 @@ class SharedYarnStockTests(TransactionTestCase):
             "supplier": self.supplier.id,
             "bags": 8,
             "conesPerBag": 20,
-            "ratePerBag": "12000.00",
+            "ratePerLb": "120.0000",
             "weightPerBagKg": "10.000",
         }, format="json")
 
@@ -217,7 +217,7 @@ class SharedYarnStockTests(TransactionTestCase):
             "supplier": self.supplier.id,
             "bags": 5,
             "conesPerBag": 20,
-            "ratePerBag": "10000.00",
+            "ratePerLb": "100.0000",
             "weightPerBagKg": "10.000",
         }, format="json")
 
@@ -231,7 +231,7 @@ class SharedYarnStockTests(TransactionTestCase):
             "supplier": self.supplier.id,
             "bags": 7,
             "conesPerBag": 20,
-            "ratePerBag": "10000.00",
+            "ratePerLb": "100.0000",
             "weightPerBagKg": "10.000",
         }, format="json")
 
@@ -257,7 +257,7 @@ class SharedYarnStockTests(TransactionTestCase):
             supplier=self.supplier,
             bags=10,
             cones_per_bag=20,
-            rate_per_bag=Decimal("10000"),
+            rate_per_lb=Decimal("100.0000"),
             weight_per_bag_kg=Decimal("10.000"),
         )
         intake2 = YarnIntake.objects.create(
@@ -270,7 +270,7 @@ class SharedYarnStockTests(TransactionTestCase):
             supplier=self.supplier,
             bags=15,
             cones_per_bag=20,
-            rate_per_bag=Decimal("10000"),
+            rate_per_lb=Decimal("100.0000"),
             weight_per_bag_kg=Decimal("10.000"),
         )
         stock_20 = intake1.stock
@@ -287,7 +287,7 @@ class SharedYarnStockTests(TransactionTestCase):
             supplier=self.supplier,
             bags=8,
             cones_per_bag=20,
-            rate_per_bag=Decimal("12000"),
+            rate_per_lb=Decimal("120.0000"),
             weight_per_bag_kg=Decimal("10.000"),
         )
         stock_30 = intake3.stock
@@ -338,7 +338,7 @@ class SharedYarnStockTests(TransactionTestCase):
             supplier=self.supplier,
             bags=20,
             cones_per_bag=10,
-            rate_per_bag=Decimal("10000"),
+            rate_per_lb=Decimal("100.0000"),
             weight_per_bag_kg=Decimal("10.000"),
         )
         stock = intake.stock
@@ -384,7 +384,7 @@ class SharedYarnStockTests(TransactionTestCase):
             supplier=self.supplier,
             bags=20,
             cones_per_bag=10,
-            rate_per_bag=Decimal("10000"),
+            rate_per_lb=Decimal("100.0000"),
             weight_per_bag_kg=Decimal("10.000"),
         )
         stock = intake.stock
@@ -427,7 +427,7 @@ class SharedYarnStockTests(TransactionTestCase):
             "supplier": self.supplier.id,
             "bags": 10,
             "conesPerBag": 20,
-            "ratePerBag": "10000.00",
+            "ratePerLb": "100.0000",
             "weightPerBagKg": "10.000",
         }, format="json")
         intake_id = intake_res.data["data"]["id"]
@@ -466,7 +466,7 @@ class SharedYarnStockTests(TransactionTestCase):
             supplier=self.supplier,
             bags=10,
             cones_per_bag=20,
-            rate_per_bag=Decimal("10000"),
+            rate_per_lb=Decimal("100.0000"),
             weight_per_bag_kg=Decimal("10.000"),
         )
         stock = intake.stock
@@ -505,7 +505,7 @@ class SharedYarnStockTests(TransactionTestCase):
             supplier=self.supplier,
             bags=10,
             cones_per_bag=10,
-            rate_per_bag=Decimal("50000"),
+            rate_per_lb=Decimal("500.0000"),
             weight_per_bag_kg=Decimal("5.000"),
         )
         stock = intake.stock
@@ -560,14 +560,14 @@ class SharedYarnStockTests(TransactionTestCase):
             supplier=self.supplier,
             bags=10,
             cones_per_bag=10,
-            rate_per_bag=Decimal("8000"),
+            rate_per_lb=Decimal("80.0000"),
             weight_per_bag_kg=Decimal("45.360"),
         )
         stock = intake.stock
         recalculate_yarn_stock(stock)
 
         expected_kg = Decimal("453.600")
-        expected_lb = (expected_kg * LB_PER_KG).quantize(Decimal("0.001"))
+        expected_lb = (expected_kg * LB_PER_KG).quantize(Decimal("0.000001"))
 
         self.assertEqual(stock.total_weight_kg, expected_kg)
         self.assertEqual(stock.total_weight_lb, expected_lb)
@@ -586,7 +586,7 @@ class SharedYarnStockTests(TransactionTestCase):
             supplier=self.supplier,
             bags=12,
             cones_per_bag=30,
-            rate_per_bag=Decimal("12000"),
+            rate_per_lb=Decimal("120.0000"),
             weight_per_bag_kg=Decimal("20.000"),
         )
         stock = intake.stock
@@ -625,7 +625,7 @@ class SharedYarnStockTests(TransactionTestCase):
             supplier=self.supplier,
             bags=50,
             cones_per_bag=20,
-            rate_per_bag=Decimal("25000"),
+            rate_per_lb=Decimal("250.0000"),
             weight_per_bag_kg=Decimal("10.000"),
         )
         stock = intake.stock
@@ -686,7 +686,7 @@ class SharedYarnStockTests(TransactionTestCase):
             supplier=self.supplier,
             bags=10,
             cones_per_bag=15,
-            rate_per_bag=Decimal("30000"),
+            rate_per_lb=Decimal("300.0000"),
             weight_per_bag_kg=Decimal("20.000"),
         )
         stock = intake1.stock

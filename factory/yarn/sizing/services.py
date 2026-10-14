@@ -59,7 +59,7 @@ def assign_beams_to_outcome(outcome=None, beam_ids=None, user=None, request=None
                         bags=0,
                         cones_per_bag=0,
                         weight_per_bag_kg=0,
-                        rate_per_bag=0,
+                        rate_per_lb=0,
                         intake_date=getattr(sizing_outcome, "outcome_date", None) or timezone.now().date(),
                     )
                 yo = YarnOutcome.objects.create(
@@ -266,7 +266,7 @@ def create_sizing_outcome(yarn_outcome=None, outcome_date=None, remarks="", beam
                     bags=0,
                     cones_per_bag=0,
                     weight_per_bag_kg=0,
-                    rate_per_bag=0,
+                    rate_per_lb=0,
                     intake_date=outcome_date or timezone.now().date(),
                 )
             yarn_outcome = YarnOutcome.objects.create(

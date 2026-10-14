@@ -148,7 +148,7 @@ POST /api/v1/yarn-intakes/
   "bags": 100,
   "conesPerBag": 24,
   "weightPerBagKg": "45.360",
-  "ratePerBag": "18500.00",
+  "ratePerLb": "185.0000",
   "intakeDate": "2026-10-01",
   "notes": "Premium quality carded yarn"
 }
@@ -156,7 +156,7 @@ POST /api/v1/yarn-intakes/
 #### Backend Calculations (Automatic):
 * `netWeightKg` = `bags` * `weightPerBagKg`
 * `netWeightLb` = `netWeightKg` * 2.20462262
-* `totalRate` = `bags` * `ratePerBag`
+* `totalRate` = `netWeightLb` * `ratePerLb`
 * `remainingBags` initialized to `bags`
 
 ---

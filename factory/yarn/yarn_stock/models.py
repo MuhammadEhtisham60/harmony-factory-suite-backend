@@ -63,7 +63,7 @@ class YarnStock(models.Model):
         cones:           current available cones
         total_weight_kg: current available weight in kilograms
         total_weight_lb: current available weight in pounds
-        price:           weighted average intake price per box/bag (Decimal)
+        price:           weighted average intake price per pound (Decimal)
     """
 
     yarn_name = models.ForeignKey(
@@ -96,7 +96,7 @@ class YarnStock(models.Model):
         max_digits=15,
         decimal_places=6,
         default=Decimal("0.000000"),
-        help_text="Weighted average purchase rate per box/bag from contributing intakes."
+        help_text="Weighted average purchase rate per pound from contributing intakes."
     )
     total_price = models.DecimalField(
         max_digits=18,
@@ -291,4 +291,13 @@ class YarnStock(models.Model):
         if total_kg and total_kg > Decimal("0"):
             total_amt = self.intakes.aggregate(models.Sum("total_rate"))["total_rate__sum"] or Decimal("0")
             return (total_amt / Decimal(str(total_kg))).quantize(Decimal("0.000001"))
+        return Decimal("0.000000")
+
+    @property
+    def price_per_lb(self):
+        """Weighted average rate per pound calculated from contributing intakes."""
+        total_lb = self.total_received_weight_lb
+        if total_lb and total_lb > Decimal("0"):
+            total_amt = self.intakes.aggregate(models.Sum("total_rate"))["total_rate__sum"] or Decimal("0")
+            return (total_amt / Decimal(str(total_lb))).quantize(Decimal("0.000001"))
         return Decimal("0.000000")

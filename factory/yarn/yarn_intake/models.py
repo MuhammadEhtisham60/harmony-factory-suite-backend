@@ -6,7 +6,7 @@ Calculation rules (all Decimal, never float):
 
   YarnIntake:
     total_cones       = bags * cones_per_bag
-    total_rate        = bags * rate_per_bag
+    total_rate        = net_weight_lb * rate_per_lb
     net_weight_kg     = bags * weight_per_bag_kg
     net_weight_lb     = net_weight_kg * LB_PER_KG
 
@@ -78,7 +78,7 @@ class YarnIntake(models.Model):
     Records a batch of yarn received from a supplier.
 
     Source-input fields (frontend-provided):
-        bags, cones_per_bag, rate_per_bag, weight_per_bag_kg
+        bags, cones_per_bag, rate_per_lb, weight_per_bag_kg
 
     Backend-calculated (read-only from API perspective):
         total_cones, total_rate, net_weight_kg, net_weight_lb
@@ -140,7 +140,12 @@ class YarnIntake(models.Model):
     # ── Source inputs ──────────────────────────────────────────────────────
     bags = models.PositiveIntegerField(default=0)
     cones_per_bag = models.PositiveIntegerField(default=0)
-    rate_per_bag = models.DecimalField(max_digits=15, decimal_places=6, default=0)
+    rate_per_lb = models.DecimalField(
+        max_digits=12,
+        decimal_places=4,
+        default=Decimal("0.0000"),
+        help_text="Price / Rate per pound (LB) of yarn."
+    )
     weight_per_bag_kg = models.DecimalField(max_digits=12, decimal_places=6, default=0)
 
     # ── Backend-calculated intake totals ───────────────────────────────────
@@ -223,13 +228,13 @@ class YarnIntake(models.Model):
         """
         bags = Decimal(str(self.bags))
         cones_per_bag = Decimal(str(self.cones_per_bag))
-        rate_per_bag = Decimal(str(self.rate_per_bag))
+        rate_per_lb = Decimal(str(self.rate_per_lb))
         weight_per_bag_kg = Decimal(str(self.weight_per_bag_kg))
 
         self.total_cones = int(bags * cones_per_bag)
-        self.total_rate = bags * rate_per_bag
-        self.net_weight_kg = bags * weight_per_bag_kg
-        self.net_weight_lb = self.net_weight_kg * LB_PER_KG
+        self.net_weight_kg = (bags * weight_per_bag_kg).quantize(Decimal("0.000001"))
+        self.net_weight_lb = (self.net_weight_kg * LB_PER_KG).quantize(Decimal("0.000001"))
+        self.total_rate = (self.net_weight_lb * rate_per_lb).quantize(Decimal("0.000001"))
 
     def init_remaining_stock(self):
         """
