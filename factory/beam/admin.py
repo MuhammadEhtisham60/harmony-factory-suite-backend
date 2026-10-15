@@ -3,7 +3,7 @@ Admin registration for the Beam module.
 """
 
 from django.contrib import admin
-from .models import Beam, BeamLoading, Production
+from .models import Beam, BeamLoading, Production, BeamDismountReconciliation
 
 
 @admin.register(Beam)
@@ -126,4 +126,28 @@ class ProductionAdmin(admin.ModelAdmin):
     ]
     readonly_fields = ["created_at", "updated_at", "created_by", "updated_by"]
     ordering = ["-production_date", "-id"]
+
+
+@admin.register(BeamDismountReconciliation)
+class BeamDismountReconciliationAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "beam_loading",
+        "expected_length",
+        "actual_length",
+        "difference",
+        "production_percentage",
+        "dismount_date",
+        "dismounted_by",
+        "created_at",
+    ]
+    list_filter = ["dismount_date"]
+    search_fields = [
+        "beam_loading__beam__beam_number",
+        "beam_loading__loom__loom_code",
+        "remarks",
+    ]
+    readonly_fields = ["created_at", "updated_at"]
+    ordering = ["-dismount_date", "-id"]
+
 

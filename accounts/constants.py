@@ -129,6 +129,19 @@ MODULE_PERMISSIONS = [
         ]
     },
     {
+        "module": "cloth",
+        "name": "Cloth Production & Stock",
+        "permissions": [
+            {"code": "cloth.view", "name": "View Cloth Production", "description": "View cloth patches, raw stock, and cloth names"},
+            {"code": "cloth.add", "name": "Add Cloth Production", "description": "Create cloth patches and cloth names"},
+            {"code": "cloth.edit", "name": "Edit Cloth Production", "description": "Modify cloth patches and cloth names"},
+            {"code": "cloth.delete", "name": "Delete Cloth Production", "description": "Delete cloth patches and cloth names"},
+            {"code": "stock.view", "name": "View Cloth Stock", "description": "View consolidated cloth stock, clean stock, and defected stock"},
+            {"code": "stock.manage", "name": "Manage Cloth Stock", "description": "Allocate clean and defected stock against patches"},
+            {"code": "cloth.dismount", "name": "Dismount Beam & Reconcile", "description": "Dismount beam from loom and reconcile production"},
+        ]
+    },
+    {
         "module": "purchases",
         "name": "Purchases",
         "permissions": [

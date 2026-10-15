@@ -201,6 +201,7 @@ class BeamDetailSerializer(serializers.ModelSerializer):
 
 # ── Loom Minimal Serializer ──────────────────────────────────────────────────
 
+
 class LoomMinSerializer(serializers.ModelSerializer):
     loomCode = serializers.CharField(source="loom_code")
     loomName = serializers.CharField(source="loom_name")
@@ -209,6 +210,101 @@ class LoomMinSerializer(serializers.ModelSerializer):
         from factory.loom.models import Loom
         model = Loom
         fields = ["id", "loomCode", "loomName", "status"]
+
+
+# ── Beam Dismount Reconciliation Serializer ──────────────────────────────────
+
+class BeamDismountReconciliationSerializer(serializers.ModelSerializer):
+    """
+    Authoritative reconciliation serializer for BeamLoading dismount.
+    Provides dual camelCase and snake_case keys for frontend compatibility.
+    """
+    loadingId = serializers.IntegerField(source="beam_loading_id", read_only=True)
+    loading_id = serializers.IntegerField(source="beam_loading_id", read_only=True)
+    beam = serializers.SerializerMethodField()
+    loom = serializers.SerializerMethodField()
+    expectedLength = serializers.DecimalField(source="expected_length", max_digits=15, decimal_places=6, read_only=True)
+    expected_length = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
+    actualLength = serializers.DecimalField(source="actual_length", max_digits=15, decimal_places=6, read_only=True)
+    actual_length = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
+    difference = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
+    productionPercentage = serializers.DecimalField(source="production_percentage", max_digits=10, decimal_places=4, read_only=True)
+    production_percentage = serializers.DecimalField(max_digits=10, decimal_places=4, read_only=True)
+    dismountDate = serializers.DateField(source="dismount_date", read_only=True)
+    dismount_date = serializers.DateField(read_only=True)
+    loadingStatus = serializers.SerializerMethodField()
+    loading_status = serializers.SerializerMethodField()
+    dismountedBy = serializers.SerializerMethodField()
+    dismounted_by = serializers.SerializerMethodField()
+    createdAt = serializers.DateTimeField(source="created_at", read_only=True)
+    updatedAt = serializers.DateTimeField(source="updated_at", read_only=True)
+
+    class Meta:
+        from .models import BeamDismountReconciliation
+        model = BeamDismountReconciliation
+        fields = [
+            "id",
+            "loadingId",
+            "loading_id",
+            "beam",
+            "loom",
+            "expectedLength",
+            "expected_length",
+            "actualLength",
+            "actual_length",
+            "difference",
+            "productionPercentage",
+            "production_percentage",
+            "dismountDate",
+            "dismount_date",
+            "loadingStatus",
+            "loading_status",
+            "remarks",
+            "dismountedBy",
+            "dismounted_by",
+            "createdAt",
+            "updatedAt",
+        ]
+
+    def get_beam(self, obj):
+        beam = obj.beam_loading.beam if obj.beam_loading else None
+        if beam:
+            return {
+                "id": beam.id,
+                "beamNumber": beam.beam_number,
+                "beam_number": beam.beam_number,
+                "beamName": beam.beam_name,
+                "beam_name": beam.beam_name,
+                "status": beam.status,
+            }
+        return None
+
+    def get_loom(self, obj):
+        loom = obj.beam_loading.loom if obj.beam_loading else None
+        if loom:
+            return {
+                "id": loom.id,
+                "loomCode": loom.loom_code,
+                "loom_code": loom.loom_code,
+                "loomName": loom.loom_name,
+                "loom_name": loom.loom_name,
+                "status": loom.status,
+            }
+        return None
+
+    def get_loadingStatus(self, obj):
+        return obj.beam_loading.status if obj.beam_loading else ""
+
+    def get_loading_status(self, obj):
+        return self.get_loadingStatus(obj)
+
+    def get_dismountedBy(self, obj):
+        if obj.dismounted_by:
+            return {"id": obj.dismounted_by.id, "username": obj.dismounted_by.username}
+        return None
+
+    def get_dismounted_by(self, obj):
+        return self.get_dismountedBy(obj)
 
 
 # ── BeamLoading Serializers ──────────────────────────────────────────────────
@@ -265,6 +361,13 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
     installationDate = serializers.DateField(source="installation_date", required=False, allow_null=True)
 
     totalMetersProduced = serializers.SerializerMethodField()
+    expectedLength = serializers.DecimalField(source="expected_length", max_digits=15, decimal_places=6, required=False, allow_null=True)
+    expected_length = serializers.DecimalField(max_digits=15, decimal_places=6, required=False, allow_null=True)
+    dismountDate = serializers.DateField(source="dismount_date", read_only=True)
+    dismount_date = serializers.DateField(read_only=True)
+    dismountedBy = serializers.SerializerMethodField()
+    dismounted_by = serializers.SerializerMethodField()
+    reconciliation = serializers.SerializerMethodField()
 
     createdAt = serializers.DateTimeField(source="created_at", read_only=True)
     updatedAt = serializers.DateTimeField(source="updated_at", read_only=True)
@@ -301,6 +404,13 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
             "installationDate",
             "status",
             "totalMetersProduced",
+            "expectedLength",
+            "expected_length",
+            "dismountDate",
+            "dismount_date",
+            "dismountedBy",
+            "dismounted_by",
+            "reconciliation",
             "createdBy",
             "updatedBy",
             "createdAt",
@@ -317,6 +427,11 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
             "beamDetail",
             "loomDetail",
             "totalMetersProduced",
+            "dismountDate",
+            "dismount_date",
+            "dismountedBy",
+            "dismounted_by",
+            "reconciliation",
             "createdBy",
             "updatedBy",
             "createdAt",
@@ -383,6 +498,19 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
             return {"id": obj.updated_by.id, "username": obj.updated_by.username}
         return None
 
+    def get_dismountedBy(self, obj):
+        if obj.dismounted_by:
+            return {"id": obj.dismounted_by.id, "username": obj.dismounted_by.username}
+        return None
+
+    def get_dismounted_by(self, obj):
+        return self.get_dismountedBy(obj)
+
+    def get_reconciliation(self, obj):
+        if hasattr(obj, "reconciliation") and obj.reconciliation:
+            return BeamDismountReconciliationSerializer(obj.reconciliation).data
+        return None
+
     def to_internal_value(self, data):
         data = data.copy() if hasattr(data, "copy") else dict(data)
         mapping = {
@@ -396,6 +524,8 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
             "reed_count": "reedCount",
             "pick_count": "pickCount",
             "installation_date": "installationDate",
+            "expected_length": "expectedLength",
+            "dismount_date": "dismountDate",
         }
         for snake, camel in mapping.items():
             if snake in data and camel not in data:

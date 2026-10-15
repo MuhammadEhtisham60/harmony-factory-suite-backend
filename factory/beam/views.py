@@ -21,6 +21,7 @@ from .serializers import (
     BeamDetailSerializer,
     BeamLoadingSerializer,
     BatchBeamLoadingSerializer,
+    BeamDismountReconciliationSerializer,
     ProductionSerializer,
 )
 from .filters import BeamFilter, BeamLoadingFilter, ProductionFilter
@@ -589,6 +590,79 @@ class BeamLoadingViewSet(ModelViewSet):
             "message": f"Beam '{updated.beam.beam_number}' has been emptied and is now AVAILABLE for new sizing sets.",
             "data": out.data,
         })
+
+    @action(detail=True, methods=["get", "post"], url_path="dismount")
+    def dismount(self, request, pk=None):
+        """
+        Dismount endpoint:
+        POST /api/v1/beam-loadings/{id}/dismount/
+          Reconciles actual cloth length against expected length, creates BeamDismountReconciliation,
+          marks BeamLoading Completed, sets Beam to Available (for reuse), and sets Loom to Active.
+
+        GET /api/v1/beam-loadings/{id}/dismount/
+          Retrieves the authoritative reconciliation report for this BeamLoading cycle.
+        """
+        instance = self.get_object()
+
+        if request.method == "POST":
+            if not request.user.is_superuser and not (
+                request.user.has_perm_code("cloth.dismount")
+                or request.user.has_perm_code("beams.assign")
+                or request.user.has_perm_code("looms.production")
+            ):
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("You do not have permission to dismount beams.")
+
+            from .services import dismount_beam_loading
+            dismount_date = request.data.get("dismount_date") or request.data.get("dismountDate")
+            remarks = request.data.get("remarks", "")
+            expected_override = (
+                request.data.get("expected_length")
+                or request.data.get("expectedLength")
+                or request.data.get("expected_length_override")
+            )
+
+            recon = dismount_beam_loading(
+                beam_loading_or_id=instance,
+                dismount_date=dismount_date,
+                remarks=remarks,
+                expected_length_override=expected_override,
+                user=request.user,
+                request=request,
+            )
+
+            serializer = BeamDismountReconciliationSerializer(recon, context={"request": request})
+            return Response({
+                "success": True,
+                "message": (
+                    f"Beam '{instance.beam.beam_number}' successfully dismounted from Loom '{instance.loom.loom_code}'. "
+                    f"Reconciliation: Actual {recon.actual_length}m vs Expected {recon.expected_length}m ({recon.difference}m)."
+                ),
+                "data": serializer.data,
+            }, status=status.HTTP_200_OK)
+
+        else:
+            # GET reconciliation
+            if not hasattr(instance, "reconciliation") or not instance.reconciliation:
+                return Response({
+                    "success": False,
+                    "message": f"BeamLoading #{instance.id} has not been dismounted / reconciled yet.",
+                    "data": None,
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            serializer = BeamDismountReconciliationSerializer(instance.reconciliation, context={"request": request})
+            return Response({
+                "success": True,
+                "data": serializer.data,
+            }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["get"], url_path="reconciliation")
+    def reconciliation(self, request, pk=None):
+        """
+        Alias read endpoint for reconciliation:
+        GET /api/v1/beam-loadings/{id}/reconciliation/
+        """
+        return self.dismount(request, pk=pk)
 
     @action(detail=False, methods=["get"], url_path="active")
     def active(self, request):

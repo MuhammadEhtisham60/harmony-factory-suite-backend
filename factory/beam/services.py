@@ -7,6 +7,7 @@ and audit logging.
 import logging
 from decimal import Decimal
 from django.db import transaction, IntegrityError
+from django.db.models import Sum
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
@@ -354,3 +355,200 @@ def get_beam_loading_history(beam_id):
         .prefetch_related("productions")
         .order_by("-installation_date", "-id")
     )
+
+
+def calculate_expected_cloth_length(beam_loading):
+    """
+    Calculates expected cloth production length for a BeamLoading cycle:
+    1. If beam_loading.expected_length is already set (> 0), returns it.
+    2. Otherwise, determines yarn length on the beam from:
+       a. SizingBeamAssignment.beam_yarn_length for this beam
+       b. Or Beam.length
+       c. Or sizing_outcome.set_length_meter (prorated by total_beams)
+    3. Retrieves shortage percentage from beam_loading.shortage or sizing_outcome.total_set_shortage.
+    4. Applies established factory production formula:
+       expected_length = yarn_length * (1 - shortage / 100)
+    5. Preserves full Decimal precision without premature rounding.
+    """
+    if beam_loading.expected_length is not None and beam_loading.expected_length > Decimal("0.000000"):
+        return beam_loading.expected_length
+
+    beam = beam_loading.beam
+    so = beam_loading.sizing_outcome
+    yarn_length = None
+
+    # Check SizingBeamAssignment
+    if so and so.yarn_outcome_id:
+        from factory.yarn.sizing.models import SizingBeamAssignment
+        sba = SizingBeamAssignment.objects.filter(
+            yarn_outcome=so.yarn_outcome,
+            beam=beam
+        ).order_by("-id").first()
+        if sba and sba.beam_yarn_length:
+            val = sba.get_beam_yarn_length(beam.id)
+            if val is not None:
+                try:
+                    yarn_length = Decimal(str(val))
+                except Exception:
+                    pass
+
+    if yarn_length is None and beam and beam.length:
+        yarn_length = Decimal(str(beam.length))
+
+    if yarn_length is None and so and so.set_length_meter:
+        total_beams = so.total_beams or 1
+        yarn_length = Decimal(str(so.set_length_meter)) / Decimal(str(total_beams))
+
+    if yarn_length is None:
+        yarn_length = Decimal("0.000000")
+
+    # Shortage percentage
+    shortage_pct = Decimal("0.000000")
+    if beam_loading.shortage is not None:
+        shortage_pct = Decimal(str(beam_loading.shortage))
+    elif so and so.total_set_shortage is not None:
+        shortage_pct = Decimal(str(so.total_set_shortage))
+
+    # Formula: expected = yarn_length * (1 - shortage / 100)
+    expected = yarn_length * (Decimal("1.000000") - (shortage_pct / Decimal("100.000000")))
+    if expected < Decimal("0.000000"):
+        expected = Decimal("0.000000")
+
+    return expected
+
+
+def dismount_beam_loading(
+    beam_loading_or_id,
+    dismount_date=None,
+    remarks="",
+    expected_length_override=None,
+    user=None,
+    request=None,
+):
+    """
+    Reconciles actual cloth length against expected length and completes beam loading:
+      1. Locks BeamLoading, Beam, Loom with select_for_update().
+      2. Validates that loading cycle is active and not already completed.
+      3. Sums actual cloth length from ClothPatch.productive_length for this specific loading cycle.
+         If no patches exist, falls back to sum of Production.meters_produced for this cycle.
+      4. Calculates expected cloth length using the verified factory formula.
+      5. Calculates difference = actual_length - expected_length (+ exceeds, - below, 0 equal).
+      6. Calculates production_percentage = (actual_length / expected_length) * 100 (if expected > 0).
+      7. Stores / updates BeamDismountReconciliation record atomically.
+      8. Sets BeamLoading.status = COMPLETED, records dismount_date and dismounted_by.
+      9. Sets Beam.status = AVAILABLE for safe reuse.
+     10. Sets Loom.status = ACTIVE.
+     11. Releases any active SizingBeamAssignment for this beam.
+    """
+    loading_id = beam_loading_or_id.id if hasattr(beam_loading_or_id, "id") else beam_loading_or_id
+
+    with transaction.atomic():
+        try:
+            loading = (
+                BeamLoading.objects
+                .select_for_update()
+                .select_related("beam", "loom", "sizing_outcome")
+                .get(id=loading_id)
+            )
+        except BeamLoading.DoesNotExist:
+            raise ValidationError({"detail": f"BeamLoading #{loading_id} does not exist."})
+
+        if loading.status == BeamLoading.StatusChoices.COMPLETED:
+            raise ValidationError({"detail": f"BeamLoading #{loading_id} is already marked completed / dismounted."})
+
+        beam = Beam.objects.select_for_update().get(id=loading.beam_id)
+        loom = Loom.objects.select_for_update().get(id=loading.loom_id)
+
+        # Calculate actual length from ClothPatch
+        from factory.cloth.models import ClothPatch
+        patch_sum = (
+            ClothPatch.objects.filter(beam_loading=loading)
+            .aggregate(s=Sum("productive_length"))["s"]
+        )
+        if patch_sum is not None:
+            actual_length = Decimal(str(patch_sum))
+        else:
+            # Fallback to Production.meters_produced if patches were not used
+            prod_sum = (
+                loading.productions.aggregate(s=Sum("meters_produced"))["s"]
+            )
+            actual_length = Decimal(str(prod_sum)) if prod_sum is not None else Decimal("0.000000")
+
+        # Determine expected length
+        if expected_length_override is not None:
+            expected_length = Decimal(str(expected_length_override))
+        else:
+            expected_length = calculate_expected_cloth_length(loading)
+
+        # Difference and percentage
+        difference = actual_length - expected_length
+        if expected_length > Decimal("0.000000"):
+            production_percentage = (actual_length / expected_length) * Decimal("100.0000")
+        else:
+            production_percentage = None
+
+        d_date = dismount_date or timezone.now().date()
+
+        # Update or create BeamDismountReconciliation
+        from factory.beam.models import BeamDismountReconciliation
+        reconciliation, _ = BeamDismountReconciliation.objects.update_or_create(
+            beam_loading=loading,
+            defaults={
+                "expected_length": expected_length,
+                "actual_length": actual_length,
+                "difference": difference,
+                "production_percentage": production_percentage,
+                "dismount_date": d_date,
+                "dismounted_by": user,
+                "remarks": remarks or "",
+            }
+        )
+
+        # Update loading
+        loading.status = BeamLoading.StatusChoices.COMPLETED
+        loading.expected_length = expected_length
+        loading.dismount_date = d_date
+        loading.dismounted_by = user
+        loading.updated_by = user
+        loading.save(update_fields=[
+            "status",
+            "expected_length",
+            "dismount_date",
+            "dismounted_by",
+            "updated_by",
+            "updated_at",
+        ])
+
+        # Release Beam and Loom
+        beam.status = Beam.StatusChoices.AVAILABLE
+        beam.updated_by = user
+        beam.save(update_fields=["status", "updated_by", "updated_at"])
+
+        loom.status = Loom.StatusChoices.ACTIVE
+        loom.updated_by = user
+        loom.save(update_fields=["status", "updated_by", "updated_at"])
+
+        # Release SizingBeamAssignment
+        from factory.yarn.sizing.models import SizingBeamAssignment
+        active_sba_list = SizingBeamAssignment.objects.filter(
+            beam=beam
+        ).exclude(status=SizingBeamAssignment.StatusChoices.RELEASED)
+        for sba in active_sba_list:
+            sba.status = SizingBeamAssignment.StatusChoices.RELEASED
+            sba.released_at = timezone.now()
+            sba.updated_by = user
+            sba.save(update_fields=["status", "released_at", "updated_by", "updated_at"])
+
+        log_activity(
+            request=request,
+            action="Dismount Beam",
+            description=(
+                f"Dismounted Beam '{beam.beam_number}' from Loom '{loom.loom_code}' (Loading #{loading.id}). "
+                f"Actual: {actual_length}m, Expected: {expected_length}m, Difference: {difference}m."
+            ),
+            module="Factory – Beam Loading",
+            status="Success",
+            user=user,
+        )
+
+        return reconciliation

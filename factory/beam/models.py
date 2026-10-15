@@ -2,6 +2,7 @@
 Beam Model for the Factory module.
 """
 
+from decimal import Decimal
 from django.db import models
 from django.conf import settings
 
@@ -231,6 +232,29 @@ class BeamLoading(models.Model):
         default=StatusChoices.LOADED
     )
 
+    expected_length = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        help_text="Expected woven cloth length in meters"
+    )
+
+    dismount_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Date beam was dismounted from loom"
+    )
+
+    dismounted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="dismounted_beam_loadings",
+        help_text="User who dismounted the beam"
+    )
+
     created_at = models.DateTimeField(
         auto_now_add=True
     )
@@ -368,4 +392,75 @@ class Production(models.Model):
         loom_code = self.loom.loom_code if self.loom else "N/A"
         beam_no = self.beam.beam_number if self.beam else "N/A"
         return f"Production #{self.id}: Loom {loom_code} / Beam {beam_no} ({self.meters_produced}m)"
+
+
+class BeamDismountReconciliation(models.Model):
+    """
+    Authoritative reconciliation of expected vs. actual cloth production
+    when a physical Beam is dismounted from a Loom at the end of its loading cycle.
+    """
+    beam_loading = models.OneToOneField(
+        BeamLoading,
+        on_delete=models.PROTECT,
+        related_name="reconciliation"
+    )
+
+    expected_length = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="Expected woven cloth production length in meters"
+    )
+
+    actual_length = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="Actual woven cloth production length in meters (sum of ClothPatch.productive_length)"
+    )
+
+    difference = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="difference = actual_length - expected_length (+ exceeds, - below, 0 equal)"
+    )
+
+    production_percentage = models.DecimalField(
+        max_digits=10,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        help_text="Production percentage: (actual_length / expected_length) * 100"
+    )
+
+    dismount_date = models.DateField(
+        help_text="Date beam was dismounted and reconciled"
+    )
+
+    dismounted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="beam_reconciliations",
+        help_text="User who performed the dismount"
+    )
+
+    remarks = models.TextField(
+        blank=True,
+        default="",
+        help_text="Reconciliation remarks"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-dismount_date", "-id"]
+        verbose_name = "Beam Dismount Reconciliation"
+        verbose_name_plural = "Beam Dismount Reconciliations"
+
+    def __str__(self):
+        return f"Reconciliation for Loading #{self.beam_loading_id}: Actual {self.actual_length}m / Expected {self.expected_length}m"
 

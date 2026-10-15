@@ -12,6 +12,8 @@ urlpatterns = [
     path('api/v1/factory/', include('factory.loom.urls')),
     path('api/v1/factory/', include('factory.beam.urls')),
     path('api/v1/', include('factory.beam.urls')),
+    path('api/v1/factory/', include('factory.cloth.urls')),
+    path('api/v1/', include('factory.cloth.urls')),
 
     path('api/v1/', include('factory.yarn.yarn_buyer.urls')),
     path('api/v1/', include('factory.yarn.yarn_name.urls')),
