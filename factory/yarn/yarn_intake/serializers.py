@@ -254,6 +254,9 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
                     "totalRate": str(so.total_rate) if so.total_rate is not None else None,
                     "netWeightKg": str(so.net_weight_kg) if so.net_weight_kg is not None else None,
                     "outcomeDate": so.outcome_date,
+                    "amountPaid": str(so.amount_paid) if so.amount_paid is not None else "0.000000",
+                    "amountDue": str(so.amount_due) if so.amount_due is not None else "0.000000",
+                    "paymentStatus": so.payment_status or "Unpaid",
                 }
         return None
 
@@ -274,6 +277,9 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
                 if so.total_rate is not None and so.total_rate > 0:
                     ret["totalPrice"] = str(so.total_rate)
                     ret["totalRate"] = str(so.total_rate)
+                ret["amountPaid"] = str(so.amount_paid) if so.amount_paid is not None else "0.000000"
+                ret["amountDue"] = str(so.amount_due) if so.amount_due is not None else "0.000000"
+                ret["paymentStatus"] = so.payment_status or "Unpaid"
         return ret
 
     def get_createdBy(self, obj):
