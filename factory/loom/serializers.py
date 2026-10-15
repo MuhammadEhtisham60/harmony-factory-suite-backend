@@ -37,6 +37,9 @@ class LoomListSerializer(serializers.ModelSerializer):
             "currentBeamId",
             "currentBeamNo",
             "currentLoadingId",
+            "currentSetNo",
+            "clothQuality",
+            "clothName",
             "beamLength",
             "producedMeters",
             "remainingMeters",
@@ -49,6 +52,9 @@ class LoomListSerializer(serializers.ModelSerializer):
     currentBeamId = serializers.SerializerMethodField()
     currentBeamNo = serializers.SerializerMethodField()
     currentLoadingId = serializers.SerializerMethodField()
+    currentSetNo = serializers.SerializerMethodField()
+    clothQuality = serializers.SerializerMethodField()
+    clothName = serializers.SerializerMethodField()
     beamLength = serializers.SerializerMethodField()
     producedMeters = serializers.SerializerMethodField()
     remainingMeters = serializers.SerializerMethodField()
@@ -71,6 +77,20 @@ class LoomListSerializer(serializers.ModelSerializer):
     def get_currentLoadingId(self, obj):
         loading = self._get_active_loading(obj)
         return loading.id if loading else None
+
+    def get_currentSetNo(self, obj):
+        loading = self._get_active_loading(obj)
+        return loading.sizing_outcome.set_no if loading and loading.sizing_outcome else ""
+
+    def get_clothQuality(self, obj):
+        loading = self._get_active_loading(obj)
+        return loading.cloth_quality if loading else ""
+
+    def get_clothName(self, obj):
+        loading = self._get_active_loading(obj)
+        if loading and loading.cloth_name:
+            return getattr(loading.cloth_name, "cloth_quality", "")
+        return ""
 
     def get_beamLength(self, obj):
         loading = self._get_active_loading(obj)
@@ -166,6 +186,9 @@ class LoomDetailSerializer(serializers.ModelSerializer):
             "currentBeamId",
             "currentBeamNo",
             "currentLoadingId",
+            "currentSetNo",
+            "clothQuality",
+            "clothName",
             "beamLength",
             "producedMeters",
             "remainingMeters",
@@ -179,6 +202,9 @@ class LoomDetailSerializer(serializers.ModelSerializer):
     currentBeamId = serializers.SerializerMethodField()
     currentBeamNo = serializers.SerializerMethodField()
     currentLoadingId = serializers.SerializerMethodField()
+    currentSetNo = serializers.SerializerMethodField()
+    clothQuality = serializers.SerializerMethodField()
+    clothName = serializers.SerializerMethodField()
     beamLength = serializers.SerializerMethodField()
     producedMeters = serializers.SerializerMethodField()
     remainingMeters = serializers.SerializerMethodField()
@@ -201,6 +227,20 @@ class LoomDetailSerializer(serializers.ModelSerializer):
     def get_currentLoadingId(self, obj):
         loading = self._get_active_loading(obj)
         return loading.id if loading else None
+
+    def get_currentSetNo(self, obj):
+        loading = self._get_active_loading(obj)
+        return loading.sizing_outcome.set_no if loading and loading.sizing_outcome else ""
+
+    def get_clothQuality(self, obj):
+        loading = self._get_active_loading(obj)
+        return loading.cloth_quality if loading else ""
+
+    def get_clothName(self, obj):
+        loading = self._get_active_loading(obj)
+        if loading and loading.cloth_name:
+            return getattr(loading.cloth_name, "cloth_quality", "")
+        return ""
 
     def get_beamLength(self, obj):
         loading = self._get_active_loading(obj)
