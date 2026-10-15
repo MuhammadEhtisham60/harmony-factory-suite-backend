@@ -1,0 +1,592 @@
+[
+{
+  "model": "accounts.role",
+  "pk": 1,
+  "fields": {
+    "name": "Super Admin",
+    "slug": "super_admin",
+    "description": "Unrestricted system access across all ERP modules.",
+    "status": "Active",
+    "is_system": true,
+    "permissions": [
+      "dashboard.view",
+      "dashboard.export",
+      "users.view",
+      "users.add",
+      "users.edit",
+      "users.delete",
+      "users.status",
+      "users.reset_pwd",
+      "roles.manage",
+      "activity.view",
+      "mfg.view",
+      "mfg.add",
+      "mfg.edit",
+      "mfg.delete",
+      "mfg.assign",
+      "mfg.status",
+      "yarn.view",
+      "yarn.add",
+      "yarn.edit",
+      "yarn.delete",
+      "sizing.view",
+      "sizing.add",
+      "sizing.edit",
+      "sizing.delete",
+      "beams.view",
+      "beams.add",
+      "beams.edit",
+      "beams.delete",
+      "beams.assign",
+      "looms.view",
+      "looms.add",
+      "looms.edit",
+      "looms.delete",
+      "looms.assign_beam",
+      "looms.production",
+      "po.view",
+      "po.add",
+      "po.edit",
+      "po.delete",
+      "po.approve",
+      "sale.view",
+      "sale.add",
+      "sale.edit",
+      "sale.delete",
+      "sale.dispatch",
+      "inv.view",
+      "inv.add",
+      "inv.edit",
+      "inv.delete",
+      "inv.adjust",
+      "emp.view",
+      "emp.add",
+      "emp.edit",
+      "emp.delete",
+      "payroll.process",
+      "att.view",
+      "att.mark",
+      "att.edit",
+      "att.export",
+      "rep.view",
+      "rep.generate",
+      "rep.export",
+      "settings.view",
+      "settings.company",
+      "settings.security"
+    ],
+    "created_at": "2026-09-29T14:29:24.515Z",
+    "updated_at": "2026-09-29T14:29:24.515Z"
+  }
+},
+{
+  "model": "accounts.role",
+  "pk": 2,
+  "fields": {
+    "name": "Production Manager",
+    "slug": "production_manager",
+    "description": "Comprehensive control over manufacturing, sizing, beams, and looms.",
+    "status": "Active",
+    "is_system": false,
+    "permissions": [
+      "dashboard.view",
+      "dashboard.export",
+      "mfg.view",
+      "mfg.add",
+      "mfg.edit",
+      "mfg.assign",
+      "mfg.status",
+      "yarn.view",
+      "yarn.add",
+      "yarn.edit",
+      "sizing.view",
+      "sizing.add",
+      "sizing.edit",
+      "beams.view",
+      "beams.add",
+      "beams.assign",
+      "looms.view",
+      "looms.add",
+      "looms.edit",
+      "looms.production"
+    ],
+    "created_at": "2026-09-29T14:29:24.524Z",
+    "updated_at": "2026-09-29T14:29:24.524Z"
+  }
+},
+{
+  "model": "accounts.role",
+  "pk": 3,
+  "fields": {
+    "name": "Quality Control Inspector",
+    "slug": "quality_control_inspector",
+    "description": "Performs yarn CSP audits and fabric inspection.",
+    "status": "Active",
+    "is_system": false,
+    "permissions": [
+      "dashboard.view",
+      "yarn.view",
+      "sizing.view",
+      "looms.view"
+    ],
+    "created_at": "2026-09-29T14:29:24.526Z",
+    "updated_at": "2026-09-29T14:29:24.526Z"
+  }
+},
+{
+  "model": "accounts.role",
+  "pk": 4,
+  "fields": {
+    "name": "Inventory Manager",
+    "slug": "inventory_manager",
+    "description": "Manages raw material stores, spare parts, and inventory SKUs.",
+    "status": "Active",
+    "is_system": false,
+    "permissions": [
+      "dashboard.view",
+      "yarn.view",
+      "yarn.add",
+      "yarn.edit",
+      "inv.view",
+      "inv.add",
+      "inv.edit",
+      "inv.delete",
+      "inv.adjust",
+      "po.view",
+      "po.add",
+      "po.edit"
+    ],
+    "created_at": "2026-09-29T14:29:24.528Z",
+    "updated_at": "2026-09-29T14:29:24.528Z"
+  }
+},
+{
+  "model": "accounts.role",
+  "pk": 5,
+  "fields": {
+    "name": "superrr",
+    "slug": "superrr",
+    "description": "",
+    "status": "Active",
+    "is_system": false,
+    "permissions": [
+      "dashboard.view",
+      "dashboard.export"
+    ],
+    "created_at": "2026-09-29T14:46:10.113Z",
+    "updated_at": "2026-09-29T14:46:10.113Z"
+  }
+},
+{
+  "model": "accounts.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1500000$8Fi6Jbh2pOWLrkApHzrtd4$Svuq3CSk4S9nYW68iJ3CqtNerbsigI9QtaMvd3gC37w=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "tariq.mehmood",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-09-29T14:29:26.425Z",
+    "email": "qc@fahadweaving.com",
+    "phone": "+92 333 5544332",
+    "address": "",
+    "gender": "Male",
+    "designation": "QC Inspector",
+    "role": 3,
+    "status": "Active",
+    "two_factor_enabled": false,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "accounts.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1500000$PKic1Rxl2KtgAmSWepwjl0$K0MnkzWFOKL5VZt3RB5TpbQJXPe4iRjphMh2BSsfbXo=",
+    "last_login": "2026-09-29T14:33:47.211Z",
+    "is_superuser": false,
+    "username": "sami",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-09-29T14:32:24.427Z",
+    "email": "sami@admin.com",
+    "phone": "687687598",
+    "address": "",
+    "gender": "Male",
+    "designation": "Machine Operator",
+    "role": 1,
+    "status": "Active",
+    "two_factor_enabled": false,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "accounts.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1500000$zPvWpfMSi5TiufptBBvpTl$gp9Lu0JAGEM8mOokJFQKD4YHgX7McQSj4so/k/a9zyc=",
+    "last_login": "2026-09-29T14:47:02.951Z",
+    "is_superuser": false,
+    "username": "samii",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-09-29T14:41:31.777Z",
+    "email": "samii@admin.com",
+    "phone": "676876987",
+    "address": "",
+    "gender": "Male",
+    "designation": "Quality Inspector",
+    "role": 5,
+    "status": "Active",
+    "two_factor_enabled": false,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "accounts.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1500000$thcMzxVuYmoDebsdVqzoWb$hvwDWf8w3w9L4TLxcEgQDq52gSNBymccdoKgeRHrQTg=",
+    "last_login": "2026-10-10T09:58:54.073Z",
+    "is_superuser": true,
+    "username": "admin",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-10-01T13:44:25.025Z",
+    "email": "admin@harmonymills.com",
+    "phone": "",
+    "address": "",
+    "gender": "Male",
+    "designation": "",
+    "role": null,
+    "status": "Active",
+    "two_factor_enabled": false,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 54,
+  "fields": {
+    "user": [
+      "admin"
+    ],
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Beam",
+    "description": "Created beam 'BN-001'.",
+    "module": "Factory – Beams",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-13T13:36:00.991Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 55,
+  "fields": {
+    "user": [
+      "admin"
+    ],
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Sizing",
+    "description": "Created sizing 'subhansizing'.",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-13T13:36:19.531Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 56,
+  "fields": {
+    "user": [
+      "admin"
+    ],
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Yarn Intake",
+    "description": "Created yarn intake 'Cotton Yarn' Set: BATCH-01, 10 bags.",
+    "module": "Yarn – Intake",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-13T13:40:29.329Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 57,
+  "fields": {
+    "user": [
+      "admin"
+    ],
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Delete Yarn Intake",
+    "description": "Deleted yarn intake 'Cotton Yarn' Set: BATCH-01.",
+    "module": "Yarn – Intake",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-13T13:48:53.514Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 58,
+  "fields": {
+    "user": [
+      "admin"
+    ],
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Loom",
+    "description": "Created loom 'loom1' (Code: l1).",
+    "module": "Factory – Looms",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-14T13:08:25.478Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 59,
+  "fields": {
+    "user": [
+      "admin"
+    ],
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Yarn Intake",
+    "description": "Created yarn intake 'cotton' Set: BATCH-01, 10 bags.",
+    "module": "Yarn – Intake",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-14T13:09:19.170Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 60,
+  "fields": {
+    "user": [
+      "admin"
+    ],
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Yarn Intake",
+    "description": "Created yarn intake 'cotton' Set: BATCH-02, 14 bags.",
+    "module": "Yarn – Intake",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-14T13:10:09.760Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 61,
+  "fields": {
+    "user": [
+      "admin"
+    ],
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Assign Beams to Sizing Outcome",
+    "description": "Recorded 1 beam(s) [BN-001] in Outcome #5 (Sizing: subhansizing) with status 'ASSIGNED'.",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-14T13:11:12.232Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 62,
+  "fields": {
+    "user": [
+      "admin"
+    ],
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Yarn Outcome",
+    "description": "Created Sizing outcome of 5 bags from stock pool 'cotton' (10s / 1).",
+    "module": "Yarn – Outcome",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-14T13:11:12.250Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 63,
+  "fields": {
+    "user": [
+      "admin"
+    ],
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Receive Beams from Sizing Outcome",
+    "description": "Recorded 1 beam(s) [BN-001] in Outcome #5 (Sizing: subhansizing) with status 'RECEIVED'.",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-14T13:12:17.704Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 64,
+  "fields": {
+    "user": [
+      "admin"
+    ],
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Sizing Outcome",
+    "description": "Created Sizing Outcome #4 for sizing 'subhansizing' with 1 initial beam assignment(s).",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-14T13:12:17.706Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 65,
+  "fields": {
+    "user": [
+      "admin"
+    ],
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Sizing",
+    "description": "Created sizing 'sizing2'.",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-14T13:20:06.429Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 66,
+  "fields": {
+    "user": [
+      "admin"
+    ],
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Yarn Outcome",
+    "description": "Created Sizing outcome of 4 bags from stock pool 'cotton' (10s / 1).",
+    "module": "Yarn – Outcome",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-14T13:20:34.201Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 67,
+  "fields": {
+    "user": [
+      "admin"
+    ],
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Sizing Outcome",
+    "description": "Created Sizing Outcome #5 for sizing 'sizing2' with 0 initial beam assignment(s).",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-14T13:22:24.508Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 68,
+  "fields": {
+    "user": [
+      "admin"
+    ],
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Yarn Outcome",
+    "description": "Created Sizing outcome of 2 bags from stock pool 'cotton' (10s / 1).",
+    "module": "Yarn – Outcome",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-14T14:39:06.528Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 69,
+  "fields": {
+    "user": [
+      "admin"
+    ],
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Sizing Outcome",
+    "description": "Created Sizing Outcome #6 for sizing 'sizing2' with 0 initial beam assignment(s).",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-14T14:39:57.557Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 74,
+  "fields": {
+    "user": [
+      "admin"
+    ],
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Sizing Outcome",
+    "description": "Created Sizing Outcome #7 for sizing 'sizing2' with 0 initial beam assignment(s).",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-15T11:02:02.200Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 75,
+  "fields": {
+    "user": [
+      "admin"
+    ],
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Sizing Outcome",
+    "description": "Created Sizing Outcome #8 for sizing 'sizing2' with 0 initial beam assignment(s).",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-15T11:02:49.340Z"
+  }
+}
+]

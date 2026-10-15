@@ -44,7 +44,9 @@ class Supplier(models.Model):
     phone = models.CharField(max_length=50)
 
     contact_person = models.CharField(
-        max_length=255
+        max_length=255,
+        blank=True,
+        default=""
     )
 
     email = models.EmailField(

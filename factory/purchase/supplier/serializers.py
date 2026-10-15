@@ -72,7 +72,9 @@ class SupplierListSerializer(serializers.ModelSerializer):
     supplierCode = serializers.CharField(source="supplier_code", read_only=True)
     supplierName = serializers.CharField(source="supplier_name")
     companyName = serializers.CharField(source="company_name", required=False, allow_blank=True)
-    contactPerson = serializers.CharField(source="contact_person")
+    contactPerson = serializers.CharField(
+        source="contact_person", required=False, allow_blank=True, default=""
+    )
     supplierType = serializers.ChoiceField(
         source="supplier_type",
         choices=Supplier.SupplierType.choices,
@@ -156,7 +158,9 @@ class SupplierDetailSerializer(serializers.ModelSerializer):
         source="company_name", required=False, allow_blank=True, default=""
     )
     address = serializers.CharField(required=False, allow_blank=True, default="")
-    contactPerson = serializers.CharField(source="contact_person")
+    contactPerson = serializers.CharField(
+        source="contact_person", required=False, allow_blank=True, allow_null=True, default=""
+    )
     supplierType = serializers.ChoiceField(
         source="supplier_type",
         choices=Supplier.SupplierType.choices,
@@ -223,8 +227,16 @@ class SupplierDetailSerializer(serializers.ModelSerializer):
         return None
 
     # ------------------------------------------------------------------ #
-    # Validation
+    # Deserialization & Validation
     # ------------------------------------------------------------------ #
+
+    def to_internal_value(self, data):
+        data = data.copy() if hasattr(data, "copy") else dict(data)
+        if "contact_person" in data and "contactPerson" not in data:
+            data["contactPerson"] = data["contact_person"]
+        if "contactPerson" in data and data["contactPerson"] is None:
+            data["contactPerson"] = ""
+        return super().to_internal_value(data)
 
     def validate_supplierName(self, value):  # noqa: N802
         supplier_id = self.instance.id if self.instance else None
@@ -241,6 +253,8 @@ class SupplierDetailSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
+        if attrs.get("contact_person") is None:
+            attrs["contact_person"] = ""
         bank_accounts = attrs.get("bank_accounts", [])
         primary_count = sum(1 for b in bank_accounts if b.get("is_primary", False))
         if primary_count > 1:
