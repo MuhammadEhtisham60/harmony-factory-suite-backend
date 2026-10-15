@@ -36,6 +36,10 @@ class LoomListSerializer(serializers.ModelSerializer):
             "status",
             "currentBeamId",
             "currentBeamNo",
+            "currentLoadingId",
+            "beamLength",
+            "producedMeters",
+            "remainingMeters",
             "createdBy",
             "updatedBy",
             "createdAt",
@@ -44,14 +48,59 @@ class LoomListSerializer(serializers.ModelSerializer):
 
     currentBeamId = serializers.SerializerMethodField()
     currentBeamNo = serializers.SerializerMethodField()
+    currentLoadingId = serializers.SerializerMethodField()
+    beamLength = serializers.SerializerMethodField()
+    producedMeters = serializers.SerializerMethodField()
+    remainingMeters = serializers.SerializerMethodField()
+
+    def _get_active_loading(self, obj):
+        if not hasattr(obj, "_cached_active_loading"):
+            obj._cached_active_loading = obj.beam_loadings.filter(
+                status__in=["Loaded", "In Production"]
+            ).first()
+        return obj._cached_active_loading
 
     def get_currentBeamId(self, obj):
-        loading = obj.beam_loadings.filter(status__in=["Loaded", "In Production"]).first()
-        return loading.beam.id if loading else None
+        loading = self._get_active_loading(obj)
+        return loading.beam.id if loading and loading.beam else None
 
     def get_currentBeamNo(self, obj):
-        loading = obj.beam_loadings.filter(status__in=["Loaded", "In Production"]).first()
-        return loading.beam.beam_number if loading else None
+        loading = self._get_active_loading(obj)
+        return loading.beam.beam_number if loading and loading.beam else None
+
+    def get_currentLoadingId(self, obj):
+        loading = self._get_active_loading(obj)
+        return loading.id if loading else None
+
+    def get_beamLength(self, obj):
+        loading = self._get_active_loading(obj)
+        if not loading:
+            return 0.0
+        beam = loading.beam
+        so = loading.sizing_outcome
+        if beam and beam.length:
+            return float(beam.length)
+        if loading.expected_length:
+            return float(loading.expected_length)
+        if so and so.set_length_meter:
+            total_beams = so.total_beams or 1
+            return round(float(so.set_length_meter) / float(total_beams), 2)
+        return 0.0
+
+    def get_producedMeters(self, obj):
+        loading = self._get_active_loading(obj)
+        if not loading:
+            return 0.0
+        from django.db.models import Sum
+        total = loading.productions.aggregate(Sum("meters_produced"))["meters_produced__sum"]
+        return round(float(total), 2) if total is not None else 0.0
+
+    def get_remainingMeters(self, obj):
+        total_len = self.get_beamLength(obj)
+        produced = self.get_producedMeters(obj)
+        if total_len <= 0:
+            return 0.0
+        return max(0.0, round(total_len - produced, 2))
 
     def get_createdBy(self, obj):
         if obj.created_by:
@@ -106,6 +155,10 @@ class LoomDetailSerializer(serializers.ModelSerializer):
             "notes",
             "currentBeamId",
             "currentBeamNo",
+            "currentLoadingId",
+            "beamLength",
+            "producedMeters",
+            "remainingMeters",
             "createdBy",
             "updatedBy",
             "createdAt",
@@ -115,14 +168,59 @@ class LoomDetailSerializer(serializers.ModelSerializer):
 
     currentBeamId = serializers.SerializerMethodField()
     currentBeamNo = serializers.SerializerMethodField()
+    currentLoadingId = serializers.SerializerMethodField()
+    beamLength = serializers.SerializerMethodField()
+    producedMeters = serializers.SerializerMethodField()
+    remainingMeters = serializers.SerializerMethodField()
+
+    def _get_active_loading(self, obj):
+        if not hasattr(obj, "_cached_active_loading"):
+            obj._cached_active_loading = obj.beam_loadings.filter(
+                status__in=["Loaded", "In Production"]
+            ).first()
+        return obj._cached_active_loading
 
     def get_currentBeamId(self, obj):
-        loading = obj.beam_loadings.filter(status__in=["Loaded", "In Production"]).first()
-        return loading.beam.id if loading else None
+        loading = self._get_active_loading(obj)
+        return loading.beam.id if loading and loading.beam else None
 
     def get_currentBeamNo(self, obj):
-        loading = obj.beam_loadings.filter(status__in=["Loaded", "In Production"]).first()
-        return loading.beam.beam_number if loading else None
+        loading = self._get_active_loading(obj)
+        return loading.beam.beam_number if loading and loading.beam else None
+
+    def get_currentLoadingId(self, obj):
+        loading = self._get_active_loading(obj)
+        return loading.id if loading else None
+
+    def get_beamLength(self, obj):
+        loading = self._get_active_loading(obj)
+        if not loading:
+            return 0.0
+        beam = loading.beam
+        so = loading.sizing_outcome
+        if beam and beam.length:
+            return float(beam.length)
+        if loading.expected_length:
+            return float(loading.expected_length)
+        if so and so.set_length_meter:
+            total_beams = so.total_beams or 1
+            return round(float(so.set_length_meter) / float(total_beams), 2)
+        return 0.0
+
+    def get_producedMeters(self, obj):
+        loading = self._get_active_loading(obj)
+        if not loading:
+            return 0.0
+        from django.db.models import Sum
+        total = loading.productions.aggregate(Sum("meters_produced"))["meters_produced__sum"]
+        return round(float(total), 2) if total is not None else 0.0
+
+    def get_remainingMeters(self, obj):
+        total_len = self.get_beamLength(obj)
+        produced = self.get_producedMeters(obj)
+        if total_len <= 0:
+            return 0.0
+        return max(0.0, round(total_len - produced, 2))
 
     def get_createdBy(self, obj):
         if obj.created_by:

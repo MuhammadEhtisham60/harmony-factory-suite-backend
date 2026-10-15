@@ -38,7 +38,12 @@ class LoomViewSet(ModelViewSet):
     queryset = (
         Loom.objects
         .select_related("created_by", "updated_by")
-        .prefetch_related("beam_loadings", "beam_loadings__beam")
+        .prefetch_related(
+            "beam_loadings",
+            "beam_loadings__beam",
+            "beam_loadings__sizing_outcome",
+            "beam_loadings__productions",
+        )
         .all()
     )
     permission_classes = [IsAuthenticated, HasERPModulePermission]
