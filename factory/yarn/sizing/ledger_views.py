@@ -28,6 +28,7 @@ from .ledger import (
     CSV_COLUMNS,
     MAIN_CSV_COLUMNS,
     ENTRY_TYPES,
+    ZERO,
     build_sizing_ledger,
     csv_value,
     exact_str,
@@ -180,6 +181,7 @@ class SizingLedgerViewSet(ViewSet):
             "sizing_name", "-sizing_name", "status", "-status", "created_at", "-created_at",
             "total_boxes_sent", "-total_boxes_sent", "total_boxes_received", "-total_boxes_received",
             "total_boxes_balance", "-total_boxes_balance", "total_payables", "-total_payables",
+            "total_charges", "-total_charges", "total_paid", "-total_paid",
             "transactions_count", "-transactions_count", "date", "-date",
         }
         if ordering_param not in valid_orderings:
@@ -207,6 +209,8 @@ class SizingLedgerViewSet(ViewSet):
         response.data["openingBalance"] = None
         response.data["summary"] = MainSizingLedgerSummarySerializer(aggregate_totals).data
         response.data["totalPayables"] = exact_str(aggregate_totals["total_payables"])
+        response.data["totalCharges"] = exact_str(aggregate_totals.get("total_charges", ZERO))
+        response.data["totalPaid"] = exact_str(aggregate_totals.get("total_paid", ZERO))
         response.data["totalBoxesSent"] = exact_str(aggregate_totals["total_boxes_sent"])
         response.data["totalBoxesReceived"] = exact_str(aggregate_totals["total_boxes_received"])
         response.data["totalBoxesBalance"] = exact_str(aggregate_totals["total_boxes_balance"])
@@ -258,6 +262,8 @@ class SizingLedgerViewSet(ViewSet):
             "sizing": SizingDetailSummarySerializer(sizing).data,
             "summary": IndividualSizingSummarySerializer(summary_totals).data,
             "totalPayables": exact_str(summary_totals["total_payables"]),
+            "totalCharges": exact_str(summary_totals.get("total_charges", ZERO)),
+            "totalPaid": exact_str(summary_totals.get("total_paid", ZERO)),
             "totalBoxesSent": exact_str(summary_totals["total_boxes_sent"]),
             "totalBoxesReceived": exact_str(summary_totals["total_boxes_received"]),
             "totalBoxesBalance": exact_str(summary_totals["total_boxes_balance"]),

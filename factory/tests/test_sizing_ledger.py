@@ -211,7 +211,7 @@ class SizingLedgerTests(APITestCase):
             self.assertEqual(len(txs), 4)
             self.assertEqual(
                 [t["id"] for t in txs],
-                [f"IN-{self.yo1.id}", f"OUT-{self.so1.id}", f"IN-{self.yo2.id}", f"OUT-{self.so2.id}"],
+                [f"OUT-{self.yo1.id}", f"IN-{self.so1.id}", f"OUT-{self.yo2.id}", f"IN-{self.so2.id}"],
             )
             # Both results and transactions keys present
             self.assertEqual(data["transactions"], txs)
@@ -293,7 +293,7 @@ class SizingLedgerTests(APITestCase):
         # Detail ledger filtered from Oct 10
         res_detail = self.client.get(f"{URL}{self.sizing_a.id}/", {"date_from": "2026-10-10"})
         self.assertEqual(res_detail.data["count"], 2)
-        self.assertEqual([t["id"] for t in res_detail.data["results"]], [f"IN-{self.yo2.id}", f"OUT-{self.so2.id}"])
+        self.assertEqual([t["id"] for t in res_detail.data["results"]], [f"OUT-{self.yo2.id}", f"IN-{self.so2.id}"])
 
         # Opening balance is balance prior to Oct 10 (Oct 5 balance: 10 - 3.333333 = 6.666667)
         opening = res_detail.data["openingBalance"]
@@ -452,4 +452,43 @@ class SizingLedgerTests(APITestCase):
         self.assertEqual(res_csv_tx.status_code, status.HTTP_200_OK)
         reader_tx = list(csv.DictReader(io.StringIO(res_csv_tx.content.decode("utf-8"))))
         self.assertEqual(len(reader_tx), 4)
-        self.assertEqual(reader_tx[0]["Type"], "income")
+        self.assertEqual(reader_tx[0]["Type"], "outcome")
+
+    def test_13_sizing_payments_reflected_in_ledger_payables(self):
+        """Verify that paid sizing outcomes reduce totalPayables and are reflected in totalPaid and totalCharges."""
+        # Record full payment on so1
+        self.so1.amount_paid = self.so1.total_rate
+        self.so1.amount_due = D("0.000000")
+        self.so1.payment_status = SizingOutcome.PaymentStatusChoices.PAID
+        self.so1.save()
+        self.so1.refresh_from_db()
+        self.so2.refresh_from_db()
+
+        # so2 remains unpaid (amount_paid = 0, amount_due = so2.total_rate)
+        res = self.client.get(URL)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        # Expected:
+        # totalPayables should only be so2's rate (since so1 is fully paid)
+        # totalPaid should be so1's amount_paid
+        # totalCharges should be so1 + so2 rates
+        expected_payables = self.so2.total_rate
+        expected_paid = self.so1.amount_paid
+        expected_charges = self.so1.total_rate + self.so2.total_rate
+
+        self.assertEqual(D(res.data["totalPayables"]), expected_payables)
+        self.assertEqual(D(res.data["totalPaid"]), expected_paid)
+        self.assertEqual(D(res.data["totalCharges"]), expected_charges)
+
+        # Sizing A row in results
+        alpha = [r for r in res.data["results"] if r["id"] == self.sizing_a.id][0]
+        self.assertEqual(D(alpha["totalPayables"]), expected_payables)
+        self.assertEqual(D(alpha["totalPaid"]), expected_paid)
+        self.assertEqual(D(alpha["totalCharges"]), expected_charges)
+
+        # Individual ledger for Sizing A
+        res_ind = self.client.get(f"{URL}{self.sizing_a.id}/")
+        self.assertEqual(D(res_ind.data["totalPayables"]), expected_payables)
+        self.assertEqual(D(res_ind.data["totalPaid"]), expected_paid)
+        self.assertEqual(D(res_ind.data["totalCharges"]), expected_charges)
+

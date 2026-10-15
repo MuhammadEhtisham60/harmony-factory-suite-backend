@@ -20,7 +20,7 @@ Sizing charge on an outcome row (derived, exact):
 from datetime import date as date_type
 from decimal import Decimal, localcontext
 
-from django.db.models import Sum, Count, F, Q, Value
+from django.db.models import Case, When, Sum, Count, F, Q, Value, DecimalField
 from django.db.models.functions import Coalesce
 
 from factory.yarn.yarn_intake.models import YarnOutcome
@@ -200,7 +200,13 @@ def _apply_running_balances(rows):
             bal["bags"] -= row["bags_out"]
             bal["cones"] -= row["cones_out"]
             bal["kg"] -= row["weight_kg_out"]
-            bal["charges"] += row["sizing_charge"]
+            if row.get("payment_status") == "Paid" or (row.get("amount_due") is not None and _dec(row.get("amount_due")) == ZERO):
+                due = ZERO
+            elif row.get("amount_paid") and _dec(row.get("amount_paid")) > ZERO:
+                due = max(ZERO, row["sizing_charge"] - _dec(row.get("amount_paid")))
+            else:
+                due = row["sizing_charge"]
+            bal["charges"] += due
 
         row["balance_bags"] = bal["bags"]
         row["balance_cones"] = bal["cones"]
@@ -323,6 +329,8 @@ def summarize_ledger(rows):
                     "total_weight_kg_out": ZERO,
                     "total_weight_lb_out": ZERO,
                     "total_sizing_charge": ZERO,
+                    "total_amount_paid": ZERO,
+                    "total_payables": ZERO,
                 },
             )
             p["entries"] += 1
@@ -337,6 +345,14 @@ def summarize_ledger(rows):
                 p["total_weight_kg_out"] += row["weight_kg_out"]
                 p["total_weight_lb_out"] += row["weight_lb_out"]
                 p["total_sizing_charge"] += row["sizing_charge"]
+                p["total_amount_paid"] += _dec(row.get("amount_paid"))
+                if row.get("payment_status") == "Paid" or (row.get("amount_due") is not None and _dec(row.get("amount_due")) == ZERO):
+                    due = ZERO
+                elif row.get("amount_paid") and _dec(row.get("amount_paid")) > ZERO:
+                    due = max(ZERO, row["sizing_charge"] - _dec(row.get("amount_paid")))
+                else:
+                    due = row["sizing_charge"]
+                p["total_payables"] += due
             p.update(_balance_of(row))
 
         party_list = sorted(parties.values(), key=lambda p: (p["sizing_name"], p["sizing_id"]))
@@ -352,6 +368,8 @@ def summarize_ledger(rows):
             "total_weight_kg_out": ZERO,
             "total_weight_lb_out": ZERO,
             "total_sizing_charge": ZERO,
+            "total_amount_paid": ZERO,
+            "total_payables": ZERO,
         }
         totals.update(_zero_balance())
         for p in party_list:
@@ -381,6 +399,8 @@ MAIN_CSV_COLUMNS = [
     ("Total Boxes Sent", "total_boxes_sent"),
     ("Total Boxes Received", "total_boxes_received"),
     ("Total Boxes Balance", "total_boxes_balance"),
+    ("Total Charges", "total_charges"),
+    ("Total Paid", "total_paid"),
     ("Total Payables", "total_payables"),
     ("Total Weight Kg Sent", "total_weight_kg_sent"),
     ("Total Weight Kg Received", "total_weight_kg_received"),
@@ -429,6 +449,8 @@ def get_main_sizing_ledger(
         if not sizing_ids:
             empty_totals = {
                 "total_payables": ZERO,
+                "total_charges": ZERO,
+                "total_paid": ZERO,
                 "total_boxes_sent": ZERO,
                 "total_boxes_received": ZERO,
                 "total_boxes_balance": ZERO,
@@ -457,6 +479,12 @@ def get_main_sizing_ledger(
             yo_qs = yo_qs.filter(outcome_date__lte=date_to)
             so_qs = so_qs.filter(outcome_date__lte=date_to)
 
+        due_expr = Case(
+            When(amount_due__isnull=False, then=F("amount_due")),
+            default=Coalesce(F("total_rate"), Value(Decimal("0"))) - Coalesce(F("amount_paid"), Value(Decimal("0"))),
+            output_field=DecimalField(max_digits=18, decimal_places=6),
+        )
+
         # 1. Independent aggregation for YarnOutcome (Boxes sent to sizing)
         yo_grouped = (
             yo_qs.values("sizing_id")
@@ -470,14 +498,16 @@ def get_main_sizing_ledger(
         )
         sent_map = {item["sizing_id"]: item for item in yo_grouped}
 
-        # 2. Independent aggregation for SizingOutcome (Boxes received / lagat + sizing charges)
+        # 2. Independent aggregation for SizingOutcome (Boxes received / lagat + sizing charges & payments)
         so_grouped = (
             so_qs.values("yarn_outcome__sizing_id")
             .annotate(
                 boxes_recv=Coalesce(Sum("lagat_bags"), Value(Decimal("0"))),
                 cones_recv=Coalesce(Sum("lagat_cones"), Value(Decimal("0"))),
                 net_weight_kg_recv=Coalesce(Sum("net_weight_kg"), Value(Decimal("0"))),
-                payables=Coalesce(Sum("total_rate"), Value(Decimal("0"))),
+                payables=Coalesce(Sum(due_expr), Value(Decimal("0"))),
+                charges=Coalesce(Sum("total_rate"), Value(Decimal("0"))),
+                paid=Coalesce(Sum("amount_paid"), Value(Decimal("0"))),
                 tx_count=Count("id"),
             )
         )
@@ -494,13 +524,17 @@ def get_main_sizing_ledger(
             boxes_recv=Coalesce(Sum("lagat_bags"), Value(Decimal("0"))),
             cones_recv=Coalesce(Sum("lagat_cones"), Value(Decimal("0"))),
             net_weight_kg_recv=Coalesce(Sum("net_weight_kg"), Value(Decimal("0"))),
-            payables=Coalesce(Sum("total_rate"), Value(Decimal("0"))),
+            payables=Coalesce(Sum(due_expr), Value(Decimal("0"))),
+            charges=Coalesce(Sum("total_rate"), Value(Decimal("0"))),
+            paid=Coalesce(Sum("amount_paid"), Value(Decimal("0"))),
         )
 
         tot_boxes_sent = _dec(overall_sent["boxes_sent"])
         tot_boxes_recv = _dec(overall_recv["boxes_recv"])
         tot_boxes_bal = tot_boxes_sent - tot_boxes_recv
         tot_payables = _dec(overall_recv["payables"])
+        tot_charges = _dec(overall_recv["charges"])
+        tot_paid = _dec(overall_recv["paid"])
 
         tot_cones_sent = _dec(overall_sent["cones_sent"])
         tot_cones_recv = _dec(overall_recv["cones_recv"])
@@ -512,6 +546,8 @@ def get_main_sizing_ledger(
 
         aggregate_totals = {
             "total_payables": tot_payables,
+            "total_charges": tot_charges,
+            "total_paid": tot_paid,
             "total_boxes_sent": tot_boxes_sent,
             "total_boxes_received": tot_boxes_recv,
             "total_boxes_balance": tot_boxes_bal,
@@ -536,6 +572,8 @@ def get_main_sizing_ledger(
             b_bal = b_sent - b_recv
 
             pay = _dec(s_recv.get("payables", ZERO))
+            charges = _dec(s_recv.get("charges", ZERO))
+            paid = _dec(s_recv.get("paid", ZERO))
 
             c_sent = _dec(s_sent.get("cones_sent", ZERO))
             c_recv = _dec(s_recv.get("cones_recv", ZERO))
@@ -560,6 +598,8 @@ def get_main_sizing_ledger(
                 "total_boxes_received": b_recv,
                 "total_boxes_balance": b_bal,
                 "total_payables": pay,
+                "total_charges": charges,
+                "total_paid": paid,
                 "total_weight_kg_sent": w_sent,
                 "total_weight_kg_received": w_recv,
                 "total_weight_kg_balance": w_bal,
@@ -586,6 +626,8 @@ def get_main_sizing_ledger(
             "total_boxes_received": lambda x: x["total_boxes_received"],
             "total_boxes_balance": lambda x: x["total_boxes_balance"],
             "total_payables": lambda x: x["total_payables"],
+            "total_charges": lambda x: x["total_charges"],
+            "total_paid": lambda x: x["total_paid"],
             "transactions_count": lambda x: x["transactions_count"],
         }
         key_func = valid_sort_keys.get(sort_key, valid_sort_keys["sizing_name"])
@@ -600,6 +642,12 @@ def get_individual_sizing_ledger_summary(sizing_id, date_from=None, date_to=None
     """
     with localcontext() as ctx:
         ctx.prec = LEDGER_DECIMAL_PRECISION
+
+        due_expr = Case(
+            When(amount_due__isnull=False, then=F("amount_due")),
+            default=Coalesce(F("total_rate"), Value(Decimal("0"))) - Coalesce(F("amount_paid"), Value(Decimal("0"))),
+            output_field=DecimalField(max_digits=18, decimal_places=6),
+        )
 
         yo_qs = YarnOutcome.objects.filter(
             outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING,
@@ -625,7 +673,9 @@ def get_individual_sizing_ledger_summary(sizing_id, date_from=None, date_to=None
             boxes_recv=Coalesce(Sum("lagat_bags"), Value(Decimal("0"))),
             cones_recv=Coalesce(Sum("lagat_cones"), Value(Decimal("0"))),
             net_weight_kg_recv=Coalesce(Sum("net_weight_kg"), Value(Decimal("0"))),
-            payables=Coalesce(Sum("total_rate"), Value(Decimal("0"))),
+            payables=Coalesce(Sum(due_expr), Value(Decimal("0"))),
+            charges=Coalesce(Sum("total_rate"), Value(Decimal("0"))),
+            paid=Coalesce(Sum("amount_paid"), Value(Decimal("0"))),
         )
 
         b_sent = _dec(yo_agg["boxes_sent"])
@@ -633,6 +683,8 @@ def get_individual_sizing_ledger_summary(sizing_id, date_from=None, date_to=None
         b_bal = b_sent - b_recv
 
         pay = _dec(so_agg["payables"])
+        charges = _dec(so_agg["charges"])
+        paid = _dec(so_agg["paid"])
 
         c_sent = _dec(yo_agg["cones_sent"])
         c_recv = _dec(so_agg["cones_recv"])
@@ -644,6 +696,8 @@ def get_individual_sizing_ledger_summary(sizing_id, date_from=None, date_to=None
 
         return {
             "total_payables": pay,
+            "total_charges": charges,
+            "total_paid": paid,
             "total_boxes_sent": b_sent,
             "total_boxes_received": b_recv,
             "total_boxes_balance": b_bal,

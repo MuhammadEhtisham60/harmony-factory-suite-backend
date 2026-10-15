@@ -79,8 +79,9 @@ class _SummaryBlockSerializer(BalanceSerializer):
     totalBagsOut = ExactDecimalField(source="total_bags_out")
     totalConesOut = ExactDecimalField(source="total_cones_out")
     totalWeightKgOut = ExactDecimalField(source="total_weight_kg_out")
-    totalWeightLbOut = ExactDecimalField(source="total_weight_lb_out")
     totalSizingCharge = ExactDecimalField(source="total_sizing_charge")
+    totalAmountPaid = ExactDecimalField(source="total_amount_paid", required=False)
+    totalPayables = ExactDecimalField(source="total_payables", required=False)
 
 
 class SizingLedgerPartySummarySerializer(_SummaryBlockSerializer):
@@ -107,6 +108,8 @@ class MainSizingLedgerItemSerializer(serializers.Serializer):
     totalBoxesReceived = ExactDecimalField(source="total_boxes_received")
     totalBoxesBalance = ExactDecimalField(source="total_boxes_balance")
     totalPayables = ExactDecimalField(source="total_payables")
+    totalPaid = ExactDecimalField(source="total_paid", required=False)
+    totalCharges = ExactDecimalField(source="total_charges", required=False)
 
     totalWeightKgSent = ExactDecimalField(source="total_weight_kg_sent")
     totalWeightKgReceived = ExactDecimalField(source="total_weight_kg_received")
@@ -123,6 +126,8 @@ class MainSizingLedgerItemSerializer(serializers.Serializer):
 
 class MainSizingLedgerSummarySerializer(serializers.Serializer):
     totalPayables = ExactDecimalField(source="total_payables")
+    totalPaid = ExactDecimalField(source="total_paid", required=False)
+    totalCharges = ExactDecimalField(source="total_charges", required=False)
     totalBoxesSent = ExactDecimalField(source="total_boxes_sent")
     totalBoxesReceived = ExactDecimalField(source="total_boxes_received")
     totalBoxesBalance = ExactDecimalField(source="total_boxes_balance")
@@ -153,6 +158,8 @@ class SizingDetailSummarySerializer(serializers.Serializer):
 
 class IndividualSizingSummarySerializer(serializers.Serializer):
     totalPayables = ExactDecimalField(source="total_payables")
+    totalPaid = ExactDecimalField(source="total_paid", required=False)
+    totalCharges = ExactDecimalField(source="total_charges", required=False)
     totalBoxesSent = ExactDecimalField(source="total_boxes_sent")
     totalBoxesReceived = ExactDecimalField(source="total_boxes_received")
     totalBoxesBalance = ExactDecimalField(source="total_boxes_balance")
