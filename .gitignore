@@ -24,3 +24,9 @@ ENV/
 *.swp
 .DS_Store
 Thumbs.db
+
+
+md_filess
+md_files/
+/md_files
+md_files
