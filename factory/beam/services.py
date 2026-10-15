@@ -25,6 +25,9 @@ def load_beam_onto_loom(
     loom_or_id,
     warp_count="",
     weft_count="",
+    cloth_quality="",
+    cloth_name=None,
+    cloth_name_or_id=None,
     reed_width=None,
     pick=None,
     reed_count=None,
@@ -35,6 +38,7 @@ def load_beam_onto_loom(
     installation_date=None,
     user=None,
     request=None,
+    **kwargs,
 ):
     """
     Atomically loads a returned Sizing Outcome Set onto an existing physical Beam
@@ -124,6 +128,41 @@ def load_beam_onto_loom(
                     ]
                 })
 
+            # Resolve cloth_quality and cloth_name
+            from factory.cloth.models import ClothName
+            resolved_cloth_name = None
+            target_cn_id = cloth_name_or_id or cloth_name
+            if target_cn_id:
+                if isinstance(target_cn_id, ClothName):
+                    resolved_cloth_name = target_cn_id
+                else:
+                    try:
+                        resolved_cloth_name = ClothName.objects.get(id=target_cn_id)
+                    except (ClothName.DoesNotExist, ValueError):
+                        pass
+
+            resolved_quality = str(cloth_quality or "").strip()
+            if not resolved_quality and resolved_cloth_name:
+                resolved_quality = resolved_cloth_name.name
+            elif not resolved_quality:
+                parts = []
+                rc = int(float(reed_count)) if reed_count else None
+                pc = int(float(pick_count or pick)) if (pick_count or pick) else None
+                if rc and pc:
+                    parts.append(f"{rc}x{pc}")
+                wc = str(warp_count or getattr(beam, "warp_count", "") or "").strip()
+                wec = str(weft_count or "").strip()
+                if wc or wec:
+                    parts.append(f"{wc or '40/1'}x{wec or '40/1'}")
+                w = int(float(width or getattr(beam, "width", None) or 63))
+                resolved_quality = f"{' / '.join(parts)} ({w}\")" if parts else "Cotton Standard 40/40"
+
+            if not resolved_cloth_name and resolved_quality:
+                resolved_cloth_name, _ = ClothName.objects.get_or_create(
+                    name=resolved_quality,
+                    defaults={"created_by": user}
+                )
+
             # Create BeamLoading record
             loading = BeamLoading.objects.create(
                 sizing_outcome=sizing_outcome,
@@ -131,6 +170,8 @@ def load_beam_onto_loom(
                 loom=loom,
                 warp_count=warp_count or getattr(beam, "warp_count", "") or "",
                 weft_count=weft_count or "",
+                cloth_quality=resolved_quality,
+                cloth_name=resolved_cloth_name,
                 reed_width=reed_width,
                 pick=pick,
                 reed_count=reed_count,

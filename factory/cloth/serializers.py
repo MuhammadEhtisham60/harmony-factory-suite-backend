@@ -332,10 +332,14 @@ class ClothPatchSerializer(serializers.ModelSerializer):
             cn_str = self.initial_data.get("clothName") or self.initial_data.get("cloth_name")
             if isinstance(cn_str, str) and cn_str.strip():
                 cn_obj = ClothName.objects.filter(name__iexact=cn_str.strip()).first()
-                if cn_obj:
-                    attrs["cloth_name"] = cn_obj
-                else:
-                    raise serializers.ValidationError({"clothName": [f"ClothName '{cn_str}' does not exist."]})
+                if not cn_obj:
+                    cn_obj = ClothName.objects.create(name=cn_str.strip())
+                attrs["cloth_name"] = cn_obj
+            elif resolved_loading and getattr(resolved_loading, "cloth_name", None):
+                attrs["cloth_name"] = resolved_loading.cloth_name
+            elif resolved_loading and getattr(resolved_loading, "cloth_quality", None):
+                cn_obj, _ = ClothName.objects.get_or_create(name=resolved_loading.cloth_quality.strip())
+                attrs["cloth_name"] = cn_obj
             else:
                 raise serializers.ValidationError({"clothName": ["cloth_name (or clothNameId) is required."]})
 

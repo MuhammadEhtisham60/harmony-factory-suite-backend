@@ -355,7 +355,7 @@ class BeamLoadingViewSet(ModelViewSet):
     queryset = (
         BeamLoading.objects
         .select_related("beam", "loom", "sizing_outcome", "created_by", "updated_by")
-        .prefetch_related("productions")
+        .prefetch_related("productions", "cloth_patches")
         .all()
     )
     permission_classes = [IsAuthenticated, HasERPModulePermission]

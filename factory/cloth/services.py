@@ -106,14 +106,20 @@ def create_cloth_patch(
         # Resolve ClothName
         if isinstance(cloth_name_or_id, ClothName):
             cloth_name_obj = cloth_name_or_id
-        else:
+        elif cloth_name_or_id:
             try:
                 cloth_name_obj = ClothName.objects.get(id=cloth_name_or_id)
             except (ClothName.DoesNotExist, ValueError):
-                # Check by name string
+                # Check by name string or create on the fly
                 cloth_name_obj = ClothName.objects.filter(name__iexact=str(cloth_name_or_id).strip()).first()
                 if not cloth_name_obj:
-                    raise ValidationError({"cloth_name": [f"ClothName '{cloth_name_or_id}' does not exist."]})
+                    cloth_name_obj = ClothName.objects.create(name=str(cloth_name_or_id).strip(), created_by=user)
+        elif getattr(loading, "cloth_name", None):
+            cloth_name_obj = loading.cloth_name
+        elif getattr(loading, "cloth_quality", None) and str(loading.cloth_quality).strip():
+            cloth_name_obj, _ = ClothName.objects.get_or_create(name=loading.cloth_quality.strip(), defaults={"created_by": user})
+        else:
+            raise ValidationError({"cloth_name": ["Cloth quality / name could not be resolved from active loading."]})
 
         # Advance BeamLoading and Beam to IN_PRODUCTION if currently LOADED
         if loading.status == BeamLoading.StatusChoices.LOADED:

@@ -351,6 +351,10 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
     # Spec fields
     warpCount = serializers.CharField(source="warp_count", required=False, allow_blank=True, default="")
     weftCount = serializers.CharField(source="weft_count", required=False, allow_blank=True, default="")
+    clothQuality = serializers.CharField(source="cloth_quality", required=False, allow_blank=True, default="")
+    cloth_quality = serializers.CharField(required=False, allow_blank=True, default="")
+    clothName = serializers.SerializerMethodField()
+    clothNameId = serializers.IntegerField(source="cloth_name_id", required=False, write_only=True, allow_null=True)
     reedWidth = serializers.DecimalField(source="reed_width", max_digits=15, decimal_places=6, required=False, allow_null=True)
     pick = serializers.DecimalField(max_digits=15, decimal_places=6, required=False, allow_null=True)
     reedCount = serializers.DecimalField(source="reed_count", max_digits=15, decimal_places=6, required=False, allow_null=True)
@@ -394,6 +398,10 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
             "setNo",
             "warpCount",
             "weftCount",
+            "clothQuality",
+            "cloth_quality",
+            "clothName",
+            "clothNameId",
             "reedWidth",
             "pick",
             "reedCount",
@@ -423,6 +431,7 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
             "beamNumber",
             "loomCode",
             "loomNumber",
+            "clothName",
             "sizingOutcomeDetail",
             "beamDetail",
             "loomDetail",
@@ -482,11 +491,19 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
         return None
 
     def get_totalMetersProduced(self, obj):
-        if hasattr(obj, "productions"):
-            from django.db.models import Sum
-            total = obj.productions.aggregate(Sum("meters_produced"))["meters_produced__sum"]
-            return str(total) if total is not None else "0.00"
-        return "0.00"
+        from django.db.models import Sum
+        patch_total = (
+            obj.cloth_patches.aggregate(Sum("productive_length"))["productive_length__sum"]
+            if hasattr(obj, "cloth_patches")
+            else None
+        )
+        prod_total = (
+            obj.productions.aggregate(Sum("meters_produced"))["meters_produced__sum"]
+            if hasattr(obj, "productions")
+            else None
+        )
+        total = max(float(patch_total or 0), float(prod_total or 0))
+        return f"{total:.2f}"
 
     def get_createdBy(self, obj):
         if obj.created_by:
@@ -511,6 +528,13 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
             return BeamDismountReconciliationSerializer(obj.reconciliation).data
         return None
 
+    def get_clothName(self, obj):
+        if obj.cloth_name:
+            return {"id": obj.cloth_name.id, "name": obj.cloth_name.name}
+        if obj.cloth_quality:
+            return {"id": None, "name": obj.cloth_quality}
+        return None
+
     def to_internal_value(self, data):
         data = data.copy() if hasattr(data, "copy") else dict(data)
         mapping = {
@@ -520,6 +544,8 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
             "loom_id": "loomId",
             "warp_count": "warpCount",
             "weft_count": "weftCount",
+            "cloth_quality": "clothQuality",
+            "cloth_name_id": "clothNameId",
             "reed_width": "reedWidth",
             "reed_count": "reedCount",
             "pick_count": "pickCount",

@@ -164,6 +164,22 @@ class BeamLoading(models.Model):
         help_text="Weft yarn count"
     )
 
+    cloth_quality = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Cloth Quality / Fabric Name set when mounting beam on loom"
+    )
+
+    cloth_name = models.ForeignKey(
+        "factory.ClothName",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="beam_loadings",
+        help_text="Master cloth quality reference"
+    )
+
     reed_width = models.DecimalField(
         max_digits=15,
         decimal_places=6,

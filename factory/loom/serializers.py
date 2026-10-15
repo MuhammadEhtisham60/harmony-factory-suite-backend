@@ -92,8 +92,18 @@ class LoomListSerializer(serializers.ModelSerializer):
         if not loading:
             return 0.0
         from django.db.models import Sum
-        total = loading.productions.aggregate(Sum("meters_produced"))["meters_produced__sum"]
-        return round(float(total), 2) if total is not None else 0.0
+        patch_total = (
+            loading.cloth_patches.aggregate(Sum("productive_length"))["productive_length__sum"]
+            if hasattr(loading, "cloth_patches")
+            else None
+        )
+        prod_total = (
+            loading.productions.aggregate(Sum("meters_produced"))["meters_produced__sum"]
+            if hasattr(loading, "productions")
+            else None
+        )
+        total = max(float(patch_total or 0), float(prod_total or 0))
+        return round(float(total), 2)
 
     def get_remainingMeters(self, obj):
         total_len = self.get_beamLength(obj)
@@ -212,8 +222,18 @@ class LoomDetailSerializer(serializers.ModelSerializer):
         if not loading:
             return 0.0
         from django.db.models import Sum
-        total = loading.productions.aggregate(Sum("meters_produced"))["meters_produced__sum"]
-        return round(float(total), 2) if total is not None else 0.0
+        patch_total = (
+            loading.cloth_patches.aggregate(Sum("productive_length"))["productive_length__sum"]
+            if hasattr(loading, "cloth_patches")
+            else None
+        )
+        prod_total = (
+            loading.productions.aggregate(Sum("meters_produced"))["meters_produced__sum"]
+            if hasattr(loading, "productions")
+            else None
+        )
+        total = max(float(patch_total or 0), float(prod_total or 0))
+        return round(float(total), 2)
 
     def get_remainingMeters(self, obj):
         total_len = self.get_beamLength(obj)
