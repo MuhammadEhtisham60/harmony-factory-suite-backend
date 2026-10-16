@@ -14,8 +14,18 @@ from .models import (
 
 @admin.register(ClothName)
 class ClothNameAdmin(admin.ModelAdmin):
-    list_display = ["id", "name", "created_at", "updated_at"]
-    search_fields = ["name"]
+    list_display = [
+        "id",
+        "name",
+        "warp_count",
+        "weft_count",
+        "reed_count",
+        "pick_count",
+        "reed_width",
+        "created_at",
+        "updated_at",
+    ]
+    search_fields = ["name", "warp_count", "weft_count"]
 
 
 @admin.register(ClothPatch)

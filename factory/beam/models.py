@@ -150,27 +150,6 @@ class BeamLoading(models.Model):
         related_name="beam_loadings"
     )
 
-    warp_count = models.CharField(
-        max_length=100,
-        blank=True,
-        default="",
-        help_text="Warp yarn count"
-    )
-
-    weft_count = models.CharField(
-        max_length=100,
-        blank=True,
-        default="",
-        help_text="Weft yarn count"
-    )
-
-    cloth_quality = models.CharField(
-        max_length=255,
-        blank=True,
-        default="",
-        help_text="Cloth Quality / Fabric Name set when mounting beam on loom"
-    )
-
     cloth_name = models.ForeignKey(
         "factory.ClothName",
         on_delete=models.SET_NULL,
@@ -178,38 +157,6 @@ class BeamLoading(models.Model):
         blank=True,
         related_name="beam_loadings",
         help_text="Master cloth quality reference"
-    )
-
-    reed_width = models.DecimalField(
-        max_digits=15,
-        decimal_places=6,
-        null=True,
-        blank=True,
-        help_text="Reed width in inches"
-    )
-
-    pick = models.DecimalField(
-        max_digits=15,
-        decimal_places=6,
-        null=True,
-        blank=True,
-        help_text="Pick / PPI"
-    )
-
-    reed_count = models.DecimalField(
-        max_digits=15,
-        decimal_places=6,
-        null=True,
-        blank=True,
-        help_text="Reed count"
-    )
-
-    pick_count = models.DecimalField(
-        max_digits=15,
-        decimal_places=6,
-        null=True,
-        blank=True,
-        help_text="Pick count"
     )
 
     shortage = models.DecimalField(
@@ -220,14 +167,6 @@ class BeamLoading(models.Model):
         help_text="Expected / observed shortage"
     )
 
-    width = models.DecimalField(
-        max_digits=15,
-        decimal_places=6,
-        null=True,
-        blank=True,
-        help_text="Fabric width in inches"
-    )
-
     lakhai = models.DecimalField(
         max_digits=15,
         decimal_places=6,
@@ -235,6 +174,38 @@ class BeamLoading(models.Model):
         blank=True,
         help_text="Lakhai (drawing-in / drafting cost or measurement)"
     )
+
+    @property
+    def warp_count(self):
+        return self.cloth_name.warp_count if self.cloth_name else ""
+
+    @property
+    def weft_count(self):
+        return self.cloth_name.weft_count if self.cloth_name else ""
+
+    @property
+    def cloth_quality(self):
+        return self.cloth_name.name if self.cloth_name else ""
+
+    @property
+    def reed_width(self):
+        return self.cloth_name.reed_width if self.cloth_name else None
+
+    @property
+    def reed_count(self):
+        return self.cloth_name.reed_count if self.cloth_name else None
+
+    @property
+    def pick_count(self):
+        return self.cloth_name.pick_count if self.cloth_name else None
+
+    @property
+    def pick(self):
+        return self.pick_count
+
+    @property
+    def width(self):
+        return self.reed_width
 
     installation_date = models.DateField(
         null=True,

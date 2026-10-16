@@ -27,6 +27,44 @@ class ClothName(models.Model):
         help_text="Cloth name / quality title (e.g. Cotton 40/40, Poplin 60/60)"
     )
 
+    warp_count = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        help_text="Warp yarn count (e.g. 40/1, 20/1)"
+    )
+
+    weft_count = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        help_text="Weft yarn count (e.g. 40/1, 20/1)"
+    )
+
+    reed_count = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        help_text="Reed count / dents per inch"
+    )
+
+    pick_count = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        help_text="Pick count / PPI"
+    )
+
+    reed_width = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        help_text="Reed width in inches"
+    )
+
     description = models.TextField(
         blank=True,
         default="",
@@ -66,10 +104,18 @@ class ClothName(models.Model):
                 qs = qs.exclude(pk=self.pk)
             if qs.exists():
                 raise ValidationError({"name": ["Cloth name with this name already exists (case-insensitive)."]})
+        if self.warp_count:
+            self.warp_count = self.warp_count.strip()
+        if self.weft_count:
+            self.weft_count = self.weft_count.strip()
 
     def save(self, *args, **kwargs):
         if self.name:
             self.name = self.name.strip()
+        if self.warp_count:
+            self.warp_count = self.warp_count.strip()
+        if self.weft_count:
+            self.weft_count = self.weft_count.strip()
         super().save(*args, **kwargs)
 
     def __str__(self):

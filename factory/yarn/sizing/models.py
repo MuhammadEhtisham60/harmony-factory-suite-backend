@@ -141,6 +141,20 @@ class SizingOutcome(models.Model):
         help_text="Remaining cones on sizing stock"
     )
 
+    return_bags = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="Bags returned from sizing back to yarn intake/stock"
+    )
+
+    return_cones = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="Cones returned from sizing back to yarn intake/stock"
+    )
+
     lagat_bags = models.DecimalField(
         max_digits=15,
         decimal_places=6,
@@ -390,6 +404,17 @@ class SizingOutcome(models.Model):
                     self.payment_status = self.PaymentStatusChoices.UNPAID
 
         super().save(*args, **kwargs)
+        if self.yarn_outcome_id:
+            from factory.yarn.sizing.services import sync_sizing_outcome_to_intake
+            sync_sizing_outcome_to_intake(self)
+
+    def delete(self, *args, **kwargs):
+        yo = self.yarn_outcome
+        super().delete(*args, **kwargs)
+        if yo:
+            from factory.yarn.sizing.services import sync_sizing_outcome_to_intake, sync_yarn_outcome_status
+            sync_sizing_outcome_to_intake(yo)
+            sync_yarn_outcome_status(yo)
 
     @property
     def sizing(self):

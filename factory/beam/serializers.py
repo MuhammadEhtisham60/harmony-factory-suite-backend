@@ -3,6 +3,7 @@ Serializers for the Beam module.
 """
 
 from rest_framework import serializers
+from factory.cloth.models import ClothName
 from .models import Beam
 
 
@@ -348,19 +349,27 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
     beamDetail = serializers.SerializerMethodField()
     loomDetail = serializers.SerializerMethodField()
 
-    # Spec fields
-    warpCount = serializers.CharField(source="warp_count", required=False, allow_blank=True, default="")
-    weftCount = serializers.CharField(source="weft_count", required=False, allow_blank=True, default="")
-    clothQuality = serializers.CharField(source="cloth_quality", required=False, allow_blank=True, default="")
-    cloth_quality = serializers.CharField(required=False, allow_blank=True, default="")
+    # Spec fields (derived from linked cloth_name model)
+    warpCount = serializers.CharField(source="warp_count", read_only=True)
+    warp_count = serializers.CharField(read_only=True)
+    weftCount = serializers.CharField(source="weft_count", read_only=True)
+    weft_count = serializers.CharField(read_only=True)
+    clothQuality = serializers.CharField(source="cloth_quality", read_only=True)
+    cloth_quality = serializers.CharField(read_only=True)
     clothName = serializers.SerializerMethodField()
     clothNameId = serializers.IntegerField(source="cloth_name_id", required=False, write_only=True, allow_null=True)
-    reedWidth = serializers.DecimalField(source="reed_width", max_digits=15, decimal_places=6, required=False, allow_null=True)
-    pick = serializers.DecimalField(max_digits=15, decimal_places=6, required=False, allow_null=True)
-    reedCount = serializers.DecimalField(source="reed_count", max_digits=15, decimal_places=6, required=False, allow_null=True)
-    pickCount = serializers.DecimalField(source="pick_count", max_digits=15, decimal_places=6, required=False, allow_null=True)
+    cloth_name = serializers.PrimaryKeyRelatedField(
+        queryset=ClothName.objects.all(), required=False, allow_null=True
+    )
+    reedWidth = serializers.DecimalField(source="reed_width", max_digits=15, decimal_places=6, read_only=True)
+    reed_width = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
+    pick = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
+    reedCount = serializers.DecimalField(source="reed_count", max_digits=15, decimal_places=6, read_only=True)
+    reed_count = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
+    pickCount = serializers.DecimalField(source="pick_count", max_digits=15, decimal_places=6, read_only=True)
+    pick_count = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
     shortage = serializers.DecimalField(max_digits=15, decimal_places=6, required=False, allow_null=True)
-    width = serializers.DecimalField(max_digits=15, decimal_places=6, required=False, allow_null=True)
+    width = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
     lakhai = serializers.DecimalField(max_digits=15, decimal_places=6, required=False, allow_null=True)
     installationDate = serializers.DateField(source="installation_date", required=False, allow_null=True)
 
@@ -397,15 +406,21 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
             "loomDetail",
             "setNo",
             "warpCount",
+            "warp_count",
             "weftCount",
+            "weft_count",
             "clothQuality",
             "cloth_quality",
             "clothName",
             "clothNameId",
+            "cloth_name",
             "reedWidth",
+            "reed_width",
             "pick",
             "reedCount",
+            "reed_count",
             "pickCount",
+            "pick_count",
             "shortage",
             "width",
             "lakhai",
@@ -432,6 +447,20 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
             "loomCode",
             "loomNumber",
             "clothName",
+            "warpCount",
+            "warp_count",
+            "weftCount",
+            "weft_count",
+            "clothQuality",
+            "cloth_quality",
+            "reedWidth",
+            "reed_width",
+            "pick",
+            "reedCount",
+            "reed_count",
+            "pickCount",
+            "pick_count",
+            "width",
             "sizingOutcomeDetail",
             "beamDetail",
             "loomDetail",
@@ -530,9 +559,16 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
 
     def get_clothName(self, obj):
         if obj.cloth_name:
-            return {"id": obj.cloth_name.id, "name": obj.cloth_name.name}
-        if obj.cloth_quality:
-            return {"id": None, "name": obj.cloth_quality}
+            cn = obj.cloth_name
+            return {
+                "id": cn.id,
+                "name": cn.name,
+                "warpCount": cn.warp_count,
+                "weftCount": cn.weft_count,
+                "reedCount": cn.reed_count,
+                "pickCount": cn.pick_count,
+                "reedWidth": cn.reed_width,
+            }
         return None
 
     def to_internal_value(self, data):
@@ -542,13 +578,7 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
             "sizing_outcome_id": "sizingOutcomeId",
             "beam_id": "beamId",
             "loom_id": "loomId",
-            "warp_count": "warpCount",
-            "weft_count": "weftCount",
-            "cloth_quality": "clothQuality",
             "cloth_name_id": "clothNameId",
-            "reed_width": "reedWidth",
-            "reed_count": "reedCount",
-            "pick_count": "pickCount",
             "installation_date": "installationDate",
             "expected_length": "expectedLength",
             "dismount_date": "dismountDate",
@@ -556,6 +586,12 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
         for snake, camel in mapping.items():
             if snake in data and camel not in data:
                 data[camel] = data[snake]
+
+        if "clothNameId" in data and "cloth_name" not in data:
+            data["cloth_name"] = data["clothNameId"]
+        elif "cloth_name_id" in data and "cloth_name" not in data:
+            data["cloth_name"] = data["cloth_name_id"]
+
         return super().to_internal_value(data)
 
     def validate(self, attrs):

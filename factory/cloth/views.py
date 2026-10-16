@@ -62,8 +62,11 @@ class ClothNameViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated, HasERPModulePermission]
     pagination_class = StandardResultsSetPagination
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    search_fields = ["name", "description"]
-    ordering_fields = ["name", "created_at", "updated_at", "id"]
+    search_fields = ["name", "description", "warp_count", "weft_count"]
+    ordering_fields = [
+        "name", "warp_count", "weft_count", "reed_count", "pick_count", "reed_width",
+        "created_at", "updated_at", "id"
+    ]
     ordering = ["name"]
 
     permission_map = {

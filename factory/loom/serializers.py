@@ -89,8 +89,8 @@ class LoomListSerializer(serializers.ModelSerializer):
     def get_clothName(self, obj):
         loading = self._get_active_loading(obj)
         if loading and loading.cloth_name:
-            return getattr(loading.cloth_name, "cloth_quality", "")
-        return ""
+            return loading.cloth_name.name
+        return loading.cloth_quality if loading else ""
 
     def get_beamLength(self, obj):
         loading = self._get_active_loading(obj)
@@ -239,8 +239,8 @@ class LoomDetailSerializer(serializers.ModelSerializer):
     def get_clothName(self, obj):
         loading = self._get_active_loading(obj)
         if loading and loading.cloth_name:
-            return getattr(loading.cloth_name, "cloth_quality", "")
-        return ""
+            return loading.cloth_name.name
+        return loading.cloth_quality if loading else ""
 
     def get_beamLength(self, obj):
         loading = self._get_active_loading(obj)

@@ -250,9 +250,9 @@ def sync_yarn_outcome_status(yarn_outcome):
     Synchronizes the status of a YarnOutcome based on its linked SizingOutcome returns.
     Rules:
       - If no sizing outcomes exist -> 'In Sizing'
-      - If remaining bags on sizing stock > 0, OR sum of lagat bags is less than outcome_bags
+      - If remaining bags on sizing stock > 0, OR sum of lagat bags + return bags is less than outcome_bags
         (and outcome_bags > 0) -> 'Partially Received'
-      - If all sent bags are consumed/received (sum of lagat_bags >= outcome_bags and remaining_bags_on_sizing_stock == 0) -> 'Received'
+      - If all sent bags are consumed/received (sum of lagat_bags + return_bags >= outcome_bags and remaining_bags_on_sizing_stock == 0) -> 'Received'
     """
     if not yarn_outcome:
         return None
@@ -271,6 +271,8 @@ def sync_yarn_outcome_status(yarn_outcome):
         new_status = YarnOutcome.StatusChoices.IN_SIZING
     else:
         total_lagat = sizing_outcomes.aggregate(total=Sum("lagat_bags"))["total"] or Decimal("0")
+        total_returned = sizing_outcomes.aggregate(total=Sum("return_bags"))["total"] or Decimal("0")
+        total_accounted = total_lagat + total_returned
         sent_bags = Decimal(str(yarn_outcome.outcome_bags or 0))
 
         # Check the latest sizing outcome for remaining bags on sizing stock
@@ -281,9 +283,9 @@ def sync_yarn_outcome_status(yarn_outcome):
             else 0
         )
 
-        if total_lagat <= Decimal("0") and latest_remaining_stock == 0:
+        if total_accounted <= Decimal("0") and latest_remaining_stock == 0:
             new_status = YarnOutcome.StatusChoices.IN_SIZING
-        elif latest_remaining_stock > 0 or (sent_bags > Decimal("0") and total_lagat < sent_bags):
+        elif latest_remaining_stock > 0 or (sent_bags > Decimal("0") and total_accounted < sent_bags):
             new_status = YarnOutcome.StatusChoices.PARTIALLY_RECEIVED
         else:
             new_status = YarnOutcome.StatusChoices.RECEIVED
@@ -293,6 +295,46 @@ def sync_yarn_outcome_status(yarn_outcome):
         yarn_outcome.save(update_fields=["status", "updated_at"])
 
     return new_status
+
+
+def sync_sizing_outcome_to_intake(outcome_or_yarn_outcome):
+    """
+    Recalculates the parent YarnIntake (and shared YarnStock)
+    when a SizingOutcome is created, updated, or deleted.
+    """
+    if not outcome_or_yarn_outcome:
+        return
+
+    from factory.yarn.yarn_intake.models import YarnOutcome
+    if hasattr(outcome_or_yarn_outcome, "yarn_outcome"):
+        yarn_outcome = outcome_or_yarn_outcome.yarn_outcome
+    elif isinstance(outcome_or_yarn_outcome, YarnOutcome):
+        yarn_outcome = outcome_or_yarn_outcome
+    elif isinstance(outcome_or_yarn_outcome, (int, str)):
+        yarn_outcome = YarnOutcome.objects.filter(id=outcome_or_yarn_outcome).first()
+    else:
+        yarn_outcome = None
+
+    if not yarn_outcome:
+        return
+
+    intake_ids = set()
+    if hasattr(yarn_outcome, "items") and yarn_outcome.items.exists():
+        intake_ids.update(yarn_outcome.items.values_list("yarn_intake_id", flat=True))
+    elif hasattr(yarn_outcome, "yarn_intakes") and yarn_outcome.yarn_intakes.exists():
+        intake_ids.update(yarn_outcome.yarn_intakes.values_list("id", flat=True))
+
+    if intake_ids:
+        from factory.yarn.yarn_intake.services import recalculate_yarn_intake_stock
+        from factory.yarn.yarn_intake.models import YarnIntake
+        for intake in YarnIntake.objects.filter(id__in=intake_ids):
+            recalculate_yarn_intake_stock(intake)
+    elif yarn_outcome.stock_id:
+        from factory.yarn.yarn_stock.services import recalculate_yarn_stock
+        from factory.yarn.yarn_stock.models import YarnStock
+        stock = YarnStock.objects.filter(pk=yarn_outcome.stock_id).first()
+        if stock:
+            recalculate_yarn_stock(stock)
 
 
 def create_sizing_outcome(yarn_outcome=None, outcome_date=None, remarks="", beam_ids=None, user=None, request=None, **extra_fields):
@@ -342,6 +384,7 @@ def create_sizing_outcome(yarn_outcome=None, outcome_date=None, remarks="", beam
 
         if yarn_outcome:
             sync_yarn_outcome_status(yarn_outcome)
+            sync_sizing_outcome_to_intake(yarn_outcome)
 
         assignments = []
         if beam_ids:

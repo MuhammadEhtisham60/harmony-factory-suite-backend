@@ -33,6 +33,7 @@ from .services import (
     transition_beam_assignment,
     release_beam_assignment,
     sync_yarn_outcome_status,
+    sync_sizing_outcome_to_intake,
 )
 
 
@@ -262,6 +263,7 @@ class SizingOutcomeViewSet(ModelViewSet):
 
         if updated.yarn_outcome:
             sync_yarn_outcome_status(updated.yarn_outcome)
+            sync_sizing_outcome_to_intake(updated.yarn_outcome)
 
         log_activity(
             request=request,
@@ -309,6 +311,7 @@ class SizingOutcomeViewSet(ModelViewSet):
         instance.delete()
         if yarn_outcome:
             sync_yarn_outcome_status(yarn_outcome)
+            sync_sizing_outcome_to_intake(yarn_outcome)
 
         log_activity(
             request=request,

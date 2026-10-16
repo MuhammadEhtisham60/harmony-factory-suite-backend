@@ -55,12 +55,18 @@ class YarnOutcomeViewSet(ModelViewSet):
         YarnOutcome.objects
         .select_related(
             "stock",
-            "yarn_intake",
-            "yarn_intake__supplier",
+            "stock__yarn_name",
+            "stock__yarn_count",
+            "stock__yarn_type",
             "yarn_buyer",
             "sizing",
             "created_by",
             "updated_by",
+        )
+        .prefetch_related(
+            "items",
+            "items__yarn_intake",
+            "items__yarn_intake__supplier",
         )
         .all()
     )
@@ -75,8 +81,8 @@ class YarnOutcomeViewSet(ModelViewSet):
         "stock__yarn_count__name",
         "stock__yarn_type__name",
         "stock__production_type",
-        "yarn_intake__yarn_name__name",
-        "yarn_intake__set_no",
+        "items__yarn_intake__yarn_name__name",
+        "items__yarn_intake__set_no",
         "outcome_type",
         "yarn_buyer__buyer_name",
     ]
@@ -99,121 +105,103 @@ class YarnOutcomeViewSet(ModelViewSet):
     # ──────────────────────────────────────────────────────────────────────
 
     def create(self, request, *args, **kwargs):
+        # Support bulk list payload: e.g. [{"yarn_intake": 1, ...}, ...]
+        if isinstance(request.data, list):
+            created_outcomes = []
+            with transaction.atomic():
+                for item_payload in request.data:
+                    serializer = YarnOutcomeSerializer(
+                        data=item_payload, context={"request": request}
+                    )
+                    serializer.is_valid(raise_exception=True)
+                    outcome = serializer.save()
+
+                    if outcome.outcome_type == YarnOutcome.OutcomeTypeChoices.SIZING:
+                        from factory.yarn.sizing.models import SizingBeamAssignment
+                        from factory.yarn.sizing.services import assign_beams_to_outcome
+                        raw_beam_ids = item_payload.get("beam_ids") or item_payload.get("beamIds")
+                        single_beam = item_payload.get("beam") or item_payload.get("beam_id") or item_payload.get("beamId")
+                        user = request.user if request.user and request.user.is_authenticated else None
+                        if raw_beam_ids and isinstance(raw_beam_ids, list):
+                            assign_beams_to_outcome(outcome=outcome, beam_ids=raw_beam_ids, user=user, request=request)
+                        elif single_beam:
+                            assign_beams_to_outcome(outcome=outcome, beam_ids=[single_beam], user=user, request=request)
+                        else:
+                            SizingBeamAssignment.objects.create(
+                                yarn_outcome=outcome,
+                                status=SizingBeamAssignment.StatusChoices.ASSIGNED,
+                                created_by=user,
+                                updated_by=user,
+                            )
+                    created_outcomes.append(outcome)
+
+            log_activity(
+                request=request,
+                action="Create Yarn Outcomes (Bulk)",
+                description=f"Created {len(created_outcomes)} yarn outcomes.",
+                module="Yarn – Outcome",
+                status="Success",
+            )
+            return Response(
+                {
+                    "success": True,
+                    "message": f"{len(created_outcomes)} yarn outcomes created successfully.",
+                    "data": [YarnOutcomeSerializer(o, context={"request": request}).data for o in created_outcomes],
+                },
+                status=status.HTTP_201_CREATED,
+            )
+
         serializer = YarnOutcomeSerializer(
             data=request.data, context={"request": request}
         )
         serializer.is_valid(raise_exception=True)
+        outcome = serializer.save()
 
-        validated = serializer.validated_data
-        stock = validated.get("stock")
-        intake = validated.get("yarn_intake")
-        if not stock and intake:
-            stock = intake.stock
-        if not stock:
-            raise ValidationError({"stock": ["A valid YarnStock pool must be selected."]})
+        # When outcomeType is Sizing: create SizingBeamAssignment using created YarnOutcome id
+        if outcome.outcome_type == YarnOutcome.OutcomeTypeChoices.SIZING:
+            from factory.yarn.sizing.models import SizingBeamAssignment
+            from factory.yarn.sizing.services import assign_beams_to_outcome
 
-        outcome_bags = validated["outcome_bags"]
-        outcome_weight_per_bag_kg = validated["outcome_weight_per_bag_kg"]
-        calc_weight_kg = Decimal(str(outcome_bags)) * Decimal(str(outcome_weight_per_bag_kg))
+            raw_beam_ids = (
+                request.data.get("beam_ids")
+                or request.data.get("beamIds")
+            )
+            single_beam = (
+                request.data.get("beam")
+                or request.data.get("beam_id")
+                or request.data.get("beamId")
+            )
 
-        try:
-            with transaction.atomic():
-                # Lock the stock row to prevent race conditions
-                locked_stock = (
-                    YarnStock.objects
-                    .select_for_update()
-                    .get(pk=stock.pk)
+            user = request.user if request.user and request.user.is_authenticated else None
+            if raw_beam_ids and isinstance(raw_beam_ids, list):
+                assign_beams_to_outcome(
+                    outcome=outcome,
+                    beam_ids=raw_beam_ids,
+                    user=user,
+                    request=request,
+                )
+            elif single_beam:
+                assign_beams_to_outcome(
+                    outcome=outcome,
+                    beam_ids=[single_beam],
+                    user=user,
+                    request=request,
+                )
+            else:
+                SizingBeamAssignment.objects.create(
+                    yarn_outcome=outcome,
+                    status=SizingBeamAssignment.StatusChoices.ASSIGNED,
+                    created_by=user,
+                    updated_by=user,
                 )
 
-                # Validate stock pool balance
-                validate_outcome_stock_pool(
-                    stock=locked_stock,
-                    outcome_bags=outcome_bags,
-                    outcome_weight_kg=calc_weight_kg,
-                )
-
-                # Build and save the outcome
-                outcome = YarnOutcome(
-                    stock=locked_stock,
-                    yarn_intake=intake,
-                    outcome_type=validated.get("outcome_type", YarnOutcome.OutcomeTypeChoices.SIZING),
-                    outcome_bags=outcome_bags,
-                    outcome_cones_per_bag=validated.get("outcome_cones_per_bag", 0),
-                    outcome_weight_per_bag_kg=outcome_weight_per_bag_kg,
-                    yarn_buyer=validated.get("yarn_buyer"),
-                    sizing=validated.get("sizing"),
-                    total_price=validated.get("total_price", 0),
-                    outcome_date=validated["outcome_date"],
-                    notes=validated.get("notes", ""),
-                )
-
-                if request.user and request.user.is_authenticated:
-                    outcome.created_by = request.user
-                    outcome.updated_by = request.user
-
-                outcome.calculate_outcome_fields()
-                outcome.save()
-
-                # Recalculate shared stock pool
-                recalculate_yarn_stock(locked_stock)
-
-                # If tied to an intake, recalculate intake denormalized fields
-                if intake:
-                    locked_intake = YarnIntake.objects.select_for_update().get(pk=intake.pk)
-                    recalculate_yarn_intake_stock(locked_intake)
-
-                # When outcomeType is Sizing: create SizingBeamAssignment using created YarnOutcome id
-                if outcome.outcome_type == YarnOutcome.OutcomeTypeChoices.SIZING:
-                    from factory.yarn.sizing.models import SizingBeamAssignment
-                    from factory.yarn.sizing.services import assign_beams_to_outcome
-
-                    raw_beam_ids = (
-                        request.data.get("beam_ids")
-                        or request.data.get("beamIds")
-                        or validated.get("beamIds")
-                    )
-                    single_beam = (
-                        request.data.get("beam")
-                        or request.data.get("beam_id")
-                        or request.data.get("beamId")
-                        or validated.get("beam")
-                        or validated.get("beamId")
-                    )
-
-                    user = request.user if request.user and request.user.is_authenticated else None
-                    if raw_beam_ids and isinstance(raw_beam_ids, list):
-                        assign_beams_to_outcome(
-                            outcome=outcome,
-                            beam_ids=raw_beam_ids,
-                            user=user,
-                            request=request,
-                        )
-                    elif single_beam:
-                        assign_beams_to_outcome(
-                            outcome=outcome,
-                            beam_ids=[single_beam],
-                            user=user,
-                            request=request,
-                        )
-                    else:
-                        SizingBeamAssignment.objects.create(
-                            yarn_outcome=outcome,
-                            status=SizingBeamAssignment.StatusChoices.ASSIGNED,
-                            created_by=user,
-                            updated_by=user,
-                        )
-
-        except ValidationError:
-            raise
-        except Exception as exc:
-            raise ValidationError({"detail": str(exc)})
-
+        stock_name = outcome.stock.yarn_name.name if outcome.stock and outcome.stock.yarn_name else ""
         log_activity(
             request=request,
             action="Create Yarn Outcome",
             description=(
                 f"Created {outcome.outcome_type} outcome of {outcome.outcome_bags} bags "
-                f"from stock pool '{locked_stock.yarn_name.name if locked_stock.yarn_name else ''}' ({locked_stock.yarn_count.name if locked_stock.yarn_count else ''})."
+                f"from stock pool '{stock_name}'."
             ),
             module="Yarn – Outcome",
             status="Success",
@@ -252,97 +240,28 @@ class YarnOutcomeViewSet(ModelViewSet):
             instance, data=request.data, partial=partial, context={"request": request}
         )
         serializer.is_valid(raise_exception=True)
+        outcome = serializer.save()
 
-        validated = serializer.validated_data
-        new_stock = validated.get("stock", instance.stock)
-        new_intake = validated.get("yarn_intake", instance.yarn_intake)
-        if not new_stock and new_intake:
-            new_stock = new_intake.stock
-
-        new_outcome_bags = validated.get("outcome_bags", instance.outcome_bags)
-        new_weight_per_bag_kg = validated.get(
-            "outcome_weight_per_bag_kg", instance.outcome_weight_per_bag_kg
-        )
-        calc_weight_kg = Decimal(str(new_outcome_bags)) * Decimal(str(new_weight_per_bag_kg))
-
-        try:
-            with transaction.atomic():
-                old_stock_id = instance.stock_id
-                new_stock_id = new_stock.pk if new_stock else None
-
-                # Lock stocks in order of ID to prevent deadlocks
-                stock_ids = sorted(list({s for s in [old_stock_id, new_stock_id] if s is not None}))
-                locked_stocks = {
-                    s.pk: s
-                    for s in YarnStock.objects.filter(pk__in=stock_ids).select_for_update()
-                }
-
-                locked_outcome = (
-                    YarnOutcome.objects
-                    .select_for_update()
-                    .get(pk=instance.pk)
-                )
-
-                target_stock = locked_stocks.get(new_stock_id)
-                if not target_stock:
-                    raise ValidationError({"stock": ["Target stock pool does not exist."]})
-
-                # Validate stock pool excluding this outcome if staying in same pool
-                exclude_id = locked_outcome.pk if (old_stock_id == new_stock_id) else None
-                validate_outcome_stock_pool(
-                    stock=target_stock,
-                    outcome_bags=new_outcome_bags,
-                    outcome_weight_kg=calc_weight_kg,
-                    exclude_outcome_id=exclude_id,
-                )
-
-                # Apply changes (skipping non-model write-only fields)
-                for attr, value in validated.items():
-                    if hasattr(locked_outcome, attr):
-                        setattr(locked_outcome, attr, value)
-
-                locked_outcome.stock = target_stock
-                if new_intake:
-                    locked_outcome.yarn_intake = new_intake
-
-                if request.user and request.user.is_authenticated:
-                    locked_outcome.updated_by = request.user
-
-                locked_outcome.calculate_outcome_fields()
-                locked_outcome.save()
-
-                # Recalculate all affected stock pools
-                for s in locked_stocks.values():
-                    recalculate_yarn_stock(s)
-
-                if new_intake:
-                    locked_intake = YarnIntake.objects.select_for_update().get(pk=new_intake.pk)
-                    recalculate_yarn_intake_stock(locked_intake)
-
-        except ValidationError:
-            raise
-        except Exception as exc:
-            raise ValidationError({"detail": str(exc)})
-
+        stock_name = outcome.stock.yarn_name.name if outcome.stock and outcome.stock.yarn_name else ""
         log_activity(
             request=request,
             action="Update Yarn Outcome",
             description=(
-                f"Updated {locked_outcome.outcome_type} outcome to {locked_outcome.outcome_bags} bags "
-                f"in stock pool '{target_stock.yarn_name.name if target_stock.yarn_name else ''}' ({target_stock.yarn_count.name if target_stock.yarn_count else ''})."
+                f"Updated {outcome.outcome_type} outcome to {outcome.outcome_bags} bags "
+                f"in stock pool '{stock_name}'."
             ),
             module="Yarn – Outcome",
             status="Success",
         )
 
-        locked_outcome.refresh_from_db()
-        out = YarnOutcomeSerializer(locked_outcome, context={"request": request})
+        outcome.refresh_from_db()
+        out = YarnOutcomeSerializer(outcome, context={"request": request})
         return Response(
             {
                 "success": True,
                 "message": "Yarn outcome updated successfully.",
                 "data": out.data,
-                "stock": YarnStockMinSerializer(locked_outcome.stock).data if locked_outcome.stock else None,
+                "stock": YarnStockMinSerializer(outcome.stock).data if outcome.stock else None,
             }
         )
 
@@ -365,17 +284,11 @@ class YarnOutcomeViewSet(ModelViewSet):
                     .get(pk=instance.pk)
                 )
                 stock_id = locked_outcome.stock_id
-                intake_id = locked_outcome.yarn_intake_id
                 outcome_type = locked_outcome.outcome_type
                 outcome_bags = locked_outcome.outcome_bags
 
-                locked_stock = None
-                if stock_id:
-                    locked_stock = YarnStock.objects.select_for_update().get(pk=stock_id)
-
-                locked_intake = None
-                if intake_id:
-                    locked_intake = YarnIntake.objects.select_for_update().get(pk=intake_id)
+                # Collect all contributing intake IDs from items
+                intake_ids = set(locked_outcome.items.values_list("yarn_intake_id", flat=True))
 
                 # Release any active beam assignments back to Available
                 from factory.beam.models import Beam
@@ -390,14 +303,19 @@ class YarnOutcomeViewSet(ModelViewSet):
                             b.save(update_fields=["status"])
                 locked_outcome.beam_assignments.all().delete()
 
-                # Delete the outcome
+                # Delete the outcome (cascades to items)
                 locked_outcome.delete()
 
-                # Recalculate stock balance (automatically restored)
-                if locked_stock:
-                    recalculate_yarn_stock(locked_stock)
-                if locked_intake:
+                # Recalculate all affected intakes
+                for i_id in sorted(list(intake_ids)):
+                    locked_intake = YarnIntake.objects.select_for_update().get(pk=i_id)
                     recalculate_yarn_intake_stock(locked_intake)
+
+                # Recalculate stock balance (automatically restored)
+                locked_stock = None
+                if stock_id:
+                    locked_stock = YarnStock.objects.select_for_update().get(pk=stock_id)
+                    recalculate_yarn_stock(locked_stock)
 
         except Exception as exc:
             raise ValidationError({"detail": str(exc)})

@@ -159,8 +159,26 @@ class YarnIntake(models.Model):
     outcome_weight_kg = models.DecimalField(max_digits=15, decimal_places=6, default=0)
     outcome_weight_lb = models.DecimalField(max_digits=15, decimal_places=6, default=0)
 
-    # ── Remaining stock (recalculated from YarnOutcome) ────────────────────
+    # ── Returned from sizing summary (recalculated from SizingOutcome) ────
+    return_bags = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="Total bags returned from sizing"
+    )
+    return_cones = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="Total cones returned from sizing"
+    )
+
+    # ── Remaining stock (recalculated from YarnOutcome & SizingOutcome) ───
     remaining_bags = models.PositiveIntegerField(default=0)
+    remaining_cones = models.PositiveIntegerField(
+        default=0,
+        help_text="Current remaining available cones in this intake batch."
+    )
     remaining_weight_kg = models.DecimalField(max_digits=15, decimal_places=6, default=0)
     remaining_weight_lb = models.DecimalField(max_digits=15, decimal_places=6, default=0)
 
@@ -242,11 +260,14 @@ class YarnIntake(models.Model):
         Initialise remaining stock on first creation (no outcomes yet).
         """
         self.remaining_bags = self.bags
+        self.remaining_cones = self.total_cones
         self.remaining_weight_kg = self.net_weight_kg
         self.remaining_weight_lb = self.net_weight_lb
         self.outcome_bags = 0
         self.outcome_weight_kg = Decimal("0")
         self.outcome_weight_lb = Decimal("0")
+        self.return_bags = Decimal("0.000000")
+        self.return_cones = Decimal("0.000000")
 
     @classmethod
     def generate_next_batch_no(cls):
@@ -333,13 +354,12 @@ class YarnOutcome(models.Model):
         help_text="Shared stock pool this outcome is dispatched from."
     )
 
-    yarn_intake = models.ForeignKey(
+    yarn_intakes = models.ManyToManyField(
         YarnIntake,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        through="YarnOutcomeItem",
         related_name="outcomes",
-        help_text="Optional legacy reference to specific intake batch."
+        blank=True,
+        help_text="Contributing yarn intake batches."
     )
 
     outcome_type = models.CharField(
@@ -422,13 +442,15 @@ class YarnOutcome(models.Model):
         verbose_name_plural = "Yarn Outcomes"
 
     def __str__(self):
-        name = (
-            self.stock.yarn_name.name
-            if self.stock and self.stock.yarn_name
-            else (self.yarn_intake.yarn_name.name if self.yarn_intake and self.yarn_intake.yarn_name else "Yarn")
-        )
+        name = ""
+        if self.stock and self.stock.yarn_name:
+            name = self.stock.yarn_name.name
+        elif hasattr(self, "items") and self.items.exists():
+            first_item = self.items.select_related("yarn_intake__yarn_name").first()
+            if first_item and first_item.yarn_intake and first_item.yarn_intake.yarn_name:
+                name = first_item.yarn_intake.yarn_name.name
         return (
-            f"{name} - "
+            f"{name or 'Yarn'} - "
             f"{self.outcome_type} - "
             f"{self.outcome_bags} bags"
         )
@@ -448,18 +470,47 @@ class YarnOutcome(models.Model):
     def calculate_outcome_fields(self):
         """
         Recalculate backend-derived outcome weight fields.
-        Call before saving.
+        If items exist, aggregates bags and weights from items.
+        Otherwise falls back to outcome_bags * outcome_weight_per_bag_kg.
         """
-        outcome_bags = Decimal(str(self.outcome_bags))
-        weight_per_bag = Decimal(str(self.outcome_weight_per_bag_kg))
-        self.outcome_weight_kg = outcome_bags * weight_per_bag
-        self.outcome_weight_lb = self.outcome_weight_kg * LB_PER_KG
+        if hasattr(self, "items") and self.items.exists():
+            item_agg = self.items.aggregate(
+                total_bags=models.Sum("bags"),
+                total_kg=models.Sum("weight_kg"),
+                total_lb=models.Sum("weight_lb"),
+            )
+            self.outcome_bags = item_agg["total_bags"] or 0
+            self.outcome_weight_kg = item_agg["total_kg"] or Decimal("0.000000")
+            self.outcome_weight_lb = item_agg["total_lb"] or Decimal("0.000000")
+            if self.outcome_bags > 0:
+                self.outcome_weight_per_bag_kg = (self.outcome_weight_kg / Decimal(str(self.outcome_bags))).quantize(Decimal("0.000001"))
+        else:
+            outcome_bags = Decimal(str(self.outcome_bags or 0))
+            weight_per_bag = Decimal(str(self.outcome_weight_per_bag_kg or 0))
+            self.outcome_weight_kg = outcome_bags * weight_per_bag
+            self.outcome_weight_lb = self.outcome_weight_kg * LB_PER_KG
 
     def save(self, *args, **kwargs):
         self.calculate_outcome_fields()
-        if not self.stock_id and self.yarn_intake_id:
-            self.stock = self.yarn_intake.stock
+        if not self.stock_id:
+            if hasattr(self, "items") and self.items.exists():
+                first_item = self.items.select_related("yarn_intake__stock").first()
+                if first_item and first_item.yarn_intake and first_item.yarn_intake.stock:
+                    self.stock = first_item.yarn_intake.stock
         super().save(*args, **kwargs)
+
+    @property
+    def primary_intake(self):
+        if hasattr(self, "items"):
+            first_item = self.items.select_related("yarn_intake").first()
+            if first_item:
+                return first_item.yarn_intake
+        return None
+
+    @property
+    def yarn_intake(self):
+        """Backward-compatible property returning primary intake."""
+        return self.primary_intake
 
     @property
     def total_beams(self):
@@ -472,5 +523,75 @@ class YarnOutcome(models.Model):
                 sizing_assignments__status=SizingBeamAssignment.StatusChoices.RELEASED
             ).distinct().count()
         return 0
+
+
+class YarnOutcomeItem(models.Model):
+    """
+    Records yarn dispatched from a specific YarnIntake batch as part of a YarnOutcome.
+    Enables dispatching yarn from multiple intakes within a single outcome dispatch.
+    """
+    yarn_outcome = models.ForeignKey(
+        YarnOutcome,
+        on_delete=models.CASCADE,
+        related_name="items",
+        help_text="Parent yarn outcome dispatch"
+    )
+    yarn_intake = models.ForeignKey(
+        YarnIntake,
+        on_delete=models.PROTECT,
+        related_name="outcome_items",
+        help_text="Specific yarn intake batch dispatched"
+    )
+    bags = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of bags dispatched from this intake"
+    )
+    cones_per_bag = models.PositiveIntegerField(
+        default=0,
+        help_text="Cones per bag for this intake at dispatch time"
+    )
+    weight_per_bag_kg = models.DecimalField(
+        max_digits=12,
+        decimal_places=6,
+        default=0,
+        help_text="Weight per bag in KG from this intake"
+    )
+    weight_kg = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        default=0,
+        help_text="Calculated weight in KG (bags * weight_per_bag_kg)"
+    )
+    weight_lb = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        default=0,
+        help_text="Calculated weight in LB (weight_kg * LB_PER_KG)"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["id"]
+        verbose_name = "Yarn Outcome Item"
+        verbose_name_plural = "Yarn Outcome Items"
+
+    def calculate_weights(self):
+        bags_dec = Decimal(str(self.bags or 0))
+        wpb_dec = Decimal(str(self.weight_per_bag_kg or 0))
+        self.weight_kg = bags_dec * wpb_dec
+        self.weight_lb = self.weight_kg * LB_PER_KG
+
+    def save(self, *args, **kwargs):
+        if not self.weight_per_bag_kg and self.yarn_intake_id:
+            self.weight_per_bag_kg = self.yarn_intake.weight_per_bag_kg
+        if not self.cones_per_bag and self.yarn_intake_id:
+            self.cones_per_bag = self.yarn_intake.cones_per_bag
+        self.calculate_weights()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        intake_str = self.yarn_intake.set_no if self.yarn_intake else f"Intake #{self.yarn_intake_id}"
+        return f"Outcome #{self.yarn_outcome_id} -> {intake_str} ({self.bags} bags)"
 
 

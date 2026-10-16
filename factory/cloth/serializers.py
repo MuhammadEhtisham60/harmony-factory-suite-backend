@@ -36,6 +36,16 @@ class ClothNameSerializer(serializers.ModelSerializer):
     Normalizes whitespace and rejects case-insensitive duplicates.
     """
     name = serializers.CharField(max_length=150)
+    warpCount = serializers.CharField(source="warp_count", required=False, allow_blank=True, default="")
+    warp_count = serializers.CharField(read_only=True)
+    weftCount = serializers.CharField(source="weft_count", required=False, allow_blank=True, default="")
+    weft_count = serializers.CharField(read_only=True)
+    reedCount = serializers.DecimalField(source="reed_count", max_digits=15, decimal_places=6, required=False, allow_null=True)
+    reed_count = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
+    pickCount = serializers.DecimalField(source="pick_count", max_digits=15, decimal_places=6, required=False, allow_null=True)
+    pick_count = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
+    reedWidth = serializers.DecimalField(source="reed_width", max_digits=15, decimal_places=6, required=False, allow_null=True)
+    reed_width = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
     description = serializers.CharField(required=False, allow_blank=True, default="")
     createdAt = serializers.DateTimeField(source="created_at", read_only=True)
     updatedAt = serializers.DateTimeField(source="updated_at", read_only=True)
@@ -49,6 +59,16 @@ class ClothNameSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
+            "warpCount",
+            "warp_count",
+            "weftCount",
+            "weft_count",
+            "reedCount",
+            "reed_count",
+            "pickCount",
+            "pick_count",
+            "reedWidth",
+            "reed_width",
             "description",
             "createdAt",
             "updatedAt",
@@ -57,7 +77,39 @@ class ClothNameSerializer(serializers.ModelSerializer):
             "createdBy",
             "updatedBy",
         ]
-        read_only_fields = ["id", "createdAt", "updatedAt", "created_at", "updated_at", "createdBy", "updatedBy"]
+        read_only_fields = [
+            "id",
+            "warp_count",
+            "weft_count",
+            "reed_count",
+            "pick_count",
+            "reed_width",
+            "createdAt",
+            "updatedAt",
+            "created_at",
+            "updated_at",
+            "createdBy",
+            "updatedBy",
+        ]
+
+    def to_internal_value(self, data):
+        data = data.copy() if hasattr(data, "copy") else dict(data)
+        mapping = {
+            "warp_count": "warpCount",
+            "weft_count": "weftCount",
+            "reed_count": "reedCount",
+            "pick_count": "pickCount",
+            "reed_width": "reedWidth",
+        }
+        for snake, camel in mapping.items():
+            if snake in data and camel not in data:
+                data[camel] = data.pop(snake)
+
+        for field in ("reedCount", "pickCount", "reedWidth"):
+            if field in data and (data[field] == "" or data[field] is None):
+                data[field] = None
+
+        return super().to_internal_value(data)
 
     def get_createdBy(self, obj):
         if obj.created_by:
@@ -91,6 +143,20 @@ class ClothNameSerializer(serializers.ModelSerializer):
         if user:
             validated_data["updated_by"] = user
         return super().update(instance, validated_data)
+
+
+def _format_cloth_name_summary(cn):
+    if not cn:
+        return None
+    return {
+        "id": cn.id,
+        "name": cn.name,
+        "warpCount": cn.warp_count,
+        "weftCount": cn.weft_count,
+        "reedCount": cn.reed_count,
+        "pickCount": cn.pick_count,
+        "reedWidth": cn.reed_width,
+    }
 
 
 class ClothPatchSerializer(serializers.ModelSerializer):
@@ -223,9 +289,7 @@ class ClothPatchSerializer(serializers.ModelSerializer):
         ]
 
     def get_clothName(self, obj):
-        if obj.cloth_name:
-            return {"id": obj.cloth_name.id, "name": obj.cloth_name.name}
-        return None
+        return _format_cloth_name_summary(obj.cloth_name)
 
     def get_loomDetail(self, obj):
         if obj.loom:
@@ -444,9 +508,7 @@ class ClothStockSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_cloth_name(self, obj):
-        if obj.cloth_name:
-            return {"id": obj.cloth_name.id, "name": obj.cloth_name.name}
-        return None
+        return _format_cloth_name_summary(obj.cloth_name)
 
     def get_clothName(self, obj):
         return self.get_cloth_name(obj)
@@ -548,8 +610,8 @@ class CleanClothStockSerializer(serializers.ModelSerializer):
         ]
 
     def get_clothName(self, obj):
-        if obj.cloth_stock and obj.cloth_stock.cloth_name:
-            return {"id": obj.cloth_stock.cloth_name.id, "name": obj.cloth_stock.cloth_name.name}
+        if obj.cloth_stock:
+            return _format_cloth_name_summary(obj.cloth_stock.cloth_name)
         return None
 
     def get_cloth_name(self, obj):
@@ -792,8 +854,8 @@ class DefectedClothStockSerializer(serializers.ModelSerializer):
         ]
 
     def get_clothName(self, obj):
-        if obj.cloth_stock and obj.cloth_stock.cloth_name:
-            return {"id": obj.cloth_stock.cloth_name.id, "name": obj.cloth_stock.cloth_name.name}
+        if obj.cloth_stock:
+            return _format_cloth_name_summary(obj.cloth_stock.cloth_name)
         return None
 
     def get_cloth_name(self, obj):

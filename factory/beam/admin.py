@@ -85,11 +85,12 @@ class BeamLoadingAdmin(admin.ModelAdmin):
         "beam",
         "loom",
         "sizing_outcome",
+        "cloth_name",
         "status",
         "warp_count",
         "weft_count",
         "reed_width",
-        "pick",
+        "pick_count",
         "installation_date",
         "created_at",
     ]
@@ -98,6 +99,7 @@ class BeamLoadingAdmin(admin.ModelAdmin):
         "beam__beam_number",
         "loom__loom_code",
         "sizing_outcome__set_no",
+        "cloth_name__name",
     ]
     readonly_fields = ["created_at", "updated_at", "created_by", "updated_by"]
     ordering = ["-installation_date", "-id"]

@@ -609,6 +609,10 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
     totalCones = serializers.IntegerField(source="total_cones", required=False, default=0)
     remainingBagsOnSizingStock = serializers.IntegerField(source="remaining_bags_on_sizing_stock", required=False, default=0)
     remainingConesOnSizingStock = serializers.IntegerField(source="remaining_cones_on_sizing_stock", required=False, default=0)
+    returnBags = serializers.DecimalField(source="return_bags", max_digits=15, decimal_places=6, required=False, default=Decimal("0.000000"))
+    return_bags = serializers.DecimalField(max_digits=15, decimal_places=6, required=False, default=Decimal("0.000000"))
+    returnCones = serializers.DecimalField(source="return_cones", max_digits=15, decimal_places=6, required=False, default=Decimal("0.000000"))
+    return_cones = serializers.DecimalField(max_digits=15, decimal_places=6, required=False, default=Decimal("0.000000"))
     lagatBags = serializers.DecimalField(source="lagat_bags", max_digits=15, decimal_places=6, required=False, default=Decimal("0.000000"))
     lagatCones = serializers.DecimalField(source="lagat_cones", max_digits=15, decimal_places=6, required=False, default=Decimal("0.000000"))
     brand = serializers.CharField(required=False, allow_blank=True, default="")
@@ -715,6 +719,10 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "totalCones",
             "remainingBagsOnSizingStock",
             "remainingConesOnSizingStock",
+            "returnBags",
+            "return_bags",
+            "returnCones",
+            "return_cones",
             "lagatBags",
             "lagatCones",
             "brand",
@@ -799,6 +807,8 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "total_cones": "totalCones",
             "remaining_bags_on_sizing_stock": "remainingBagsOnSizingStock",
             "remaining_cones_on_sizing_stock": "remainingConesOnSizingStock",
+            "return_bags": "returnBags",
+            "return_cones": "returnCones",
             "lagat_bags": "lagatBags",
             "lagat_cones": "lagatCones",
             "set_length_meter": "setLengthMeter",
@@ -994,8 +1004,9 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             validated_data["updated_by"] = request.user
         updated = super().update(instance, validated_data)
         if updated.yarn_outcome:
-            from .services import sync_yarn_outcome_status
+            from .services import sync_yarn_outcome_status, sync_sizing_outcome_to_intake
             sync_yarn_outcome_status(updated.yarn_outcome)
+            sync_sizing_outcome_to_intake(updated)
         return updated
 
 

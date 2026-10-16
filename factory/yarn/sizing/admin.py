@@ -44,6 +44,8 @@ class SizingOutcomeAdmin(admin.ModelAdmin):
         "total_cones",
         "lagat_bags",
         "lagat_cones",
+        "return_bags",
+        "return_cones",
         "total_beams",
         "created_at",
     ]

@@ -63,7 +63,7 @@ class YarnStock(models.Model):
         cones:           current available cones
         total_weight_kg: current available weight in kilograms
         total_weight_lb: current available weight in pounds
-        price:           weighted average intake price per pound (Decimal)
+        price:           price per bag calculated by remaining_total_price divided by remaining_bags (Decimal)
     """
 
     yarn_name = models.ForeignKey(
@@ -96,7 +96,7 @@ class YarnStock(models.Model):
         max_digits=15,
         decimal_places=6,
         default=Decimal("0.000000"),
-        help_text="Weighted average purchase rate per pound from contributing intakes."
+        help_text="Calculated price per bag (remaining_total_price divided by remaining_bags)."
     )
     total_price = models.DecimalField(
         max_digits=18,
@@ -200,6 +200,16 @@ class YarnStock(models.Model):
                     kwargs.pop(k, None)
         super().__init__(*args, **kwargs)
 
+    def calculate_price(self):
+        """Calculates price per bag by dividing remaining_total_price by remaining_bags."""
+        rem_bags = self.remaining_bags or self.total_boxes or 0
+        rem_total = self.remaining_total_price or Decimal("0.000000")
+        if rem_bags > 0 and rem_total > Decimal("0.000000"):
+            self.price = (Decimal(str(rem_total)) / Decimal(str(rem_bags))).quantize(Decimal("0.000001"))
+        else:
+            self.price = Decimal("0.000000")
+        return self.price
+
     def save(self, *args, **kwargs):
         # Keep remaining fields and legacy balance aliases synchronized
         if self.remaining_bags and not self.total_boxes:
@@ -221,6 +231,11 @@ class YarnStock(models.Model):
             self.total_weight_lb = self.remaining_weight_lb
         elif self.total_weight_lb and not self.remaining_weight_lb:
             self.remaining_weight_lb = self.total_weight_lb
+
+        # Recalculate price: remaining_total_price divided by remaining_bags
+        update_fields = kwargs.get("update_fields")
+        if update_fields is None or "price" in update_fields:
+            self.calculate_price()
 
         super().save(*args, **kwargs)
 

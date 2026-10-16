@@ -106,9 +106,27 @@ def calculate_stock_aggregates(stock):
     total_outcome_weight_kg = outcome_agg["total_weight_kg"] or Decimal("0.000000")
     total_outcome_weight_lb = outcome_agg["total_weight_lb"] or Decimal("0.000000")
 
-    available_boxes = total_intake_bags - total_outcome_bags
-    available_cones = total_intake_cones - total_outcome_cones
-    available_weight_kg = total_intake_weight_kg - total_outcome_weight_kg
+    from factory.yarn.sizing.models import SizingOutcome
+    from django.db.models import Q
+
+    sizing_return_agg = SizingOutcome.objects.filter(
+        Q(yarn_outcome__stock=stock) | Q(yarn_outcome__items__yarn_intake__stock=stock)
+    ).distinct().aggregate(
+        total_return_bags=Sum("return_bags"),
+        total_return_cones=Sum("return_cones"),
+    )
+    total_return_bags = sizing_return_agg["total_return_bags"] or Decimal("0.000000")
+    total_return_cones = sizing_return_agg["total_return_cones"] or Decimal("0.000000")
+
+    avg_weight_per_bag = (total_intake_weight_kg / Decimal(str(total_intake_bags))) if total_intake_bags > 0 else Decimal("0.000000")
+    avg_cones_per_bag = (Decimal(str(total_intake_cones)) / Decimal(str(total_intake_bags))) if total_intake_bags > 0 else Decimal("0.000000")
+    avg_weight_per_cone = (avg_weight_per_bag / avg_cones_per_bag) if avg_cones_per_bag > 0 else Decimal("0.000000")
+
+    return_weight_kg = (total_return_bags * avg_weight_per_bag) + (total_return_cones * avg_weight_per_cone)
+
+    available_boxes = max(0, total_intake_bags - total_outcome_bags + int(total_return_bags))
+    available_cones = max(0, total_intake_cones - total_outcome_cones + int(total_return_cones + (total_return_bags * avg_cones_per_bag)))
+    available_weight_kg = max(Decimal("0.000000"), total_intake_weight_kg - total_outcome_weight_kg + return_weight_kg)
     # Use standard project conversion constant for exact precision
     available_weight_lb = available_weight_kg * LB_PER_KG
 
@@ -132,6 +150,12 @@ def calculate_stock_aggregates(stock):
     else:
         remaining_total_price = Decimal("0.000000")
 
+    # Price per bag: calculated by remaining_total_price divided by remaining_bags
+    if available_boxes > 0 and remaining_total_price > Decimal("0.000000"):
+        stock_price = (remaining_total_price / Decimal(str(available_boxes))).quantize(Decimal("0.000001"))
+    else:
+        stock_price = Decimal("0.000000")
+
     return {
         "total_intake_bags": total_intake_bags,
         "total_intake_cones": total_intake_cones,
@@ -146,7 +170,7 @@ def calculate_stock_aggregates(stock):
         "available_cones": available_cones,
         "available_weight_kg": available_weight_kg,
         "available_weight_lb": available_weight_lb,
-        "price": simple_price,
+        "price": stock_price,
         "total_price": total_intake_rate,
         "remaining_bags": available_boxes,
         "remaining_cones": available_cones,

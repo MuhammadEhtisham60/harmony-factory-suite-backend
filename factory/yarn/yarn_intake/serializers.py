@@ -20,9 +20,9 @@ from factory.yarn.yarn_type.models import YarnType
 from factory.yarn.yarn_count.models import YarnCount
 from factory.yarn.yarn_buyer.models import YarnBuyer
 from factory.yarn.sizing.models import Sizing
-from factory.yarn.yarn_stock.models import YarnStock
+from factory.yarn.yarn_stock.models import YarnStock, LB_PER_KG
 from factory.yarn.yarn_stock.serializers import YarnStockMinSerializer
-from .models import YarnIntake, YarnOutcome
+from .models import YarnIntake, YarnOutcome, YarnOutcomeItem
 
 
 # ── Supplier mini-repr ─────────────────────────────────────────────────────
@@ -57,21 +57,117 @@ class SizingMinSerializer(serializers.ModelSerializer):
         fields = ["id", "sizingName", "contactPerson"]
 
 
+# ── YarnOutcomeItem ────────────────────────────────────────────────────────
+
+class YarnOutcomeItemSerializer(serializers.ModelSerializer):
+    """
+    Serializer for individual yarn intake batch items within a YarnOutcome dispatch.
+    """
+    yarnIntake = serializers.PrimaryKeyRelatedField(
+        source="yarn_intake",
+        queryset=YarnIntake.objects.all(),
+        required=False,
+    )
+    yarnIntakeId = serializers.IntegerField(
+        write_only=True,
+        required=False,
+    )
+    bags = serializers.IntegerField(min_value=1)
+    conesPerBag = serializers.IntegerField(
+        source="cones_per_bag", required=False, default=0
+    )
+    weightPerBagKg = serializers.DecimalField(
+        source="weight_per_bag_kg",
+        max_digits=12,
+        decimal_places=6,
+        required=False,
+    )
+    weightKg = serializers.DecimalField(
+        source="weight_kg", max_digits=15, decimal_places=6, read_only=True
+    )
+    weightLb = serializers.DecimalField(
+        source="weight_lb", max_digits=15, decimal_places=6, read_only=True
+    )
+    yarnIntakeDetail = serializers.SerializerMethodField()
+
+    class Meta:
+        model = YarnOutcomeItem
+        fields = [
+            "id",
+            "yarnIntake",
+            "yarnIntakeId",
+            "bags",
+            "conesPerBag",
+            "weightPerBagKg",
+            "weightKg",
+            "weightLb",
+            "yarnIntakeDetail",
+        ]
+        read_only_fields = ["id", "weightKg", "weightLb", "yarnIntakeDetail"]
+
+    def get_yarnIntakeDetail(self, obj):
+        if obj.yarn_intake:
+            return {
+                "id": obj.yarn_intake.id,
+                "setNo": obj.yarn_intake.set_no,
+                "supplierName": obj.yarn_intake.supplier.supplier_name if obj.yarn_intake.supplier else "",
+                "remainingBags": obj.yarn_intake.remaining_bags,
+                "weightPerBagKg": str(obj.yarn_intake.weight_per_bag_kg),
+            }
+        return None
+
+    def to_internal_value(self, data):
+        data = data.copy() if hasattr(data, "copy") else dict(data)
+        if "yarn_intake" in data and "yarnIntake" not in data:
+            data["yarnIntake"] = data["yarn_intake"]
+        if "yarn_intake_id" in data and "yarnIntakeId" not in data:
+            data["yarnIntakeId"] = data["yarn_intake_id"]
+        if "outcome_bags" in data and "bags" not in data:
+            data["bags"] = data["outcome_bags"]
+        if "outcomeBags" in data and "bags" not in data:
+            data["bags"] = data["outcomeBags"]
+        if "cones_per_bag" in data and "conesPerBag" not in data:
+            data["conesPerBag"] = data["cones_per_bag"]
+        if "outcome_cones_per_bag" in data and "conesPerBag" not in data:
+            data["conesPerBag"] = data["outcome_cones_per_bag"]
+        if "outcomeConesPerBag" in data and "conesPerBag" not in data:
+            data["conesPerBag"] = data["outcomeConesPerBag"]
+        if "weight_per_bag_kg" in data and "weightPerBagKg" not in data:
+            data["weightPerBagKg"] = data["weight_per_bag_kg"]
+        if "outcome_weight_per_bag_kg" in data and "weightPerBagKg" not in data:
+            data["weightPerBagKg"] = data["outcome_weight_per_bag_kg"]
+        if "outcomeWeightPerBagKg" in data and "weightPerBagKg" not in data:
+            data["weightPerBagKg"] = data["outcomeWeightPerBagKg"]
+        return super().to_internal_value(data)
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        ret["yarn_intake"] = instance.yarn_intake_id
+        ret["yarn_intake_id"] = instance.yarn_intake_id
+        ret["outcome_bags"] = instance.bags
+        ret["outcomeBags"] = instance.bags
+        ret["weight_per_bag_kg"] = str(instance.weight_per_bag_kg)
+        ret["weight_kg"] = str(instance.weight_kg)
+        ret["weight_lb"] = str(instance.weight_lb)
+        return ret
+
+
 # ── YarnOutcome ────────────────────────────────────────────────────────────
 
 class YarnOutcomeSerializer(serializers.ModelSerializer):
     """
     Writable serializer for YarnOutcome CRUD.
 
+    Dispatches yarn from one or more YarnIntake batches.
+    Dispatching directly from stock pool without specifying intake batches is disallowed.
+
     Frontend provides:
-        stock (or stockId), OR legacy yarn_intake (or yarnIntake/yarnIntakeId),
-        outcome_type, outcome_bags, outcome_cones_per_bag,
-        outcome_weight_per_bag_kg, yarn_buyer (id|null), total_price,
-        outcome_date, notes
+        intakes (list of {yarn_intake, bags, ...}), OR single yarn_intake / yarnIntake
+        outcome_type, yarn_buyer (id|null), total_price, outcome_date, notes
 
     Backend calculates:
-        outcome_weight_kg = outcome_bags * outcome_weight_per_bag_kg
-        outcome_weight_lb = outcome_weight_kg * 2.20462262
+        outcome_bags, outcome_weight_kg, outcome_weight_lb, outcome_weight_per_bag_kg,
+        stock (resolved from contributing intakes)
     """
 
     # ── Writable FKs ──────────────────────────────────────────────────────
@@ -86,10 +182,10 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         allow_null=True
     )
     yarnIntake = serializers.PrimaryKeyRelatedField(
-        source="yarn_intake",
         queryset=YarnIntake.objects.all(),
         required=False,
-        allow_null=True
+        allow_null=True,
+        write_only=True
     )
     yarnIntakeId = serializers.IntegerField(
         write_only=True,
@@ -114,13 +210,14 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         choices=YarnOutcome.OutcomeTypeChoices.choices,
         required=False
     )
-    outcomeBags = serializers.IntegerField(source="outcome_bags", min_value=0)
+    outcomeBags = serializers.IntegerField(source="outcome_bags", min_value=0, required=False)
     outcomeConesPerBag = serializers.IntegerField(
         source="outcome_cones_per_bag", required=False, default=0
     )
     outcomeWeightPerBagKg = serializers.DecimalField(
         source="outcome_weight_per_bag_kg",
-        max_digits=12, decimal_places=6
+        max_digits=12, decimal_places=6,
+        required=False
     )
     totalPrice = serializers.DecimalField(
         source="total_price",
@@ -132,6 +229,17 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
     )
     outcomeDate = serializers.DateField(source="outcome_date")
     notes = serializers.CharField(required=False, allow_blank=True, default="")
+
+    # ── Multi-intake breakdown ────────────────────────────────────────────
+    intakes = YarnOutcomeItemSerializer(source="items", many=True, read_only=True)
+    items = YarnOutcomeItemSerializer(many=True, read_only=True)
+    intakeSetNumbers = serializers.SerializerMethodField()
+    intakeSetNoDisplay = serializers.SerializerMethodField()
+
+    yarnName = serializers.SerializerMethodField()
+    yarnType = serializers.SerializerMethodField()
+    yarnCount = serializers.SerializerMethodField()
+    yarnIntakeDetail = serializers.SerializerMethodField()
 
     # ── Beam Assignment inputs (optional at creation) ─────────────────────
     beamIds = serializers.ListField(
@@ -178,6 +286,14 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
             "stockDetail",
             "yarnIntake",
             "yarnIntakeId",
+            "yarnIntakeDetail",
+            "intakes",
+            "items",
+            "intakeSetNumbers",
+            "intakeSetNoDisplay",
+            "yarnName",
+            "yarnType",
+            "yarnCount",
             "outcomeType",
             "outcomeBags",
             "outcomeConesPerBag",
@@ -208,6 +324,8 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id", "outcomeWeightKg", "outcomeWeightLb",
+            "intakes", "items", "intakeSetNumbers", "intakeSetNoDisplay",
+            "yarnName", "yarnType", "yarnCount", "yarnIntakeDetail",
             "beamAssignments", "totalBeams", "status", "sizingOutcome", "isReceived", "isPartiallyReceived",
             "createdAt", "updatedAt", "createdBy", "updatedBy",
             "stockDetail", "yarnBuyerDetail", "sizingDetail",
@@ -253,6 +371,10 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
                     "ratePerKg": str(so.rate_per_kg) if so.rate_per_kg is not None else None,
                     "totalRate": str(so.total_rate) if so.total_rate is not None else None,
                     "netWeightKg": str(so.net_weight_kg) if so.net_weight_kg is not None else None,
+                    "returnBags": str(so.return_bags) if so.return_bags is not None else "0.000000",
+                    "return_bags": str(so.return_bags) if so.return_bags is not None else "0.000000",
+                    "returnCones": str(so.return_cones) if so.return_cones is not None else "0.000000",
+                    "return_cones": str(so.return_cones) if so.return_cones is not None else "0.000000",
                     "outcomeDate": so.outcome_date,
                     "amountPaid": str(so.amount_paid) if so.amount_paid is not None else "0.000000",
                     "amountDue": str(so.amount_due) if so.amount_due is not None else "0.000000",
@@ -260,14 +382,85 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
                 }
         return None
 
+    def get_intakeSetNumbers(self, obj):
+        set_nos = [item.yarn_intake.set_no for item in obj.items.all() if item.yarn_intake and item.yarn_intake.set_no]
+        if not set_nos and obj.primary_intake and obj.primary_intake.set_no:
+            set_nos = [obj.primary_intake.set_no]
+        return list(dict.fromkeys(set_nos))
+
+    def get_intakeSetNoDisplay(self, obj):
+        nums = self.get_intakeSetNumbers(obj)
+        return ", ".join(nums) if nums else ""
+
+    def get_yarnName(self, obj):
+        pi = obj.primary_intake
+        stock = obj.stock or (pi.stock if pi else None)
+        return stock.yarn_name.name if stock and stock.yarn_name else ""
+
+    def get_yarnType(self, obj):
+        pi = obj.primary_intake
+        stock = obj.stock or (pi.stock if pi else None)
+        return stock.yarn_type.name if stock and stock.yarn_type else ""
+
+    def get_yarnCount(self, obj):
+        pi = obj.primary_intake
+        stock = obj.stock or (pi.stock if pi else None)
+        return stock.yarn_count.name if stock and stock.yarn_count else ""
+
+    def get_yarnIntakeDetail(self, obj):
+        pi = obj.primary_intake
+        if pi:
+            return {
+                "id": pi.id,
+                "setNo": pi.set_no,
+                "remainingBags": pi.remaining_bags,
+                "weightPerBagKg": str(pi.weight_per_bag_kg),
+            }
+        return None
+
     def to_representation(self, instance):
         ret = super().to_representation(instance)
+        primary_intake = instance.primary_intake
         if instance.stock:
             ret["stock"] = instance.stock_id
             ret["stockId"] = instance.stock_id
-        if instance.yarn_intake:
-            ret["yarnIntake"] = instance.yarn_intake_id
-            ret["yarnIntakeId"] = instance.yarn_intake_id
+            if instance.stock.yarn_name:
+                ret["yarnName"] = instance.stock.yarn_name.name
+            if instance.stock.yarn_type:
+                ret["yarnType"] = instance.stock.yarn_type.name
+            if instance.stock.yarn_count:
+                ret["yarnCount"] = instance.stock.yarn_count.name
+        elif primary_intake and primary_intake.stock:
+            stock = primary_intake.stock
+            ret["stock"] = stock.id
+            ret["stockId"] = stock.id
+            if stock.yarn_name:
+                ret["yarnName"] = stock.yarn_name.name
+            if stock.yarn_type:
+                ret["yarnType"] = stock.yarn_type.name
+            if stock.yarn_count:
+                ret["yarnCount"] = stock.yarn_count.name
+
+        if primary_intake:
+            ret["yarnIntake"] = primary_intake.id
+            ret["yarnIntakeId"] = primary_intake.id
+            ret["yarnIntakeDetail"] = {
+                "id": primary_intake.id,
+                "setNo": primary_intake.set_no,
+                "remainingBags": primary_intake.remaining_bags,
+                "weightPerBagKg": str(primary_intake.weight_per_bag_kg),
+            }
+
+        items_qs = instance.items.all().select_related("yarn_intake", "yarn_intake__supplier")
+        items_data = YarnOutcomeItemSerializer(items_qs, many=True, context=self.context).data
+        ret["intakes"] = items_data
+        ret["items"] = items_data
+
+        set_nos = [item.yarn_intake.set_no for item in items_qs if item.yarn_intake and item.yarn_intake.set_no]
+        if not set_nos and primary_intake and primary_intake.set_no:
+            set_nos = [primary_intake.set_no]
+        ret["intakeSetNumbers"] = list(dict.fromkeys(set_nos))
+        ret["intakeSetNoDisplay"] = ", ".join(list(dict.fromkeys(set_nos))) if set_nos else ""
 
         if hasattr(instance, "sizing_outcomes") and instance.sizing_outcomes.exists():
             so = instance.sizing_outcomes.order_by("-id").first()
@@ -305,44 +498,189 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
     # ── Validation ────────────────────────────────────────────────────────
 
     def validate(self, attrs):
-        # Resolve stock or legacy yarn_intake
-        stock_val = attrs.get("stock")
-        raw_stock = (
-            self.initial_data.get("stockId")
-            or self.initial_data.get("stock_id")
-            or self.initial_data.get("stock")
+        raw_items = (
+            self.initial_data.get("intakes")
+            or self.initial_data.get("items")
+            or self.initial_data.get("yarn_intakes")
+            or self.initial_data.get("yarnIntakes")
         )
-        if not stock_val and raw_stock:
-            try:
-                stock_val = YarnStock.objects.get(pk=raw_stock)
-                attrs["stock"] = stock_val
-            except (YarnStock.DoesNotExist, ValueError):
-                raise serializers.ValidationError({"stock": ["Invalid stock pool ID."]})
 
-        intake_val = attrs.get("yarn_intake")
-        raw_intake = (
-            self.initial_data.get("yarnIntakeId")
-            or self.initial_data.get("yarn_intake_id")
-            or self.initial_data.get("yarnIntake")
-            or self.initial_data.get("yarn_intake")
-        )
-        if not intake_val and raw_intake:
-            try:
-                intake_val = YarnIntake.objects.get(pk=raw_intake)
-                attrs["yarn_intake"] = intake_val
-            except (YarnIntake.DoesNotExist, ValueError):
-                raise serializers.ValidationError({"yarnIntake": ["Invalid yarn intake ID."]})
+        parsed_items = []
+        if raw_items is not None:
+            if not isinstance(raw_items, (list, tuple)) or len(raw_items) == 0:
+                raise serializers.ValidationError({
+                    "intakes": ["At least one intake item must be specified."]
+                })
 
-        # If legacy yarn_intake was passed, resolve to its shared stock pool
-        if not stock_val and intake_val:
-            stock_val = intake_val.stock
-            attrs["stock"] = stock_val
+            for idx, item in enumerate(raw_items):
+                if not isinstance(item, dict):
+                    raise serializers.ValidationError({
+                        "intakes": [f"Item at position {idx} must be an object."]
+                    })
+                raw_intake_id = (
+                    item.get("yarnIntake")
+                    or item.get("yarn_intake")
+                    or item.get("yarnIntakeId")
+                    or item.get("yarn_intake_id")
+                    or item.get("intake")
+                    or item.get("intakeId")
+                    or item.get("intake_id")
+                    or item.get("id")
+                )
+                if not raw_intake_id:
+                    raise serializers.ValidationError({
+                        "intakes": [f"Intake reference is required for item at position {idx}."]
+                    })
+                try:
+                    intake_obj = YarnIntake.objects.get(pk=raw_intake_id) if not isinstance(raw_intake_id, YarnIntake) else raw_intake_id
+                except (YarnIntake.DoesNotExist, ValueError):
+                    raise serializers.ValidationError({
+                        "intakes": [f"Invalid yarn intake ID '{raw_intake_id}' at position {idx}."]
+                    })
 
-        # If neither provided on creation, reject
-        if not stock_val and not (self.instance and self.instance.stock):
-            raise serializers.ValidationError({
-                "stock": ["A valid YarnStock pool must be selected."]
-            })
+                raw_bags = (
+                    item.get("bags")
+                    or item.get("outcomeBags")
+                    or item.get("outcome_bags")
+                    or item.get("quantity")
+                )
+                if raw_bags is None:
+                    raise serializers.ValidationError({
+                        "intakes": [f"Bags count is required for intake '{intake_obj.set_no or intake_obj.id}'."]
+                    })
+                try:
+                    bags_val = int(raw_bags)
+                    if bags_val <= 0:
+                        raise ValueError()
+                except (ValueError, TypeError):
+                    raise serializers.ValidationError({
+                        "intakes": [f"Bags must be a positive integer for intake '{intake_obj.set_no or intake_obj.id}'."]
+                    })
+
+                raw_cones = (
+                    item.get("conesPerBag")
+                    or item.get("cones_per_bag")
+                    or item.get("outcomeConesPerBag")
+                    or item.get("outcome_cones_per_bag")
+                )
+                cones_val = int(raw_cones) if raw_cones is not None and str(raw_cones).isdigit() else intake_obj.cones_per_bag
+
+                raw_wpb = (
+                    item.get("weightPerBagKg")
+                    or item.get("weight_per_bag_kg")
+                    or item.get("outcomeWeightPerBagKg")
+                    or item.get("outcome_weight_per_bag_kg")
+                )
+                wpb_val = Decimal(str(raw_wpb)) if raw_wpb is not None and str(raw_wpb).strip() else intake_obj.weight_per_bag_kg
+
+                parsed_items.append({
+                    "intake": intake_obj,
+                    "bags": bags_val,
+                    "cones_per_bag": cones_val,
+                    "weight_per_bag_kg": wpb_val,
+                })
+
+        else:
+            intake_val = attrs.get("yarnIntake") or attrs.get("yarn_intake")
+            raw_intake = (
+                self.initial_data.get("yarnIntakeId")
+                or self.initial_data.get("yarn_intake_id")
+                or self.initial_data.get("yarnIntake")
+                or self.initial_data.get("yarn_intake")
+            )
+            if not intake_val and raw_intake:
+                try:
+                    intake_val = YarnIntake.objects.get(pk=raw_intake)
+                except (YarnIntake.DoesNotExist, ValueError):
+                    raise serializers.ValidationError({"yarnIntake": ["Invalid yarn intake ID."]})
+
+            if intake_val:
+                outcome_bags = attrs.get(
+                    "outcome_bags",
+                    self.initial_data.get("outcomeBags", self.initial_data.get("outcome_bags"))
+                )
+                if not outcome_bags:
+                    raise serializers.ValidationError({"outcomeBags": ["Outcome bags must be greater than 0."]})
+                try:
+                    outcome_bags = int(outcome_bags)
+                    if outcome_bags <= 0:
+                        raise ValueError()
+                except (ValueError, TypeError):
+                    raise serializers.ValidationError({"outcomeBags": ["Outcome bags must be greater than 0."]})
+
+                cones_val = attrs.get("outcome_cones_per_bag") or intake_val.cones_per_bag
+                wpb_val = attrs.get("outcome_weight_per_bag_kg") or intake_val.weight_per_bag_kg
+
+                parsed_items.append({
+                    "intake": intake_val,
+                    "bags": outcome_bags,
+                    "cones_per_bag": cones_val,
+                    "weight_per_bag_kg": wpb_val,
+                })
+            else:
+                if not self.instance:
+                    raise serializers.ValidationError({
+                        "yarnIntake": [
+                            "Yarn dispatch must be from one or more yarn intake batches. "
+                            "Dispatching directly from stock pool is not allowed."
+                        ]
+                    })
+                parsed_items = None
+
+        if parsed_items is not None:
+            from collections import defaultdict
+            bags_per_intake = defaultdict(int)
+            for item in parsed_items:
+                bags_per_intake[item["intake"].id] += item["bags"]
+
+            first_intake = parsed_items[0]["intake"]
+            first_stock = first_intake.stock
+
+            for item in parsed_items:
+                intake = item["intake"]
+                if intake.stock_id != first_stock.id:
+                    if (
+                        intake.yarn_name_id != first_intake.yarn_name_id
+                        or intake.yarn_type_id != first_intake.yarn_type_id
+                        or intake.yarn_count_id != first_intake.yarn_count_id
+                    ):
+                        raise serializers.ValidationError({
+                            "intakes": [
+                                f"All selected yarn intakes must share the same yarn name, type, and count. "
+                                f"Intake '{intake.set_no}' ({intake.yarn_name}) differs from '{first_intake.set_no}' ({first_intake.yarn_name})."
+                            ]
+                        })
+
+            for intake_id, total_requested in bags_per_intake.items():
+                intake = YarnIntake.objects.get(pk=intake_id)
+                available = intake.remaining_bags
+                if self.instance:
+                    prev_item_bags = self.instance.items.filter(yarn_intake=intake).aggregate(s=Sum("bags"))["s"] or 0
+                    available += prev_item_bags
+
+                if total_requested > available:
+                    err_field = "intakes" if raw_items is not None else "outcomeBags"
+                    raise serializers.ValidationError({
+                        err_field: [
+                            f"Yarn intake batch '{intake.set_no or intake.id}' only has {available} bags remaining. "
+                            f"Cannot dispatch {total_requested} bags."
+                        ]
+                    })
+
+            total_bags = sum(it["bags"] for it in parsed_items)
+            total_kg = sum(Decimal(str(it["bags"])) * Decimal(str(it["weight_per_bag_kg"])) for it in parsed_items)
+            avg_wpb = (total_kg / Decimal(str(total_bags))).quantize(Decimal("0.000001")) if total_bags > 0 else Decimal("0")
+            avg_cones = parsed_items[0]["cones_per_bag"]
+
+            attrs["outcome_bags"] = total_bags
+            attrs["outcome_weight_per_bag_kg"] = avg_wpb
+            attrs["outcome_cones_per_bag"] = avg_cones
+            attrs["stock"] = first_stock
+            attrs["_parsed_items"] = parsed_items
+
+        attrs.pop("yarn_intake", None)
+        attrs.pop("yarnIntake", None)
+        attrs.pop("yarnIntakeId", None)
 
         outcome_type = attrs.get(
             "outcome_type",
@@ -414,6 +752,119 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
 
         return attrs
 
+    def create(self, validated_data):
+        items_data = validated_data.pop("_parsed_items", [])
+        validated_data.pop("yarn_intake", None)
+        validated_data.pop("yarnIntake", None)
+        validated_data.pop("yarnIntakeId", None)
+        validated_data.pop("beamIds", None)
+        validated_data.pop("beamId", None)
+        validated_data.pop("beam", None)
+        validated_data.pop("ratePerKg", None)
+        validated_data.pop("stockId", None)
+
+        request = self.context.get("request")
+        user = request.user if request and request.user and request.user.is_authenticated else None
+        if user:
+            validated_data["created_by"] = user
+            validated_data["updated_by"] = user
+
+        with transaction.atomic():
+            outcome = YarnOutcome(**validated_data)
+            outcome.save()
+
+            intakes_to_recalc = set()
+            for item in items_data:
+                intake = item["intake"]
+                YarnOutcomeItem.objects.create(
+                    yarn_outcome=outcome,
+                    yarn_intake=intake,
+                    bags=item["bags"],
+                    cones_per_bag=item["cones_per_bag"],
+                    weight_per_bag_kg=item["weight_per_bag_kg"],
+                )
+                intakes_to_recalc.add(intake.id)
+
+            outcome.calculate_outcome_fields()
+            outcome.save()
+
+            from .services import recalculate_yarn_intake_stock
+            from factory.yarn.yarn_stock.services import recalculate_yarn_stock
+
+            for intake_id in sorted(list(intakes_to_recalc)):
+                locked_intake = YarnIntake.objects.select_for_update().get(pk=intake_id)
+                recalculate_yarn_intake_stock(locked_intake)
+
+            if outcome.stock_id:
+                locked_stock = YarnStock.objects.select_for_update().get(pk=outcome.stock_id)
+                recalculate_yarn_stock(locked_stock)
+
+            return outcome
+
+    def update(self, instance, validated_data):
+        items_data = validated_data.pop("_parsed_items", None)
+        validated_data.pop("yarn_intake", None)
+        validated_data.pop("yarnIntake", None)
+        validated_data.pop("yarnIntakeId", None)
+        validated_data.pop("beamIds", None)
+        validated_data.pop("beamId", None)
+        validated_data.pop("beam", None)
+        validated_data.pop("ratePerKg", None)
+        validated_data.pop("stockId", None)
+
+        request = self.context.get("request")
+        user = request.user if request and request.user and request.user.is_authenticated else None
+        if user:
+            validated_data["updated_by"] = user
+
+        with transaction.atomic():
+            old_intake_ids = set()
+            for item in instance.items.all():
+                if item.yarn_intake_id:
+                    old_intake_ids.add(item.yarn_intake_id)
+
+            old_stock_id = instance.stock_id
+
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+
+            instance.save()
+
+            new_intake_ids = set()
+            if items_data is not None:
+                instance.items.all().delete()
+                for item in items_data:
+                    intake = item["intake"]
+                    YarnOutcomeItem.objects.create(
+                        yarn_outcome=instance,
+                        yarn_intake=intake,
+                        bags=item["bags"],
+                        cones_per_bag=item["cones_per_bag"],
+                        weight_per_bag_kg=item["weight_per_bag_kg"],
+                    )
+                    new_intake_ids.add(intake.id)
+                instance.calculate_outcome_fields()
+                instance.save()
+            else:
+                for item in instance.items.all():
+                    if item.yarn_intake_id:
+                        new_intake_ids.add(item.yarn_intake_id)
+
+            from .services import recalculate_yarn_intake_stock
+            from factory.yarn.yarn_stock.services import recalculate_yarn_stock
+
+            all_intake_ids = old_intake_ids.union(new_intake_ids)
+            for i_id in sorted(list(all_intake_ids)):
+                locked_intake = YarnIntake.objects.select_for_update().get(pk=i_id)
+                recalculate_yarn_intake_stock(locked_intake)
+
+            all_stock_ids = {s for s in [old_stock_id, instance.stock_id] if s is not None}
+            for s_id in sorted(list(all_stock_ids)):
+                locked_stock = YarnStock.objects.select_for_update().get(pk=s_id)
+                recalculate_yarn_stock(locked_stock)
+
+            return instance
+
 
 # ── YarnIntake (list) ──────────────────────────────────────────────────────
 
@@ -452,8 +903,16 @@ class YarnIntakeListSerializer(serializers.ModelSerializer):
     outcomeWeightKg = serializers.DecimalField(source="outcome_weight_kg", max_digits=15, decimal_places=6, read_only=True)
     outcomeWeightLb = serializers.DecimalField(source="outcome_weight_lb", max_digits=15, decimal_places=6, read_only=True)
 
+    # Returned from sizing summary
+    returnBags = serializers.DecimalField(source="return_bags", max_digits=15, decimal_places=6, read_only=True)
+    return_bags = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
+    returnCones = serializers.DecimalField(source="return_cones", max_digits=15, decimal_places=6, read_only=True)
+    return_cones = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
+
     # Remaining
     remainingBags = serializers.IntegerField(source="remaining_bags", read_only=True)
+    remainingCones = serializers.IntegerField(source="remaining_cones", read_only=True)
+    remaining_cones = serializers.IntegerField(read_only=True)
     remainingWeightKg = serializers.DecimalField(source="remaining_weight_kg", max_digits=15, decimal_places=6, read_only=True)
     remainingWeightLb = serializers.DecimalField(source="remaining_weight_lb", max_digits=15, decimal_places=6, read_only=True)
 
@@ -474,7 +933,8 @@ class YarnIntakeListSerializer(serializers.ModelSerializer):
             "ratePerLb", "totalRate",
             "weightPerBagKg", "netWeightKg", "netWeightLb",
             "outcomeBags", "outcomeWeightKg", "outcomeWeightLb",
-            "remainingBags", "remainingWeightKg", "remainingWeightLb",
+            "returnBags", "return_bags", "returnCones", "return_cones",
+            "remainingBags", "remainingCones", "remaining_cones", "remainingWeightKg", "remainingWeightLb",
             "createdBy", "updatedBy", "createdAt", "updatedAt",
         ]
 
@@ -580,12 +1040,19 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
     outcomeWeightKg = serializers.DecimalField(source="outcome_weight_kg", max_digits=15, decimal_places=6, read_only=True)
     outcomeWeightLb = serializers.DecimalField(source="outcome_weight_lb", max_digits=15, decimal_places=6, read_only=True)
 
+    returnBags = serializers.DecimalField(source="return_bags", max_digits=15, decimal_places=6, read_only=True)
+    return_bags = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
+    returnCones = serializers.DecimalField(source="return_cones", max_digits=15, decimal_places=6, read_only=True)
+    return_cones = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
+
     remainingBags = serializers.IntegerField(source="remaining_bags", read_only=True)
+    remainingCones = serializers.IntegerField(source="remaining_cones", read_only=True)
+    remaining_cones = serializers.IntegerField(read_only=True)
     remainingWeightKg = serializers.DecimalField(source="remaining_weight_kg", max_digits=15, decimal_places=6, read_only=True)
     remainingWeightLb = serializers.DecimalField(source="remaining_weight_lb", max_digits=15, decimal_places=6, read_only=True)
 
     # ── Nested outcomes (read-only, for GET detail) ───────────────────────
-    outcomes = YarnOutcomeSerializer(many=True, read_only=True)
+    outcomes = serializers.SerializerMethodField()
 
     # ── Supplier display ──────────────────────────────────────────────────
     supplierDetail = serializers.SerializerMethodField()
@@ -610,7 +1077,8 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
             "ratePerLb", "totalRate",
             "weightPerBagKg", "netWeightKg", "netWeightLb",
             "outcomeBags", "outcomeWeightKg", "outcomeWeightLb",
-            "remainingBags", "remainingWeightKg", "remainingWeightLb",
+            "returnBags", "return_bags", "returnCones", "return_cones",
+            "remainingBags", "remainingCones", "remaining_cones", "remainingWeightKg", "remainingWeightLb",
             "outcomes",
             "createdBy", "updatedBy", "createdAt", "updatedAt",
         ]
@@ -619,10 +1087,17 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
             "stock", "stockDetail",
             "totalCones", "totalRate", "netWeightKg", "netWeightLb",
             "outcomeBags", "outcomeWeightKg", "outcomeWeightLb",
-            "remainingBags", "remainingWeightKg", "remainingWeightLb",
+            "returnBags", "return_bags", "returnCones", "return_cones",
+            "remainingBags", "remainingCones", "remaining_cones", "remainingWeightKg", "remainingWeightLb",
             "outcomes", "supplierDetail",
             "createdAt", "updatedAt", "createdBy", "updatedBy",
         ]
+
+    def get_outcomes(self, obj):
+        outcomes = YarnOutcome.objects.filter(
+            items__yarn_intake=obj
+        ).distinct().order_by("-outcome_date", "-id")
+        return YarnOutcomeSerializer(outcomes, many=True, context=self.context).data
 
     def get_stockDetail(self, obj):
         if obj.stock:
@@ -680,6 +1155,12 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
         ret["yarnNameDetail"] = {"id": instance.yarn_name.id, "name": instance.yarn_name.name} if instance.yarn_name else None
         ret["yarnTypeDetail"] = {"id": instance.yarn_type.id, "name": instance.yarn_type.name} if instance.yarn_type else None
         ret["yarnCountDetail"] = {"id": instance.yarn_count.id, "name": instance.yarn_count.name} if instance.yarn_count else None
+        ret["returnBags"] = str(instance.return_bags) if instance.return_bags is not None else "0.000000"
+        ret["return_bags"] = str(instance.return_bags) if instance.return_bags is not None else "0.000000"
+        ret["returnCones"] = str(instance.return_cones) if instance.return_cones is not None else "0.000000"
+        ret["return_cones"] = str(instance.return_cones) if instance.return_cones is not None else "0.000000"
+        ret["remainingCones"] = instance.remaining_cones
+        ret["remaining_cones"] = instance.remaining_cones
         return ret
 
     def create(self, validated_data):
