@@ -165,11 +165,8 @@ class ClothPatchSerializer(serializers.ModelSerializer):
     Supports individual patch creation, rich nested loom/beam/loading details,
     and allocation metrics.
     """
-    patchNumber = serializers.CharField(source="patch_number", required=False, allow_blank=True)
-    patch_number = serializers.CharField(required=False, allow_blank=True)
-
-    setNo = serializers.CharField(source="set_no", required=False, allow_blank=True)
-    set_no = serializers.CharField(required=False, allow_blank=True)
+    patchNumber = serializers.CharField(source="patch_number")
+    patch_number = serializers.CharField(required=False)
 
     clothName = serializers.SerializerMethodField()
     cloth_name = serializers.PrimaryKeyRelatedField(
@@ -239,8 +236,6 @@ class ClothPatchSerializer(serializers.ModelSerializer):
             "id",
             "patchNumber",
             "patch_number",
-            "setNo",
-            "set_no",
             "clothName",
             "cloth_name",
             "clothNameId",
@@ -332,7 +327,6 @@ class ClothPatchSerializer(serializers.ModelSerializer):
         data = data.copy() if hasattr(data, "copy") else dict(data)
         mapping = {
             "patch_number": "patchNumber",
-            "set_no": "setNo",
             "cloth_name": "clothName",
             "cloth_name_id": "clothNameId",
             "loom_id": "loomId",
@@ -435,14 +429,13 @@ class ClothPatchSerializer(serializers.ModelSerializer):
         user = self.context["request"].user if "request" in self.context and self.context["request"].user.is_authenticated else None
         patch = create_cloth_patch(
             beam_loading_or_id=validated_data["beam_loading"],
-            patch_number=validated_data.get("patch_number", ""),
+            patch_number=validated_data["patch_number"],
             cloth_name_or_id=validated_data["cloth_name"],
             patch_date=validated_data["patch_date"],
             productive_length=validated_data["productive_length"],
             bundle_count=validated_data.get("bundle_count", 1),
             loom_or_id=validated_data.get("loom"),
             beam_or_id=validated_data.get("beam"),
-            set_no=validated_data.get("set_no", ""),
             remarks=validated_data.get("remarks", ""),
             user=user,
             request=self.context.get("request"),

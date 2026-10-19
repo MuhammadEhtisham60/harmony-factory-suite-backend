@@ -16,9 +16,6 @@ class ClothPatchFilter(filters.FilterSet):
     patch_number = filters.CharFilter(lookup_expr="icontains")
     patchNumber = filters.CharFilter(field_name="patch_number", lookup_expr="icontains")
 
-    set_no = filters.CharFilter(lookup_expr="icontains")
-    setNo = filters.CharFilter(field_name="set_no", lookup_expr="icontains")
-
     cloth_name = filters.ModelChoiceFilter(queryset=ClothName.objects.all())
     cloth_name_id = filters.NumberFilter(field_name="cloth_name_id")
     clothNameId = filters.NumberFilter(field_name="cloth_name_id")
@@ -45,7 +42,6 @@ class ClothPatchFilter(filters.FilterSet):
         model = ClothPatch
         fields = [
             "patch_number",
-            "set_no",
             "cloth_name",
             "cloth_name_id",
             "loom",

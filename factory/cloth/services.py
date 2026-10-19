@@ -31,14 +31,13 @@ logger = logging.getLogger(__name__)
 
 def create_cloth_patch(
     beam_loading_or_id,
-    patch_number="",
-    cloth_name_or_id=None,
-    patch_date=None,
-    productive_length=None,
+    patch_number,
+    cloth_name_or_id,
+    patch_date,
+    productive_length,
     bundle_count=1,
     loom_or_id=None,
     beam_or_id=None,
-    set_no="",
     remarks="",
     user=None,
     request=None,
@@ -50,7 +49,7 @@ def create_cloth_patch(
       3. Validates/derives Beam and Loom matches.
       4. Advances BeamLoading and Beam to In Production if currently Loaded.
       5. Validates productive_length > 0.
-      6. Creates ClothPatch record (auto-generates patch_number if blank).
+      6. Creates ClothPatch record.
       7. Automatically ensures a ClothStock master exists for cloth_name.
     """
     loading_id = beam_loading_or_id.id if hasattr(beam_loading_or_id, "id") else beam_loading_or_id
@@ -68,7 +67,7 @@ def create_cloth_patch(
             loading = (
                 BeamLoading.objects
                 .select_for_update()
-                .select_related("beam", "loom", "sizing_outcome")
+                .select_related("beam", "loom")
                 .get(id=loading_id)
             )
         except BeamLoading.DoesNotExist:
@@ -138,27 +137,13 @@ def create_cloth_patch(
             loom.updated_by = user
             loom.save(update_fields=["status", "updated_by", "updated_at"])
 
-        # Resolve set_no
-        resolved_set_no = str(set_no).strip() if set_no else ""
-        if not resolved_set_no and loading.sizing_outcome:
-            resolved_set_no = loading.sizing_outcome.set_no or ""
-        elif not resolved_set_no and getattr(loading, "set_no", None):
-            resolved_set_no = loading.set_no or ""
-
-        # Auto-generate patch_number if empty or "auto"
-        if not patch_number or str(patch_number).strip().lower() in ("", "auto"):
-            final_patch_number = ClothPatch.generate_next_patch_number(loading)
-        else:
-            final_patch_number = str(patch_number).strip()
-
         # Create ClothPatch
         try:
             patch = ClothPatch.objects.create(
                 loom=loom,
                 beam=beam,
                 beam_loading=loading,
-                patch_number=final_patch_number,
-                set_no=resolved_set_no,
+                patch_number=str(patch_number).strip(),
                 cloth_name=cloth_name_obj,
                 patch_date=patch_date,
                 bundle_count=int(bundle_count or 1),

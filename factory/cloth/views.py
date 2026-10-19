@@ -192,8 +192,6 @@ class ClothPatchViewSet(ModelViewSet):
     filterset_class = ClothPatchFilter
     search_fields = [
         "patch_number",
-        "set_no",
-        "beam_loading__sizing_outcome__set_no",
         "cloth_name__name",
         "loom__loom_code",
         "beam__beam_number",
@@ -202,7 +200,6 @@ class ClothPatchViewSet(ModelViewSet):
     ordering_fields = [
         "patch_date",
         "patch_number",
-        "set_no",
         "productive_length",
         "bundle_count",
         "cloth_name__name",
@@ -220,57 +217,6 @@ class ClothPatchViewSet(ModelViewSet):
         "PATCH": "cloth.edit",
         "DELETE": "cloth.delete",
     }
-
-    @action(detail=False, methods=["get"], url_path="next-patch-number")
-    def next_patch_number(self, request):
-        """
-        Calculates authoritative next sequential patch identifier for an active BeamLoading:
-        patch-set-{set_no}-{loom_number}---{beam_number}--{bundle_count:04d}
-        Example:
-        patch-set-2-l-101---Bm-101--0001
-        """
-        from factory.beam.models import BeamLoading
-
-        loading_id = (
-            request.query_params.get("beam_loading")
-            or request.query_params.get("beamLoading")
-            or request.query_params.get("beam_loading_id")
-            or request.query_params.get("beamLoadingId")
-        )
-        if not loading_id:
-            return Response({
-                "success": False,
-                "message": "beam_loading query parameter is required."
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            loading = (
-                BeamLoading.objects
-                .select_related("beam", "loom", "sizing_outcome")
-                .get(id=loading_id)
-            )
-        except (BeamLoading.DoesNotExist, ValueError):
-            return Response({
-                "success": False,
-                "message": f"BeamLoading #{loading_id} does not exist."
-            }, status=status.HTTP_404_NOT_FOUND)
-
-        next_number = ClothPatch.generate_next_patch_number(loading)
-        set_val = loading.sizing_outcome.set_no if loading.sizing_outcome else ""
-        loom_code = loading.loom.loom_code if loading.loom else ""
-        beam_no = loading.beam.beam_number if loading.beam else ""
-
-        return Response({
-            "success": True,
-            "patch_number": next_number,
-            "patchNumber": next_number,
-            "set_no": set_val,
-            "setNo": set_val,
-            "loom_code": loom_code,
-            "loomCode": loom_code,
-            "beam_number": beam_no,
-            "beamNumber": beam_no,
-        })
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={"request": request})
