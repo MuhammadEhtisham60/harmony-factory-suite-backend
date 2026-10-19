@@ -155,6 +155,13 @@ class ClothPatch(models.Model):
         help_text="Unique patch identifier (e.g. PATCH-2026-0001)"
     )
 
+    set_no = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        help_text="Sizing set number inherited from beam loading (e.g. SET-2, SET-4)"
+    )
+
     cloth_name = models.ForeignKey(
         ClothName,
         on_delete=models.PROTECT,
@@ -211,7 +218,121 @@ class ClothPatch(models.Model):
             models.Index(fields=["beam_loading"], name="factory_cp_bl_idx"),
             models.Index(fields=["cloth_name"], name="factory_cp_cn_idx"),
             models.Index(fields=["patch_date"], name="factory_cp_date_idx"),
+            models.Index(fields=["set_no"], name="factory_cp_set_no_idx"),
         ]
+
+    def save(self, *args, **kwargs):
+        if not self.set_no and self.beam_loading:
+            if getattr(self.beam_loading, "sizing_outcome", None):
+                self.set_no = self.beam_loading.sizing_outcome.set_no or ""
+            elif getattr(self.beam_loading, "set_no", None):
+                self.set_no = self.beam_loading.set_no or ""
+        if not self.patch_number or str(self.patch_number).strip().lower() in ("", "auto"):
+            self.patch_number = self.generate_next_patch_number(self.beam_loading)
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def generate_next_patch_number(cls, beam_loading_or_id):
+        """
+        Auto-generates sequential patch identifier formatted as:
+        patch-set-{set_no}-{loom_number}---{beam_number}--{bundle_count:04d}
+        Example:
+        patch-set-2-l-101---Bm-101--0001
+        """
+        import re
+        from factory.beam.models import BeamLoading
+
+        if isinstance(beam_loading_or_id, BeamLoading):
+            loading = beam_loading_or_id
+        else:
+            try:
+                loading = (
+                    BeamLoading.objects
+                    .select_related("beam", "loom", "sizing_outcome")
+                    .get(id=beam_loading_or_id)
+                )
+            except Exception:
+                loading = None
+
+        # 1. Set part (e.g. "set-2" from "SET-2", "2", "SET-4" -> "set-4")
+        raw_set = ""
+        if loading and loading.sizing_outcome and loading.sizing_outcome.set_no:
+            raw_set = loading.sizing_outcome.set_no
+        elif loading and getattr(loading, "set_no", None):
+            raw_set = loading.set_no
+
+        if raw_set:
+            s = str(raw_set).strip()
+            m = re.match(r"^set[-_\s]*(.+)$", s, re.IGNORECASE)
+            val = m.group(1).strip() if m else s
+            val = re.sub(r"\s+", "-", val).lower()
+            set_part = f"set-{val}"
+        else:
+            set_part = "set-1"
+
+        # 2. Loom part (e.g. "l-101" from "L-101", "101", "LOOM-101")
+        raw_loom = ""
+        if loading and loading.loom and loading.loom.loom_code:
+            raw_loom = loading.loom.loom_code
+        elif loading and getattr(loading, "loom_id", None):
+            raw_loom = str(loading.loom_id)
+
+        if raw_loom:
+            s = str(raw_loom).strip()
+            m = re.match(r"^(?:loom|l)[-_\s]*(.+)$", s, re.IGNORECASE)
+            val = m.group(1).strip() if m else s
+            val = re.sub(r"\s+", "-", val).lower()
+            loom_part = f"l-{val}"
+        else:
+            loom_part = "l-0"
+
+        # 3. Beam part (e.g. "Bm-101" from "BM-101", "BM-0101", "101")
+        raw_beam = ""
+        if loading and loading.beam and loading.beam.beam_number:
+            raw_beam = loading.beam.beam_number
+        elif loading and getattr(loading, "beam_id", None):
+            raw_beam = str(loading.beam_id)
+
+        if raw_beam:
+            s = str(raw_beam).strip()
+            m = re.match(r"^(?:beam|bm)[-_\s]*(.+)$", s, re.IGNORECASE)
+            val = m.group(1).strip() if m else s
+            val = re.sub(r"\s+", "-", val)
+            beam_part = f"Bm-{val}"
+        else:
+            beam_part = "Bm-0"
+
+        # 4. Sequential roll/bundle count (e.g. 0001, 0002)
+        prefix = f"patch-{set_part}-{loom_part}---{beam_part}--"
+
+        existing_matches = cls.objects.filter(patch_number__istartswith=prefix).values_list("patch_number", flat=True)
+        max_seq = 0
+        pattern = re.compile(re.escape(prefix) + r"(\d+)$", re.IGNORECASE)
+        for p_num in existing_matches:
+            match = pattern.match(p_num)
+            if match:
+                try:
+                    num = int(match.group(1))
+                    if num > max_seq:
+                        max_seq = num
+                except ValueError:
+                    pass
+
+        if max_seq > 0:
+            next_seq = max_seq + 1
+        else:
+            if loading and getattr(loading, "pk", None):
+                loading_count = cls.objects.filter(beam_loading=loading).count()
+                next_seq = loading_count + 1
+            else:
+                next_seq = 1
+
+        candidate = f"{prefix}{next_seq:04d}"
+        while cls.objects.filter(patch_number__iexact=candidate).exists():
+            next_seq += 1
+            candidate = f"{prefix}{next_seq:04d}"
+
+        return candidate
 
     def __str__(self):
         cloth_title = self.cloth_name.name if self.cloth_name else "Unknown"
