@@ -1870,6 +1870,58 @@ class SizingBeamAssignmentJsonFieldTests(APITestCase):
         self.assertEqual(assignment.get_beam_yarn_length(self.beam102.id), 4500.0)
         self.assertIsNone(assignment.get_beam_yarn_length(9999))
 
+    def test_user_payload_multiple_intakes_with_beam_ids(self):
+        """
+        Tests creating a YarnOutcome with outcomeType='Sizing', multiple intakes,
+        and beamIds payload (the exact payload reported by user).
+        """
+        intake2 = YarnIntake.objects.create(
+            yarn_name="Cotton Warp 20/1",
+            yarn_type="Warp",
+            yarn_count="20/1",
+            supplier=self.supplier,
+            bags=50,
+            cones_per_bag=24,
+            weight_per_bag_kg=Decimal("45.36"),
+            rate_per_lb=Decimal("150"),
+            intake_date="2026-10-02",
+        )
+        beam = Beam.objects.create(
+            beam_number="BN-USER-PAYLOAD-TEST",
+            status=Beam.StatusChoices.AVAILABLE,
+        )
+
+        payload = {
+            "outcomeType": "Sizing",
+            "outcomeBags": 2,
+            "outcomeConesPerBag": 24,
+            "outcomeWeightPerBagKg": 27.5,
+            "outcomeDate": "2026-10-19",
+            "sizing": self.sizing.id,
+            "yarnBuyer": None,
+            "ratePerKg": None,
+            "totalPrice": 0,
+            "intakes": [
+                {"yarnIntake": self.yarn_intake.id, "yarn_intake": self.yarn_intake.id, "bags": 1, "conesPerBag": 24, "weightPerBagKg": 45},
+                {"yarnIntake": intake2.id, "yarn_intake": intake2.id, "bags": 1, "conesPerBag": 24, "weightPerBagKg": 10},
+            ],
+            "beamIds": [beam.id],
+        }
+
+        res = self.client.post("/api/v1/yarn-outcomes/", payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED, res.data)
+        data = res.data["data"]
+        self.assertEqual(data["outcomeBags"], 2)
+        self.assertEqual(data["outcomeType"], "Sizing")
+
+        beam.refresh_from_db()
+        self.assertEqual(beam.status, Beam.StatusChoices.SIZING)
+
+        yo_id = data["id"]
+        assignment = SizingBeamAssignment.objects.get(yarn_outcome_id=yo_id)
+        self.assertIn(beam, assignment.beam.all())
+        self.assertEqual(assignment.status, SizingBeamAssignment.StatusChoices.ASSIGNED)
+
 
 
 

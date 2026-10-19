@@ -429,7 +429,7 @@ class SizingOutcome(models.Model):
     @property
     def total_beams(self):
         # Return count of beam assignments or beam loadings
-        if hasattr(self, "beam_loadings") and self.beam_loadings.exists():
+        if self.pk and hasattr(self, "beam_loadings") and self.beam_loadings.exists():
             return self.beam_loadings.count()
         if self.yarn_outcome_id:
             from factory.beam.models import Beam

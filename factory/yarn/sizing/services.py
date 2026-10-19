@@ -572,11 +572,10 @@ def get_beam_sizing_history(beam_id):
         .select_related(
             "yarn_outcome",
             "yarn_outcome__sizing",
-            "yarn_outcome__yarn_intake",
             "created_by",
             "updated_by",
         )
-        .prefetch_related("beam")
+        .prefetch_related("beam", "yarn_outcome__items__yarn_intake")
         .order_by("-assigned_at", "-id")
     )
 
@@ -598,10 +597,9 @@ def get_beam_active_assignment(beam_id):
         .select_related(
             "yarn_outcome",
             "yarn_outcome__sizing",
-            "yarn_outcome__yarn_intake",
             "created_by",
             "updated_by",
         )
-        .prefetch_related("beam")
+        .prefetch_related("beam", "yarn_outcome__items__yarn_intake")
         .first()
     )

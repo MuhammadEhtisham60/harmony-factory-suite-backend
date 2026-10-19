@@ -441,11 +441,20 @@ class YarnOutcome(models.Model):
         verbose_name = "Yarn Outcome"
         verbose_name_plural = "Yarn Outcomes"
 
+    def __init__(self, *args, **kwargs):
+        intake = kwargs.pop("yarn_intake", None) or kwargs.pop("yarnIntake", None)
+        intake_id = kwargs.pop("yarn_intake_id", None) or kwargs.pop("yarnIntakeId", None)
+        super().__init__(*args, **kwargs)
+        if intake is not None:
+            self._initial_yarn_intake = intake
+        elif intake_id is not None:
+            self._initial_yarn_intake = intake_id
+
     def __str__(self):
         name = ""
         if self.stock and self.stock.yarn_name:
             name = self.stock.yarn_name.name
-        elif hasattr(self, "items") and self.items.exists():
+        elif self.pk and hasattr(self, "items") and self.items.exists():
             first_item = self.items.select_related("yarn_intake__yarn_name").first()
             if first_item and first_item.yarn_intake and first_item.yarn_intake.yarn_name:
                 name = first_item.yarn_intake.yarn_name.name
@@ -473,7 +482,7 @@ class YarnOutcome(models.Model):
         If items exist, aggregates bags and weights from items.
         Otherwise falls back to outcome_bags * outcome_weight_per_bag_kg.
         """
-        if hasattr(self, "items") and self.items.exists():
+        if self.pk and hasattr(self, "items") and self.items.exists():
             item_agg = self.items.aggregate(
                 total_bags=models.Sum("bags"),
                 total_kg=models.Sum("weight_kg"),
@@ -493,18 +502,40 @@ class YarnOutcome(models.Model):
     def save(self, *args, **kwargs):
         self.calculate_outcome_fields()
         if not self.stock_id:
-            if hasattr(self, "items") and self.items.exists():
+            if self.pk and hasattr(self, "items") and self.items.exists():
                 first_item = self.items.select_related("yarn_intake__stock").first()
                 if first_item and first_item.yarn_intake and first_item.yarn_intake.stock:
                     self.stock = first_item.yarn_intake.stock
+            elif hasattr(self, "_initial_yarn_intake") and self._initial_yarn_intake:
+                intake = self._initial_yarn_intake
+                if isinstance(intake, int):
+                    intake = YarnIntake.objects.filter(pk=intake).first()
+                if intake and getattr(intake, "stock", None):
+                    self.stock = intake.stock
         super().save(*args, **kwargs)
+        if hasattr(self, "_initial_yarn_intake") and self._initial_yarn_intake and not self.items.exists():
+            intake = self._initial_yarn_intake
+            if isinstance(intake, int):
+                intake = YarnIntake.objects.filter(pk=intake).first()
+            if intake:
+                YarnOutcomeItem.objects.create(
+                    yarn_outcome=self,
+                    yarn_intake=intake,
+                    bags=self.outcome_bags,
+                    cones_per_bag=self.outcome_cones_per_bag or intake.cones_per_bag,
+                    weight_per_bag_kg=self.outcome_weight_per_bag_kg or intake.weight_per_bag_kg,
+                )
 
     @property
     def primary_intake(self):
-        if hasattr(self, "items"):
+        if self.pk and hasattr(self, "items"):
             first_item = self.items.select_related("yarn_intake").first()
             if first_item:
                 return first_item.yarn_intake
+        if hasattr(self, "_initial_yarn_intake") and self._initial_yarn_intake:
+            if isinstance(self._initial_yarn_intake, int):
+                return YarnIntake.objects.filter(pk=self._initial_yarn_intake).first()
+            return self._initial_yarn_intake
         return None
 
     @property
@@ -512,9 +543,26 @@ class YarnOutcome(models.Model):
         """Backward-compatible property returning primary intake."""
         return self.primary_intake
 
+    @yarn_intake.setter
+    def yarn_intake(self, value):
+        self._initial_yarn_intake = value
+
+    @property
+    def yarn_intake_id(self):
+        if hasattr(self, "_initial_yarn_intake") and self._initial_yarn_intake:
+            if isinstance(self._initial_yarn_intake, int):
+                return self._initial_yarn_intake
+            return getattr(self._initial_yarn_intake, "id", None)
+        intake = self.primary_intake
+        return intake.id if intake else None
+
+    @yarn_intake_id.setter
+    def yarn_intake_id(self, value):
+        self._initial_yarn_intake = value
+
     @property
     def total_beams(self):
-        if hasattr(self, "beam_assignments"):
+        if self.pk and hasattr(self, "beam_assignments"):
             from factory.beam.models import Beam
             from factory.yarn.sizing.models import SizingBeamAssignment
             return Beam.objects.filter(

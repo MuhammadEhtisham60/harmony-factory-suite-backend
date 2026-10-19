@@ -469,8 +469,8 @@ class SizingBeamAssignmentViewSet(ModelViewSet):
 
     queryset = (
         SizingBeamAssignment.objects
-        .select_related("yarn_outcome", "yarn_outcome__sizing", "yarn_outcome__yarn_intake", "created_by", "updated_by")
-        .prefetch_related("beam")
+        .select_related("yarn_outcome", "yarn_outcome__sizing", "created_by", "updated_by")
+        .prefetch_related("beam", "yarn_outcome__items__yarn_intake")
         .all()
     )
     serializer_class = SizingBeamAssignmentSerializer
@@ -479,7 +479,7 @@ class SizingBeamAssignmentViewSet(ModelViewSet):
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = SizingBeamAssignmentFilter
-    search_fields = ["beam__beam_number", "yarn_outcome__yarn_intake__yarn_name"]
+    search_fields = ["beam__beam_number", "yarn_outcome__yarn_intakes__yarn_name__name"]
     ordering_fields = ["assigned_at", "released_at", "status"]
     ordering = ["-assigned_at", "-id"]
 

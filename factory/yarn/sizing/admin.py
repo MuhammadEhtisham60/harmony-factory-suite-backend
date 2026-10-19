@@ -59,7 +59,7 @@ class SizingOutcomeAdmin(admin.ModelAdmin):
 class SizingBeamAssignmentAdmin(admin.ModelAdmin):
     list_display = ["id", "display_beams", "yarn_outcome", "status", "assigned_at", "released_at"]
     list_filter = ["status", "assigned_at"]
-    search_fields = ["beam__beam_number", "yarn_outcome__yarn_intake__yarn_name"]
+    search_fields = ["beam__beam_number", "yarn_outcome__yarn_intakes__yarn_name__name"]
     filter_horizontal = ["beam"]
     readonly_fields = ["assigned_at", "created_at", "updated_at", "created_by", "updated_by"]
 

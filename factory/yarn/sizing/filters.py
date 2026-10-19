@@ -46,7 +46,7 @@ class SizingOutcomeFilter(django_filters.FilterSet):
         return queryset.filter(
             Q(yarn_outcome__sizing__sizing_name__icontains=value)
             | Q(yarn_outcome__sizing__contact_person__icontains=value)
-            | Q(yarn_outcome__yarn_intake__yarn_name__icontains=value)
+            | Q(yarn_outcome__yarn_intakes__yarn_name__name__icontains=value)
             | Q(sizing_name__icontains=value)
             | Q(set_no__icontains=value)
             | Q(set_bill__icontains=value)
