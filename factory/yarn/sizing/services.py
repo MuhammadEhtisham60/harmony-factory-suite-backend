@@ -329,7 +329,8 @@ def sync_sizing_outcome_to_intake(outcome_or_yarn_outcome):
         from factory.yarn.yarn_intake.models import YarnIntake
         for intake in YarnIntake.objects.filter(id__in=intake_ids):
             recalculate_yarn_intake_stock(intake)
-    elif yarn_outcome.stock_id:
+
+    if yarn_outcome.stock_id:
         from factory.yarn.yarn_stock.services import recalculate_yarn_stock
         from factory.yarn.yarn_stock.models import YarnStock
         stock = YarnStock.objects.filter(pk=yarn_outcome.stock_id).first()

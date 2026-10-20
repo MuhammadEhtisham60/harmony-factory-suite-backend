@@ -6,6 +6,7 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from factory.beam.models import Beam
+from factory.yarn.yarn_stock.models import LB_PER_KG
 from factory.yarn.yarn_intake.models import YarnOutcome
 from factory.yarn.sizing.models import Sizing, SizingOutcome, SizingBeamAssignment
 from factory.yarn.sizing.services import create_sizing_outcome, assign_beams_to_outcome
@@ -636,6 +637,8 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
     status = serializers.SerializerMethodField()
     isReceived = serializers.SerializerMethodField()
     isPartiallyReceived = serializers.SerializerMethodField()
+    returnPrice = serializers.SerializerMethodField()
+    return_price = serializers.SerializerMethodField()
 
     def get_status(self, obj):
         if obj.yarn_outcome:
@@ -647,6 +650,30 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
 
     def get_isPartiallyReceived(self, obj):
         return self.get_status(obj) == "Partially Received"
+
+    def get_returnPrice(self, obj):
+        yo = obj.yarn_outcome
+        if not yo:
+            return "0.000000"
+        ret_bags = Decimal(str(obj.return_bags or 0))
+        ret_cones = Decimal(str(obj.return_cones or 0))
+        if ret_bags == 0 and ret_cones == 0:
+            return "0.000000"
+        rate_per_lb = Decimal("0.000000")
+        first_item = yo.items.first()
+        if first_item and first_item.yarn_intake and first_item.yarn_intake.rate_per_lb:
+            rate_per_lb = Decimal(str(first_item.yarn_intake.rate_per_lb))
+        elif yo.stock and yo.stock.price_per_lb:
+            rate_per_lb = Decimal(str(yo.stock.price_per_lb))
+        wpb = Decimal(str(yo.outcome_weight_per_bag_kg or 0))
+        cpb = Decimal(str(yo.outcome_cones_per_bag or 0))
+        wpc = (wpb / cpb) if cpb > 0 else Decimal("0.000000")
+        ret_kg = (ret_bags * wpb) + (ret_cones * wpc)
+        ret_lb = ret_kg * LB_PER_KG
+        return str((ret_lb * rate_per_lb).quantize(Decimal("0.000001")))
+
+    def get_return_price(self, obj):
+        return self.get_returnPrice(obj)
 
     amountPaid = serializers.DecimalField(source="amount_paid", max_digits=18, decimal_places=6, required=False)
     amount_paid = serializers.DecimalField(max_digits=18, decimal_places=6, required=False)
@@ -737,6 +764,8 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "return_bags",
             "returnCones",
             "return_cones",
+            "returnPrice",
+            "return_price",
             "lagatBags",
             "lagatCones",
             "brand",
@@ -783,6 +812,8 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "id",
             "yarnOutcomeDetail",
             "yarnOutcomeStatus",
+            "returnPrice",
+            "return_price",
             "amountDue",
             "amount_due",
             "sizingDetail",

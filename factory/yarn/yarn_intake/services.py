@@ -91,6 +91,10 @@ def recalculate_yarn_intake_stock(intake):
     return_weight_kg = (total_return_bags * weight_per_bag) + (total_return_cones * weight_per_cone)
     return_weight_lb = return_weight_kg * LB_PER_KG
 
+    rate_per_lb = Decimal(str(intake.rate_per_lb or 0))
+    return_total_rate = (return_weight_lb * rate_per_lb).quantize(Decimal("0.000001"))
+    outcome_total_rate = (total_outcome_weight_lb * rate_per_lb).quantize(Decimal("0.000001"))
+
     rem_bags_calc = Decimal(str(intake.bags)) - Decimal(str(total_outcome_bags)) + total_return_bags
     intake.remaining_bags = int(rem_bags_calc) if rem_bags_calc >= 0 else 0
 
@@ -102,19 +106,39 @@ def recalculate_yarn_intake_stock(intake):
     else:
         intake.remaining_cones = 0
 
-    intake.remaining_weight_kg = Decimal(str(intake.net_weight_kg)) - total_outcome_weight_kg + return_weight_kg
-    intake.remaining_weight_lb = Decimal(str(intake.net_weight_lb)) - total_outcome_weight_lb + return_weight_lb
+    rem_weight_kg_calc = Decimal(str(intake.net_weight_kg)) - total_outcome_weight_kg + return_weight_kg
+    intake.remaining_weight_kg = rem_weight_kg_calc if rem_weight_kg_calc > Decimal("0.000000") else Decimal("0.000000")
+
+    if intake.remaining_bags > 0 and intake.remaining_weight_kg > Decimal("0.000000"):
+        intake.remaining_weight_lb = intake.remaining_weight_kg * LB_PER_KG
+        intake.remaining_total_rate = (intake.remaining_weight_lb * rate_per_lb).quantize(Decimal("0.000001"))
+    else:
+        intake.remaining_weight_lb = Decimal("0.000000")
+        intake.remaining_total_rate = Decimal("0.000000")
+
+    intake.return_weight_kg = return_weight_kg
+    intake.return_weight_lb = return_weight_lb
+    intake.return_total_rate = return_total_rate
+    intake.outcome_total_rate = outcome_total_rate
+    # Active intake entry valuation: reflects current available inventory in this batch
+    intake.total_rate = intake.remaining_total_rate
 
     intake.save(update_fields=[
         "outcome_bags",
         "outcome_weight_kg",
         "outcome_weight_lb",
+        "outcome_total_rate",
         "return_bags",
         "return_cones",
+        "return_weight_kg",
+        "return_weight_lb",
+        "return_total_rate",
         "remaining_bags",
         "remaining_cones",
         "remaining_weight_kg",
         "remaining_weight_lb",
+        "remaining_total_rate",
+        "total_rate",
     ])
 
     if intake.stock_id:

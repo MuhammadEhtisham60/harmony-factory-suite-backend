@@ -158,6 +158,12 @@ class YarnIntake(models.Model):
     outcome_bags = models.PositiveIntegerField(default=0)
     outcome_weight_kg = models.DecimalField(max_digits=15, decimal_places=6, default=0)
     outcome_weight_lb = models.DecimalField(max_digits=15, decimal_places=6, default=0)
+    outcome_total_rate = models.DecimalField(
+        max_digits=18,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="Total monetary value of outcomes dispatched from this intake."
+    )
 
     # ── Returned from sizing summary (recalculated from SizingOutcome) ────
     return_bags = models.DecimalField(
@@ -172,6 +178,24 @@ class YarnIntake(models.Model):
         default=Decimal("0.000000"),
         help_text="Total cones returned from sizing"
     )
+    return_weight_kg = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="Total weight in kg returned from sizing"
+    )
+    return_weight_lb = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="Total weight in lb returned from sizing"
+    )
+    return_total_rate = models.DecimalField(
+        max_digits=18,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="Total monetary price / value of yarn returned from sizing to this intake batch."
+    )
 
     # ── Remaining stock (recalculated from YarnOutcome & SizingOutcome) ───
     remaining_bags = models.PositiveIntegerField(default=0)
@@ -181,6 +205,12 @@ class YarnIntake(models.Model):
     )
     remaining_weight_kg = models.DecimalField(max_digits=15, decimal_places=6, default=0)
     remaining_weight_lb = models.DecimalField(max_digits=15, decimal_places=6, default=0)
+    remaining_total_rate = models.DecimalField(
+        max_digits=18,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="Current remaining available inventory total price / valuation in this intake batch."
+    )
 
     # ── Audit ──────────────────────────────────────────────────────────────
     created_at = models.DateTimeField(auto_now_add=True)
@@ -253,7 +283,15 @@ class YarnIntake(models.Model):
         self.total_cones = int(bags * cones_per_bag)
         self.net_weight_kg = bags * weight_per_bag_kg
         self.net_weight_lb = self.net_weight_kg * LB_PER_KG
-        self.total_rate = self.net_weight_lb * rate_per_lb
+        if not self.outcome_bags and not self.return_bags:
+            self.total_rate = (self.net_weight_lb * rate_per_lb).quantize(Decimal("0.000001"))
+        elif self.remaining_total_rate is not None:
+            self.total_rate = self.remaining_total_rate
+
+    @property
+    def initial_total_rate(self):
+        """Initial invoice total price when this batch was received."""
+        return (Decimal(str(self.net_weight_lb or 0)) * Decimal(str(self.rate_per_lb or 0))).quantize(Decimal("0.000001"))
 
     def init_remaining_stock(self):
         """
@@ -263,11 +301,16 @@ class YarnIntake(models.Model):
         self.remaining_cones = self.total_cones
         self.remaining_weight_kg = self.net_weight_kg
         self.remaining_weight_lb = self.net_weight_lb
+        self.remaining_total_rate = self.total_rate
         self.outcome_bags = 0
         self.outcome_weight_kg = Decimal("0")
         self.outcome_weight_lb = Decimal("0")
+        self.outcome_total_rate = Decimal("0.000000")
         self.return_bags = Decimal("0.000000")
         self.return_cones = Decimal("0.000000")
+        self.return_weight_kg = Decimal("0.000000")
+        self.return_weight_lb = Decimal("0.000000")
+        self.return_total_rate = Decimal("0.000000")
 
     @classmethod
     def generate_next_batch_no(cls):
@@ -311,6 +354,16 @@ class YarnIntake(models.Model):
                 user=self.created_by,
             )
         super().save(*args, **kwargs)
+        if self.stock_id and not kwargs.get("update_fields"):
+            from factory.yarn.yarn_stock.services import recalculate_yarn_stock
+            recalculate_yarn_stock(self.stock)
+
+    def delete(self, *args, **kwargs):
+        stock = self.stock
+        super().delete(*args, **kwargs)
+        if stock:
+            from factory.yarn.yarn_stock.services import recalculate_yarn_stock
+            recalculate_yarn_stock(stock)
 
 
 class YarnOutcome(models.Model):
@@ -526,6 +579,18 @@ class YarnOutcome(models.Model):
                     weight_per_bag_kg=self.outcome_weight_per_bag_kg or intake.weight_per_bag_kg,
                 )
 
+    def delete(self, *args, **kwargs):
+        stock = self.stock
+        intake_ids = list(self.items.values_list("yarn_intake_id", flat=True)) if self.pk else []
+        super().delete(*args, **kwargs)
+        if stock:
+            from factory.yarn.yarn_stock.services import recalculate_yarn_stock
+            recalculate_yarn_stock(stock)
+        if intake_ids:
+            from factory.yarn.yarn_intake.services import recalculate_yarn_intake_stock
+            for intake in YarnIntake.objects.filter(id__in=intake_ids):
+                recalculate_yarn_intake_stock(intake)
+
     @property
     def primary_intake(self):
         if self.pk and hasattr(self, "items"):
@@ -637,6 +702,13 @@ class YarnOutcomeItem(models.Model):
             self.cones_per_bag = self.yarn_intake.cones_per_bag
         self.calculate_weights()
         super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        intake = self.yarn_intake
+        super().delete(*args, **kwargs)
+        if intake:
+            from factory.yarn.yarn_intake.services import recalculate_yarn_intake_stock
+            recalculate_yarn_intake_stock(intake)
 
     def __str__(self):
         intake_str = self.yarn_intake.set_no if self.yarn_intake else f"Intake #{self.yarn_intake_id}"

@@ -362,6 +362,20 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         if hasattr(obj, "sizing_outcomes"):
             so = obj.sizing_outcomes.order_by("-id").first()
             if so:
+                rate_per_lb = Decimal("0.000000")
+                first_item = obj.items.first()
+                if first_item and first_item.yarn_intake and first_item.yarn_intake.rate_per_lb:
+                    rate_per_lb = Decimal(str(first_item.yarn_intake.rate_per_lb))
+                elif obj.stock and obj.stock.price_per_lb:
+                    rate_per_lb = Decimal(str(obj.stock.price_per_lb))
+                ret_bags = Decimal(str(so.return_bags or 0))
+                ret_cones = Decimal(str(so.return_cones or 0))
+                wpb = Decimal(str(obj.outcome_weight_per_bag_kg or 0))
+                cpb = Decimal(str(obj.outcome_cones_per_bag or 0))
+                wpc = (wpb / cpb) if cpb > 0 else Decimal("0.000000")
+                ret_kg = (ret_bags * wpb) + (ret_cones * wpc)
+                ret_lb = ret_kg * LB_PER_KG
+                ret_price = (ret_lb * rate_per_lb).quantize(Decimal("0.000001"))
                 return {
                     "id": so.id,
                     "setNo": so.set_no,
@@ -373,6 +387,8 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
                     "return_bags": str(so.return_bags) if so.return_bags is not None else "0.000000",
                     "returnCones": str(so.return_cones) if so.return_cones is not None else "0.000000",
                     "return_cones": str(so.return_cones) if so.return_cones is not None else "0.000000",
+                    "returnPrice": str(ret_price),
+                    "return_price": str(ret_price),
                     "outcomeDate": so.outcome_date,
                     "amountPaid": str(so.amount_paid) if so.amount_paid is not None else "0.000000",
                     "amountDue": str(so.amount_due) if so.amount_due is not None else "0.000000",
@@ -891,7 +907,10 @@ class YarnIntakeListSerializer(serializers.ModelSerializer):
     conesPerBag = serializers.IntegerField(source="cones_per_bag")
     totalCones = serializers.IntegerField(source="total_cones", read_only=True)
     ratePerLb = serializers.DecimalField(source="rate_per_lb", max_digits=15, decimal_places=6, read_only=True)
-    totalRate = serializers.DecimalField(source="total_rate", max_digits=15, decimal_places=6, read_only=True)
+    totalRate = serializers.DecimalField(source="total_rate", max_digits=18, decimal_places=6, read_only=True)
+    totalPrice = serializers.DecimalField(source="total_rate", max_digits=18, decimal_places=6, read_only=True)
+    initialTotalRate = serializers.DecimalField(source="initial_total_rate", max_digits=18, decimal_places=6, read_only=True)
+    initial_total_rate = serializers.DecimalField(max_digits=18, decimal_places=6, read_only=True)
     weightPerBagKg = serializers.DecimalField(source="weight_per_bag_kg", max_digits=12, decimal_places=6)
     netWeightKg = serializers.DecimalField(source="net_weight_kg", max_digits=15, decimal_places=6, read_only=True)
     netWeightLb = serializers.DecimalField(source="net_weight_lb", max_digits=15, decimal_places=6, read_only=True)
@@ -906,6 +925,17 @@ class YarnIntakeListSerializer(serializers.ModelSerializer):
     return_bags = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
     returnCones = serializers.DecimalField(source="return_cones", max_digits=15, decimal_places=6, read_only=True)
     return_cones = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
+    returnWeightKg = serializers.DecimalField(source="return_weight_kg", max_digits=15, decimal_places=6, read_only=True)
+    return_weight_kg = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
+    returnWeightLb = serializers.DecimalField(source="return_weight_lb", max_digits=15, decimal_places=6, read_only=True)
+    return_weight_lb = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
+    returnTotalRate = serializers.DecimalField(source="return_total_rate", max_digits=18, decimal_places=6, read_only=True)
+    return_total_rate = serializers.DecimalField(max_digits=18, decimal_places=6, read_only=True)
+    returnTotalPrice = serializers.DecimalField(source="return_total_rate", max_digits=18, decimal_places=6, read_only=True)
+    return_total_price = serializers.DecimalField(source="return_total_rate", max_digits=18, decimal_places=6, read_only=True)
+
+    outcomeTotalRate = serializers.DecimalField(source="outcome_total_rate", max_digits=18, decimal_places=6, read_only=True)
+    outcome_total_rate = serializers.DecimalField(max_digits=18, decimal_places=6, read_only=True)
 
     # Remaining
     remainingBags = serializers.IntegerField(source="remaining_bags", read_only=True)
@@ -913,6 +943,10 @@ class YarnIntakeListSerializer(serializers.ModelSerializer):
     remaining_cones = serializers.IntegerField(read_only=True)
     remainingWeightKg = serializers.DecimalField(source="remaining_weight_kg", max_digits=15, decimal_places=6, read_only=True)
     remainingWeightLb = serializers.DecimalField(source="remaining_weight_lb", max_digits=15, decimal_places=6, read_only=True)
+    remainingTotalRate = serializers.DecimalField(source="remaining_total_rate", max_digits=18, decimal_places=6, read_only=True)
+    remaining_total_rate = serializers.DecimalField(max_digits=18, decimal_places=6, read_only=True)
+    remainingTotalPrice = serializers.DecimalField(source="remaining_total_rate", max_digits=18, decimal_places=6, read_only=True)
+    remaining_total_price = serializers.DecimalField(source="remaining_total_rate", max_digits=18, decimal_places=6, read_only=True)
 
     createdAt = serializers.DateTimeField(source="created_at", read_only=True)
     updatedAt = serializers.DateTimeField(source="updated_at", read_only=True)
@@ -928,11 +962,14 @@ class YarnIntakeListSerializer(serializers.ModelSerializer):
             "setNo",
             "intakeDate", "supplierDetail", "stock", "stockDetail", "productionType",
             "bags", "conesPerBag", "totalCones",
-            "ratePerLb", "totalRate",
+            "ratePerLb", "totalRate", "totalPrice", "initialTotalRate", "initial_total_rate",
             "weightPerBagKg", "netWeightKg", "netWeightLb",
-            "outcomeBags", "outcomeWeightKg", "outcomeWeightLb",
+            "outcomeBags", "outcomeWeightKg", "outcomeWeightLb", "outcomeTotalRate", "outcome_total_rate",
             "returnBags", "return_bags", "returnCones", "return_cones",
+            "returnWeightKg", "return_weight_kg", "returnWeightLb", "return_weight_lb",
+            "returnTotalRate", "return_total_rate", "returnTotalPrice", "return_total_price",
             "remainingBags", "remainingCones", "remaining_cones", "remainingWeightKg", "remainingWeightLb",
+            "remainingTotalRate", "remaining_total_rate", "remainingTotalPrice", "remaining_total_price",
             "createdBy", "updatedBy", "createdAt", "updatedAt",
         ]
 
@@ -1030,7 +1067,10 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
 
     # ── Read-only calculated ──────────────────────────────────────────────
     totalCones = serializers.IntegerField(source="total_cones", read_only=True)
-    totalRate = serializers.DecimalField(source="total_rate", max_digits=15, decimal_places=6, read_only=True)
+    totalRate = serializers.DecimalField(source="total_rate", max_digits=18, decimal_places=6, read_only=True)
+    totalPrice = serializers.DecimalField(source="total_rate", max_digits=18, decimal_places=6, read_only=True)
+    initialTotalRate = serializers.DecimalField(source="initial_total_rate", max_digits=18, decimal_places=6, read_only=True)
+    initial_total_rate = serializers.DecimalField(max_digits=18, decimal_places=6, read_only=True)
     netWeightKg = serializers.DecimalField(source="net_weight_kg", max_digits=15, decimal_places=6, read_only=True)
     netWeightLb = serializers.DecimalField(source="net_weight_lb", max_digits=15, decimal_places=6, read_only=True)
 
@@ -1042,12 +1082,27 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
     return_bags = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
     returnCones = serializers.DecimalField(source="return_cones", max_digits=15, decimal_places=6, read_only=True)
     return_cones = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
+    returnWeightKg = serializers.DecimalField(source="return_weight_kg", max_digits=15, decimal_places=6, read_only=True)
+    return_weight_kg = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
+    returnWeightLb = serializers.DecimalField(source="return_weight_lb", max_digits=15, decimal_places=6, read_only=True)
+    return_weight_lb = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
+    returnTotalRate = serializers.DecimalField(source="return_total_rate", max_digits=18, decimal_places=6, read_only=True)
+    return_total_rate = serializers.DecimalField(max_digits=18, decimal_places=6, read_only=True)
+    returnTotalPrice = serializers.DecimalField(source="return_total_rate", max_digits=18, decimal_places=6, read_only=True)
+    return_total_price = serializers.DecimalField(source="return_total_rate", max_digits=18, decimal_places=6, read_only=True)
+
+    outcomeTotalRate = serializers.DecimalField(source="outcome_total_rate", max_digits=18, decimal_places=6, read_only=True)
+    outcome_total_rate = serializers.DecimalField(max_digits=18, decimal_places=6, read_only=True)
 
     remainingBags = serializers.IntegerField(source="remaining_bags", read_only=True)
     remainingCones = serializers.IntegerField(source="remaining_cones", read_only=True)
     remaining_cones = serializers.IntegerField(read_only=True)
     remainingWeightKg = serializers.DecimalField(source="remaining_weight_kg", max_digits=15, decimal_places=6, read_only=True)
     remainingWeightLb = serializers.DecimalField(source="remaining_weight_lb", max_digits=15, decimal_places=6, read_only=True)
+    remainingTotalRate = serializers.DecimalField(source="remaining_total_rate", max_digits=18, decimal_places=6, read_only=True)
+    remaining_total_rate = serializers.DecimalField(max_digits=18, decimal_places=6, read_only=True)
+    remainingTotalPrice = serializers.DecimalField(source="remaining_total_rate", max_digits=18, decimal_places=6, read_only=True)
+    remaining_total_price = serializers.DecimalField(source="remaining_total_rate", max_digits=18, decimal_places=6, read_only=True)
 
     # ── Nested outcomes (read-only, for GET detail) ───────────────────────
     outcomes = serializers.SerializerMethodField()
@@ -1072,21 +1127,28 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
             "intakeDate", "supplier", "supplierDetail", "productionType",
             "stock", "stockDetail",
             "bags", "conesPerBag", "totalCones",
-            "ratePerLb", "totalRate",
+            "ratePerLb", "totalRate", "totalPrice", "initialTotalRate", "initial_total_rate",
             "weightPerBagKg", "netWeightKg", "netWeightLb",
-            "outcomeBags", "outcomeWeightKg", "outcomeWeightLb",
+            "outcomeBags", "outcomeWeightKg", "outcomeWeightLb", "outcomeTotalRate", "outcome_total_rate",
             "returnBags", "return_bags", "returnCones", "return_cones",
+            "returnWeightKg", "return_weight_kg", "returnWeightLb", "return_weight_lb",
+            "returnTotalRate", "return_total_rate", "returnTotalPrice", "return_total_price",
             "remainingBags", "remainingCones", "remaining_cones", "remainingWeightKg", "remainingWeightLb",
+            "remainingTotalRate", "remaining_total_rate", "remainingTotalPrice", "remaining_total_price",
             "outcomes",
             "createdBy", "updatedBy", "createdAt", "updatedAt",
         ]
         read_only_fields = [
             "id",
             "stock", "stockDetail",
-            "totalCones", "totalRate", "netWeightKg", "netWeightLb",
-            "outcomeBags", "outcomeWeightKg", "outcomeWeightLb",
+            "totalCones", "totalRate", "totalPrice", "initialTotalRate", "initial_total_rate",
+            "netWeightKg", "netWeightLb",
+            "outcomeBags", "outcomeWeightKg", "outcomeWeightLb", "outcomeTotalRate", "outcome_total_rate",
             "returnBags", "return_bags", "returnCones", "return_cones",
+            "returnWeightKg", "return_weight_kg", "returnWeightLb", "return_weight_lb",
+            "returnTotalRate", "return_total_rate", "returnTotalPrice", "return_total_price",
             "remainingBags", "remainingCones", "remaining_cones", "remainingWeightKg", "remainingWeightLb",
+            "remainingTotalRate", "remaining_total_rate", "remainingTotalPrice", "remaining_total_price",
             "outcomes", "supplierDetail",
             "createdAt", "updatedAt", "createdBy", "updatedBy",
         ]

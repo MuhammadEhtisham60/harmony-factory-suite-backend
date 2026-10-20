@@ -232,6 +232,11 @@ class YarnStock(models.Model):
         elif self.total_weight_lb and not self.remaining_weight_lb:
             self.remaining_weight_lb = self.total_weight_lb
 
+        if self.remaining_total_price and not self.total_price:
+            self.total_price = self.remaining_total_price
+        elif self.total_price and not self.remaining_total_price:
+            self.remaining_total_price = self.total_price
+
         # Recalculate price: remaining_total_price divided by remaining_bags
         update_fields = kwargs.get("update_fields")
         if update_fields is None or "price" in update_fields:
@@ -290,6 +295,15 @@ class YarnStock(models.Model):
         return agg["outcome_bags__sum"] or 0
 
     @property
+    def total_dispatched_cones(self):
+        outcome_cone_expr = models.ExpressionWrapper(
+            models.F("outcome_bags") * models.F("outcome_cones_per_bag"),
+            output_field=models.IntegerField()
+        )
+        agg = self.outcomes.annotate(calc_cones=outcome_cone_expr).aggregate(models.Sum("calc_cones"))
+        return agg["calc_cones__sum"] or 0
+
+    @property
     def total_dispatched_weight_kg(self):
         agg = self.outcomes.aggregate(models.Sum("outcome_weight_kg"))
         return agg["outcome_weight_kg__sum"] or Decimal("0.000000")
@@ -298,6 +312,62 @@ class YarnStock(models.Model):
     def total_dispatched_weight_lb(self):
         agg = self.outcomes.aggregate(models.Sum("outcome_weight_lb"))
         return agg["outcome_weight_lb__sum"] or Decimal("0.000000")
+
+    @property
+    def total_returned_boxes(self):
+        from factory.yarn.sizing.models import SizingOutcome
+        from django.db.models import Q
+        agg = SizingOutcome.objects.filter(
+            Q(yarn_outcome__stock=self) | Q(yarn_outcome__items__yarn_intake__stock=self)
+        ).distinct().aggregate(models.Sum("return_bags"))
+        return agg["return_bags__sum"] or Decimal("0.000000")
+
+    @property
+    def total_returned_cones(self):
+        from factory.yarn.sizing.models import SizingOutcome
+        from django.db.models import Q
+        agg = SizingOutcome.objects.filter(
+            Q(yarn_outcome__stock=self) | Q(yarn_outcome__items__yarn_intake__stock=self)
+        ).distinct().aggregate(models.Sum("return_cones"))
+        return agg["return_cones__sum"] or Decimal("0.000000")
+
+    @property
+    def total_returned_weight_kg(self):
+        total_intake_bags = self.total_received_boxes
+        total_intake_kg = self.total_received_weight_kg
+        total_intake_cones = self.total_received_cones
+        avg_wpb = (total_intake_kg / Decimal(str(total_intake_bags))) if total_intake_bags > 0 else Decimal("0.000000")
+        avg_cpb = (Decimal(str(total_intake_cones)) / Decimal(str(total_intake_bags))) if total_intake_bags > 0 else Decimal("0.000000")
+        avg_wpc = (avg_wpb / avg_cpb) if avg_cpb > 0 else Decimal("0.000000")
+        return ((Decimal(str(self.total_returned_boxes)) * avg_wpb) + (Decimal(str(self.total_returned_cones)) * avg_wpc)).quantize(Decimal("0.000001"))
+
+    @property
+    def total_returned_weight_lb(self):
+        return (self.total_returned_weight_kg * LB_PER_KG).quantize(Decimal("0.000001"))
+
+    @property
+    def total_returned_price(self):
+        agg = self.intakes.aggregate(models.Sum("return_total_rate"))
+        ret_val = agg["return_total_rate__sum"]
+        if ret_val is not None and ret_val > Decimal("0.000000"):
+            return ret_val
+        return (self.total_returned_weight_lb * self.price_per_lb).quantize(Decimal("0.000001"))
+
+    @property
+    def available_boxes(self):
+        return self.remaining_bags
+
+    @property
+    def available_cones(self):
+        return self.remaining_cones
+
+    @property
+    def available_weight_kg(self):
+        return self.remaining_weight_kg
+
+    @property
+    def available_weight_lb(self):
+        return self.remaining_weight_lb
 
     @property
     def price_per_kg(self):
@@ -314,3 +384,11 @@ class YarnStock(models.Model):
         if avg_val is not None:
             return Decimal(str(avg_val)).quantize(Decimal("0.000001"))
         return Decimal("0.000000")
+
+    @property
+    def cumulative_intake_price(self):
+        """Total cumulative valuation of all intakes that ever contributed to this pool."""
+        total = Decimal("0.000000")
+        for intake in self.intakes.all():
+            total += (Decimal(str(intake.net_weight_lb or 0)) * Decimal(str(intake.rate_per_lb or 0)))
+        return total.quantize(Decimal("0.000001"))
