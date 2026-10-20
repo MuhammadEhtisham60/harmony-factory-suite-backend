@@ -3,7 +3,21 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
+from django.http import JsonResponse
+
+def root_health_view(request):
+    return JsonResponse({
+        "status": "online",
+        "service": "Harmony Factory Suite Backend API",
+        "version": "1.0.0",
+        "endpoints": {
+            "admin": "/admin/",
+            "api_v1": "/api/v1/",
+        }
+    })
+
 urlpatterns = [
+    path('', root_health_view, name='root-health'),
     path('admin/', admin.site.urls),
     path('api/v1/', include('accounts.urls')),
     path('api/v1/', include('audit_logs.urls')),
