@@ -235,6 +235,103 @@ class ClothPatchViewSet(ModelViewSet):
         serializer = self.get_serializer(instance, context={"request": request})
         return Response({"success": True, "data": serializer.data})
 
+    @action(detail=False, methods=["get"], url_path="next-patch-number")
+    def next_patch_number(self, request):
+        """
+        Calculates and returns the authoritative next sequential patch identifier for a given beam loading.
+        Query params:
+            beam_loading: ID of the BeamLoading
+        Format:
+            patch-set-{set_no}-{loom_code}---{beam_code}--{roll:04d}
+        """
+        raw_loading_id = (
+            request.query_params.get("beam_loading")
+            or request.query_params.get("beamLoading")
+            or request.query_params.get("beam_loading_id")
+        )
+        if not raw_loading_id:
+            return Response(
+                {"success": False, "message": "beam_loading parameter is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        from factory.beam.models import BeamLoading
+        import re
+
+        try:
+            loading = (
+                BeamLoading.objects
+                .select_related("loom", "beam", "sizing_outcome")
+                .get(id=raw_loading_id)
+            )
+        except (BeamLoading.DoesNotExist, ValueError):
+            return Response(
+                {"success": False, "message": f"BeamLoading #{raw_loading_id} does not exist."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        existing_count = ClothPatch.objects.filter(beam_loading=loading).count()
+        next_seq = existing_count + 1
+
+        # 1. Set Part
+        raw_set = (
+            getattr(loading.sizing_outcome, "set_no", "")
+            if loading.sizing_outcome
+            else ""
+        )
+        set_part = "set-1"
+        if raw_set:
+            s = str(raw_set).strip()
+            m = re.match(r"^set[-_\s]*(.+)$", s, re.IGNORECASE)
+            val = (m.group(1).strip() if m else s).replace(" ", "-").lower()
+            set_part = f"set-{val}"
+
+        # 2. Loom Part
+        raw_loom = (
+            loading.loom.loom_code
+            if loading.loom and loading.loom.loom_code
+            else (f"L-{loading.loom_id}" if loading.loom_id else "l-0")
+        )
+        loom_part = "l-0"
+        if raw_loom:
+            s = str(raw_loom).strip()
+            m = re.match(r"^(?:loom|l)[-_\s]*(.+)$", s, re.IGNORECASE)
+            val = (m.group(1).strip() if m else s).replace(" ", "-").lower()
+            loom_part = f"l-{val}"
+
+        # 3. Beam Part
+        raw_beam = (
+            loading.beam.beam_number
+            if loading.beam and loading.beam.beam_number
+            else (f"BM-{loading.beam_id}" if loading.beam_id else "Bm-0")
+        )
+        beam_part = "Bm-0"
+        if raw_beam:
+            s = str(raw_beam).strip()
+            m = re.match(r"^(?:beam|bm)[-_\s]*(.+)$", s, re.IGNORECASE)
+            val = (m.group(1).strip() if m else s).replace(" ", "-")
+            beam_part = f"Bm-{val}"
+
+        seq_str = str(next_seq).zfill(4)
+        patch_number = f"patch-{set_part}-{loom_part}---{beam_part}--{seq_str}"
+
+        while ClothPatch.objects.filter(patch_number=patch_number).exists():
+            next_seq += 1
+            seq_str = str(next_seq).zfill(4)
+            patch_number = f"patch-{set_part}-{loom_part}---{beam_part}--{seq_str}"
+
+        return Response({
+            "success": True,
+            "data": {
+                "patchNumber": patch_number,
+                "patch_number": patch_number,
+                "sequence": next_seq,
+                "beamLoadingId": loading.id,
+            },
+            "patchNumber": patch_number,
+            "patch_number": patch_number,
+        })
+
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
         instance = self.get_object()

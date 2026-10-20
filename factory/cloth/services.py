@@ -137,13 +137,26 @@ def create_cloth_patch(
             loom.updated_by = user
             loom.save(update_fields=["status", "updated_by", "updated_at"])
 
+        # Resolve target patch_number: if duplicate sequential roll code is submitted,
+        # auto-increment sequence so multiple pieces cut from the same loom/beam cycle succeed seamlessly.
+        import re
+        target_patch_number = str(patch_number).strip() if patch_number else ""
+        if target_patch_number and ClothPatch.objects.filter(patch_number=target_patch_number).exists():
+            m = re.match(r"^(.*--)(\d+)$", target_patch_number)
+            if m:
+                prefix, num_str = m.group(1), m.group(2)
+                seq = int(num_str) + 1
+                while ClothPatch.objects.filter(patch_number=f"{prefix}{str(seq).zfill(len(num_str))}").exists():
+                    seq += 1
+                target_patch_number = f"{prefix}{str(seq).zfill(len(num_str))}"
+
         # Create ClothPatch
         try:
             patch = ClothPatch.objects.create(
                 loom=loom,
                 beam=beam,
                 beam_loading=loading,
-                patch_number=str(patch_number).strip(),
+                patch_number=target_patch_number,
                 cloth_name=cloth_name_obj,
                 patch_date=patch_date,
                 bundle_count=int(bundle_count or 1),
@@ -154,7 +167,7 @@ def create_cloth_patch(
             )
         except IntegrityError as exc:
             logger.error(f"IntegrityError creating ClothPatch: {exc}")
-            raise ValidationError({"patch_number": [f"Patch number '{patch_number}' already exists."]})
+            raise ValidationError({"patch_number": [f"Patch number '{target_patch_number}' already exists."]})
 
         # Ensure ClothStock master row exists
         ClothStock.objects.get_or_create(
