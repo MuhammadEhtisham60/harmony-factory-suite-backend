@@ -345,14 +345,12 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         return []
 
     def get_status(self, obj):
-        if getattr(obj, "status", None):
-            return obj.status
         if obj.outcome_type == YarnOutcome.OutcomeTypeChoices.SIZING:
             if hasattr(obj, "sizing_outcomes") and obj.sizing_outcomes.exists():
                 from factory.yarn.sizing.services import sync_yarn_outcome_status
                 return sync_yarn_outcome_status(obj)
-            return YarnOutcome.StatusChoices.IN_SIZING
-        return "Dispatched"
+            return getattr(obj, "status", None) or YarnOutcome.StatusChoices.IN_SIZING
+        return getattr(obj, "status", None) or "Dispatched"
 
     def get_isReceived(self, obj):
         return self.get_status(obj) == YarnOutcome.StatusChoices.RECEIVED

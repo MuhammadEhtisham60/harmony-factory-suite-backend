@@ -405,8 +405,9 @@ class SizingOutcome(models.Model):
 
         super().save(*args, **kwargs)
         if self.yarn_outcome_id:
-            from factory.yarn.sizing.services import sync_sizing_outcome_to_intake
+            from factory.yarn.sizing.services import sync_sizing_outcome_to_intake, sync_yarn_outcome_status
             sync_sizing_outcome_to_intake(self)
+            sync_yarn_outcome_status(self.yarn_outcome)
 
     def delete(self, *args, **kwargs):
         yo = self.yarn_outcome
