@@ -633,6 +633,20 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
     total_rate = serializers.DecimalField(max_digits=18, decimal_places=6, required=False, allow_null=True)
 
     yarnOutcomeStatus = serializers.CharField(source="yarn_outcome.status", read_only=True)
+    status = serializers.SerializerMethodField()
+    isReceived = serializers.SerializerMethodField()
+    isPartiallyReceived = serializers.SerializerMethodField()
+
+    def get_status(self, obj):
+        if obj.yarn_outcome:
+            return obj.yarn_outcome.status
+        return "In Sizing"
+
+    def get_isReceived(self, obj):
+        return self.get_status(obj) == "Received"
+
+    def get_isPartiallyReceived(self, obj):
+        return self.get_status(obj) == "Partially Received"
 
     amountPaid = serializers.DecimalField(source="amount_paid", max_digits=18, decimal_places=6, required=False)
     amount_paid = serializers.DecimalField(max_digits=18, decimal_places=6, required=False)
@@ -742,6 +756,9 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "totalRate",
             "total_rate",
             "yarnOutcomeStatus",
+            "status",
+            "isReceived",
+            "isPartiallyReceived",
             "amountPaid",
             "amount_paid",
             "amountDue",
