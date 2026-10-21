@@ -252,6 +252,27 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         required=False, allow_null=True, write_only=True
     )
 
+    # ── Merged Sizing Mill Stock inputs & outputs ─────────────────────────
+    mergedSizingBags = serializers.IntegerField(
+        source="merged_sizing_bags", required=False, default=0
+    )
+    merged_sizing_bags = serializers.IntegerField(required=False, default=0)
+    mergedSizingCones = serializers.IntegerField(
+        source="merged_sizing_cones", required=False, default=0
+    )
+    merged_sizing_cones = serializers.IntegerField(required=False, default=0)
+    totalSetBags = serializers.IntegerField(source="total_set_bags", read_only=True)
+    total_set_bags = serializers.IntegerField(read_only=True)
+    totalSetCones = serializers.IntegerField(source="total_set_cones", read_only=True)
+    total_set_cones = serializers.IntegerField(read_only=True)
+    mergedFromSets = serializers.SerializerMethodField()
+    mergedFromSizingOutcomeIds = serializers.ListField(
+        child=serializers.IntegerField(), required=False, write_only=True
+    )
+    merged_from_sizing_outcome_ids = serializers.ListField(
+        child=serializers.IntegerField(), required=False, write_only=True
+    )
+
     # ── Read-only calculated ──────────────────────────────────────────────
     outcomeWeightKg = serializers.DecimalField(
         source="outcome_weight_kg", max_digits=15, decimal_places=6, read_only=True
@@ -300,6 +321,17 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
             "outcomeWeightPerBagKg",
             "outcomeWeightKg",
             "outcomeWeightLb",
+            "mergedSizingBags",
+            "merged_sizing_bags",
+            "mergedSizingCones",
+            "merged_sizing_cones",
+            "totalSetBags",
+            "total_set_bags",
+            "totalSetCones",
+            "total_set_cones",
+            "mergedFromSets",
+            "mergedFromSizingOutcomeIds",
+            "merged_from_sizing_outcome_ids",
             "yarnBuyer",
             "yarnBuyerDetail",
             "sizing",
@@ -324,12 +356,27 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id", "outcomeWeightKg", "outcomeWeightLb",
+            "totalSetBags", "total_set_bags", "totalSetCones", "total_set_cones", "mergedFromSets",
             "intakes", "items", "intakeSetNumbers", "intakeSetNoDisplay",
             "yarnName", "yarnType", "yarnCount", "yarnIntakeDetail",
             "beamAssignments", "totalBeams", "status", "sizingOutcome", "isReceived", "isPartiallyReceived",
             "createdAt", "updatedAt", "createdBy", "updatedBy",
             "stockDetail", "yarnBuyerDetail", "sizingDetail",
         ]
+
+    def get_mergedFromSets(self, obj):
+        if hasattr(obj, "merged_from_sizing_outcomes"):
+            return [
+                {
+                    "id": s.id,
+                    "setNo": s.set_no or f"SET-{s.id}",
+                    "bags": s.total_bags_on_sizing,
+                    "remainingBags": s.remaining_bags_on_sizing_stock,
+                    "remainingCones": s.remaining_cones_on_sizing_stock,
+                }
+                for s in obj.merged_from_sizing_outcomes.all()
+            ]
+        return []
 
     def get_stockDetail(self, obj):
         if obj.stock:
@@ -487,6 +534,18 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
                 ret["amountPaid"] = str(so.amount_paid) if so.amount_paid is not None else "0.000000"
                 ret["amountDue"] = str(so.amount_due) if so.amount_due is not None else "0.000000"
                 ret["paymentStatus"] = so.payment_status or "Unpaid"
+
+        ret["mergedSizingBags"] = instance.merged_sizing_bags or 0
+        ret["merged_sizing_bags"] = instance.merged_sizing_bags or 0
+        ret["mergedSizingCones"] = instance.merged_sizing_cones or 0
+        ret["merged_sizing_cones"] = instance.merged_sizing_cones or 0
+        ret["totalSetBags"] = instance.total_set_bags
+        ret["total_set_bags"] = instance.total_set_bags
+        ret["totalSetCones"] = instance.total_set_cones
+        ret["total_set_cones"] = instance.total_set_cones
+        ret["mergedFromSets"] = self.get_mergedFromSets(instance)
+        ret["merged_from_sets"] = ret["mergedFromSets"]
+
         return ret
 
     def get_createdBy(self, obj):
@@ -632,14 +691,33 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
                     "weight_per_bag_kg": wpb_val,
                 })
             else:
+                outcome_type_cand = (
+                    attrs.get("outcome_type")
+                    or self.initial_data.get("outcomeType")
+                    or self.initial_data.get("outcome_type")
+                    or (self.instance.outcome_type if self.instance else YarnOutcome.OutcomeTypeChoices.SIZING)
+                )
+                merged_bags_cand = int(
+                    self.initial_data.get("mergedSizingBags")
+                    or self.initial_data.get("merged_sizing_bags")
+                    or 0
+                )
                 if not self.instance:
-                    raise serializers.ValidationError({
-                        "yarnIntake": [
-                            "Yarn dispatch must be from one or more yarn intake batches. "
-                            "Dispatching directly from stock pool is not allowed."
-                        ]
-                    })
-                parsed_items = None
+                    if outcome_type_cand == YarnOutcome.OutcomeTypeChoices.SIZING and merged_bags_cand > 0:
+                        parsed_items = []
+                        attrs["outcome_bags"] = 0
+                        attrs["outcome_weight_per_bag_kg"] = Decimal("0")
+                        attrs["outcome_cones_per_bag"] = 24
+                        attrs["_parsed_items"] = []
+                    else:
+                        raise serializers.ValidationError({
+                            "yarnIntake": [
+                                "Yarn dispatch must be from one or more yarn intake batches. "
+                                "Dispatching directly from stock pool is not allowed."
+                            ]
+                        })
+                else:
+                    parsed_items = None
 
         if parsed_items is not None:
             from collections import defaultdict
@@ -755,19 +833,72 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
                     "sizing": ["Sizing reference is required for Sizing outcome type."]
                 })
 
+        # Check merged sizing mill stock
+        merged_sizing_bags = int(
+            attrs.get("merged_sizing_bags")
+            or self.initial_data.get("mergedSizingBags")
+            or self.initial_data.get("merged_sizing_bags")
+            or 0
+        )
+        merged_sizing_cones = int(
+            attrs.get("merged_sizing_cones")
+            or self.initial_data.get("mergedSizingCones")
+            or self.initial_data.get("merged_sizing_cones")
+            or 0
+        )
+        raw_merged_so_ids = (
+            self.initial_data.get("mergedFromSizingOutcomeIds")
+            or self.initial_data.get("merged_from_sizing_outcome_ids")
+            or self.initial_data.get("mergedFromSets")
+            or []
+        )
+
+        resolved_merged_sos = []
+        if raw_merged_so_ids:
+            if not isinstance(raw_merged_so_ids, (list, tuple)):
+                raw_merged_so_ids = [raw_merged_so_ids]
+            clean_so_ids = []
+            for x in raw_merged_so_ids:
+                val = x.get("id") if isinstance(x, dict) else (x.id if hasattr(x, "id") else x)
+                if val is not None and str(val).isdigit():
+                    clean_so_ids.append(int(val))
+            if clean_so_ids:
+                from factory.yarn.sizing.models import SizingOutcome
+                resolved_merged_sos = list(SizingOutcome.objects.filter(id__in=clean_so_ids))
+
+        attrs["merged_sizing_bags"] = merged_sizing_bags
+        attrs["merged_sizing_cones"] = merged_sizing_cones
+        attrs["_resolved_merged_sos"] = resolved_merged_sos
+
+        if outcome_type == YarnOutcome.OutcomeTypeChoices.SIZING:
+            for m_so in resolved_merged_sos:
+                if m_so.sizing_id and sizing and m_so.sizing_id != sizing.id:
+                    raise serializers.ValidationError({
+                        "mergedFromSizingOutcomeIds": [
+                            f"Set '{m_so.set_no or m_so.id}' belongs to another sizing unit (#{m_so.sizing_id})."
+                        ]
+                    })
+            if not attrs.get("stock") and resolved_merged_sos:
+                for m_so in resolved_merged_sos:
+                    if m_so.yarn_outcome and m_so.yarn_outcome.stock:
+                        attrs["stock"] = m_so.yarn_outcome.stock
+                        break
+
         outcome_bags = attrs.get(
             "outcome_bags",
             getattr(self.instance, "outcome_bags", 0) if self.instance else 0
         )
         if outcome_bags <= 0:
-            raise serializers.ValidationError({
-                "outcomeBags": ["Outcome bags must be greater than 0."]
-            })
+            if not (outcome_type == YarnOutcome.OutcomeTypeChoices.SIZING and merged_sizing_bags > 0):
+                raise serializers.ValidationError({
+                    "outcomeBags": ["Outcome bags must be greater than 0."]
+                })
 
         return attrs
 
     def create(self, validated_data):
         items_data = validated_data.pop("_parsed_items", [])
+        resolved_merged_sos = validated_data.pop("_resolved_merged_sos", [])
         validated_data.pop("yarn_intake", None)
         validated_data.pop("yarnIntake", None)
         validated_data.pop("yarnIntakeId", None)
@@ -776,6 +907,9 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         validated_data.pop("beam", None)
         validated_data.pop("ratePerKg", None)
         validated_data.pop("stockId", None)
+        validated_data.pop("mergedFromSizingOutcomeIds", None)
+        validated_data.pop("merged_from_sizing_outcome_ids", None)
+        validated_data.pop("mergedFromSets", None)
 
         request = self.context.get("request")
         user = request.user if request and request.user and request.user.is_authenticated else None
@@ -799,8 +933,29 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
                 )
                 intakes_to_recalc.add(intake.id)
 
-            outcome.calculate_outcome_fields()
-            outcome.save()
+            if items_data:
+                outcome.calculate_outcome_fields()
+                outcome.save()
+
+            if resolved_merged_sos:
+                from factory.yarn.sizing.services import sync_yarn_outcome_status
+                from factory.yarn.sizing.models import SizingOutcome
+                outcome.merged_from_sizing_outcomes.set(resolved_merged_sos)
+
+                rem_bags_to_deduct = outcome.merged_sizing_bags or 0
+                rem_cones_to_deduct = outcome.merged_sizing_cones or 0
+
+                for s_so in resolved_merged_sos:
+                    locked_so = SizingOutcome.objects.select_for_update().get(id=s_so.id)
+                    ded_b = min(locked_so.remaining_bags_on_sizing_stock, rem_bags_to_deduct)
+                    ded_c = min(locked_so.remaining_cones_on_sizing_stock, rem_cones_to_deduct)
+                    locked_so.remaining_bags_on_sizing_stock -= ded_b
+                    locked_so.remaining_cones_on_sizing_stock -= ded_c
+                    rem_bags_to_deduct -= ded_b
+                    rem_cones_to_deduct -= ded_c
+                    locked_so.save(update_fields=["remaining_bags_on_sizing_stock", "remaining_cones_on_sizing_stock", "updated_at"])
+                    if locked_so.yarn_outcome:
+                        sync_yarn_outcome_status(locked_so.yarn_outcome)
 
             from .services import recalculate_yarn_intake_stock
             from factory.yarn.yarn_stock.services import recalculate_yarn_stock

@@ -390,7 +390,7 @@ def sync_yarn_outcome_status(yarn_outcome):
         total_lagat = sizing_outcomes.aggregate(total=Sum("lagat_bags"))["total"] or Decimal("0")
         total_returned = sizing_outcomes.aggregate(total=Sum("return_bags"))["total"] or Decimal("0")
         total_accounted = total_lagat + total_returned
-        sent_bags = Decimal(str(yarn_outcome.outcome_bags or 0))
+        sent_bags = Decimal(str(getattr(yarn_outcome, "total_set_bags", yarn_outcome.outcome_bags) or 0))
 
         # Check the latest sizing outcome for remaining bags on sizing stock
         latest_so = sizing_outcomes.order_by("-outcome_date", "-id").first()

@@ -141,6 +141,23 @@ class SizingOutcome(models.Model):
         help_text="Remaining cones on sizing stock"
     )
 
+    merged_sizing_bags = models.PositiveIntegerField(
+        default=0,
+        help_text="Bags merged from previous sizing stock into this set"
+    )
+
+    merged_sizing_cones = models.PositiveIntegerField(
+        default=0,
+        help_text="Cones merged from previous sizing stock into this set"
+    )
+
+    merged_from_set_nos = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Set numbers whose balance was merged into this set"
+    )
+
     return_bags = models.DecimalField(
         max_digits=15,
         decimal_places=6,
@@ -371,12 +388,22 @@ class SizingOutcome(models.Model):
         return f"Sizing Outcome #{self.id}{set_str}{bill_str} ({s_name or 'N/A'})"
 
     def save(self, *args, **kwargs):
-        if not self.sizing_name and self.yarn_outcome_id:
+        if self.yarn_outcome_id:
             yo = getattr(self, "yarn_outcome", None)
-            if yo and getattr(yo, "sizing", None):
-                self.sizing_name = yo.sizing.sizing_name
+            if yo:
+                if not self.sizing_name and getattr(yo, "sizing", None):
+                    self.sizing_name = yo.sizing.sizing_name
+                if not self.total_bags_on_sizing:
+                    self.total_bags_on_sizing = getattr(yo, "total_set_bags", yo.outcome_bags)
+                if not self.merged_sizing_bags and getattr(yo, "merged_sizing_bags", 0):
+                    self.merged_sizing_bags = yo.merged_sizing_bags
+                if not self.merged_sizing_cones and getattr(yo, "merged_sizing_cones", 0):
+                    self.merged_sizing_cones = yo.merged_sizing_cones
+                if not self.merged_from_set_nos and hasattr(yo, "merged_from_sizing_outcomes") and yo.merged_from_sizing_outcomes.exists():
+                    set_nos = [s.set_no or f"SET-{s.id}" for s in yo.merged_from_sizing_outcomes.all()]
+                    self.merged_from_set_nos = ", ".join(dict.fromkeys(set_nos))
         if not self.total_cones and self.total_bags_on_sizing and self.bag_packing_cone:
-            self.total_cones = self.total_bags_on_sizing * self.bag_packing_cone
+            self.total_cones = (self.total_bags_on_sizing * self.bag_packing_cone) + (self.merged_sizing_cones or 0)
         if self.rate_per_kg is not None and self.net_weight_kg is not None:
             self.total_rate = self.rate_per_kg * self.net_weight_kg
 

@@ -469,6 +469,22 @@ class YarnOutcome(models.Model):
 
     notes = models.TextField(blank=True, default="")
 
+    # ── Merged Sizing Mill Stock ──────────────────────────────────────────
+    merged_sizing_bags = models.PositiveIntegerField(
+        default=0,
+        help_text="Bags merged from existing sizing stock of the same quality at the sizing mill."
+    )
+    merged_sizing_cones = models.PositiveIntegerField(
+        default=0,
+        help_text="Cones merged from existing sizing stock of the same quality at the sizing mill."
+    )
+    merged_from_sizing_outcomes = models.ManyToManyField(
+        "factory.SizingOutcome",
+        blank=True,
+        related_name="merged_into_yarn_outcomes",
+        help_text="Previous sizing outcome sets whose remaining balance was merged into this dispatch/set."
+    )
+
     # ── Audit ──────────────────────────────────────────────────────────────
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -580,9 +596,23 @@ class YarnOutcome(models.Model):
                 )
 
     def delete(self, *args, **kwargs):
+        # Restore merged sizing balance if this outcome was deleted before completion
+        merged_sos = list(self.merged_from_sizing_outcomes.all()) if self.pk else []
+        merged_bags = self.merged_sizing_bags or 0
+        merged_cones = self.merged_sizing_cones or 0
+
         stock = self.stock
         intake_ids = list(self.items.values_list("yarn_intake_id", flat=True)) if self.pk else []
         super().delete(*args, **kwargs)
+
+        if merged_sos:
+            from factory.yarn.sizing.services import sync_yarn_outcome_status
+            for source_so in merged_sos:
+                source_so.remaining_bags_on_sizing_stock += merged_bags
+                source_so.remaining_cones_on_sizing_stock += merged_cones
+                source_so.save(update_fields=["remaining_bags_on_sizing_stock", "remaining_cones_on_sizing_stock", "updated_at"])
+                sync_yarn_outcome_status(source_so.yarn_outcome)
+
         if stock:
             from factory.yarn.yarn_stock.services import recalculate_yarn_stock
             recalculate_yarn_stock(stock)
@@ -590,6 +620,19 @@ class YarnOutcome(models.Model):
             from factory.yarn.yarn_intake.services import recalculate_yarn_intake_stock
             for intake in YarnIntake.objects.filter(id__in=intake_ids):
                 recalculate_yarn_intake_stock(intake)
+
+    @property
+    def total_set_bags(self):
+        """Total bags available for the sizing set (dispatched from warehouse + merged from sizing mill)."""
+        return (self.outcome_bags or 0) + (self.merged_sizing_bags or 0)
+
+    @property
+    def total_set_cones(self):
+        """Total cones available for the sizing set."""
+        cpb = self.outcome_cones_per_bag or 24
+        dispatched_cones = (self.outcome_bags or 0) * cpb
+        merged_cones = (self.merged_sizing_bags or 0) * cpb + (self.merged_sizing_cones or 0)
+        return dispatched_cones + merged_cones
 
     @property
     def primary_intake(self):

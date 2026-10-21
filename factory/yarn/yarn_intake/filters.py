@@ -19,6 +19,7 @@ class YarnIntakeFilter(django_filters.FilterSet):
     stock = django_filters.NumberFilter(field_name="stock__id")
     stock_id = django_filters.NumberFilter(field_name="stock__id")
     set_no = django_filters.CharFilter(field_name="set_no", lookup_expr="icontains")
+    in_stock = django_filters.BooleanFilter(method="filter_in_stock")
     intake_date_after = django_filters.DateFilter(field_name="intake_date", lookup_expr="gte")
     intake_date_before = django_filters.DateFilter(field_name="intake_date", lookup_expr="lte")
     created_after = django_filters.DateFilter(field_name="created_at", lookup_expr="date__gte")
@@ -49,3 +50,8 @@ class YarnIntakeFilter(django_filters.FilterSet):
             | Q(production_type__icontains=value)
             | Q(supplier__supplier_name__icontains=value)
         )
+
+    def filter_in_stock(self, queryset, name, value):  # noqa: ARG002
+        if value:
+            return queryset.filter(remaining_bags__gt=0)
+        return queryset

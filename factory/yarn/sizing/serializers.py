@@ -16,16 +16,68 @@ from factory.yarn.sizing.services import create_sizing_outcome, assign_beams_to_
 
 class YarnOutcomeMinSerializer(serializers.ModelSerializer):
     """Minimal YarnOutcome details for nested responses."""
-    yarnName = serializers.CharField(source="yarn_intake.yarn_name", read_only=True)
-    yarnType = serializers.CharField(source="yarn_intake.yarn_type", read_only=True)
-    yarnCount = serializers.CharField(source="yarn_intake.yarn_count", read_only=True)
-    intakeSetNo = serializers.CharField(source="yarn_intake.set_no", read_only=True)
+    yarnName = serializers.SerializerMethodField()
+    yarnType = serializers.SerializerMethodField()
+    yarnCount = serializers.SerializerMethodField()
+    intakeSetNo = serializers.SerializerMethodField()
     sizingName = serializers.CharField(source="sizing.sizing_name", read_only=True)
+    stockId = serializers.IntegerField(source="stock_id", read_only=True)
+    stock_id = serializers.IntegerField(read_only=True)
+    totalSetBags = serializers.IntegerField(source="total_set_bags", read_only=True)
+    total_set_bags = serializers.IntegerField(read_only=True)
+    mergedSizingBags = serializers.IntegerField(source="merged_sizing_bags", read_only=True)
+    merged_sizing_bags = serializers.IntegerField(read_only=True)
+    mergedSizingCones = serializers.IntegerField(source="merged_sizing_cones", read_only=True)
+    merged_sizing_cones = serializers.IntegerField(read_only=True)
     status = serializers.CharField(read_only=True)
 
     class Meta:
         model = YarnOutcome
-        fields = ["id", "outcome_type", "outcome_bags", "yarnName", "yarnType", "yarnCount", "intakeSetNo", "sizingName", "status"]
+        fields = [
+            "id",
+            "outcome_type",
+            "outcome_bags",
+            "totalSetBags",
+            "total_set_bags",
+            "mergedSizingBags",
+            "merged_sizing_bags",
+            "mergedSizingCones",
+            "merged_sizing_cones",
+            "stockId",
+            "stock_id",
+            "yarnName",
+            "yarnType",
+            "yarnCount",
+            "intakeSetNo",
+            "sizingName",
+            "status",
+        ]
+
+    def get_yarnName(self, obj):
+        if obj.stock and obj.stock.yarn_name:
+            return obj.stock.yarn_name.name
+        if obj.primary_intake and obj.primary_intake.yarn_name:
+            return obj.primary_intake.yarn_name.name
+        return ""
+
+    def get_yarnType(self, obj):
+        if obj.stock and obj.stock.yarn_type:
+            return obj.stock.yarn_type.name
+        if obj.primary_intake and obj.primary_intake.yarn_type:
+            return obj.primary_intake.yarn_type.name
+        return ""
+
+    def get_yarnCount(self, obj):
+        if obj.stock and obj.stock.yarn_count:
+            return obj.stock.yarn_count.name
+        if obj.primary_intake and obj.primary_intake.yarn_count:
+            return obj.primary_intake.yarn_count.name
+        return ""
+
+    def get_intakeSetNo(self, obj):
+        if obj.primary_intake and obj.primary_intake.set_no:
+            return obj.primary_intake.set_no
+        return ""
 
 
 class SizingMinSerializer(serializers.ModelSerializer):
@@ -610,6 +662,60 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
     totalCones = serializers.IntegerField(source="total_cones", required=False, default=0)
     remainingBagsOnSizingStock = serializers.IntegerField(source="remaining_bags_on_sizing_stock", required=False, default=0)
     remainingConesOnSizingStock = serializers.IntegerField(source="remaining_cones_on_sizing_stock", required=False, default=0)
+    mergedSizingBags = serializers.IntegerField(source="merged_sizing_bags", required=False, default=0)
+    merged_sizing_bags = serializers.IntegerField(required=False, default=0)
+    mergedSizingCones = serializers.IntegerField(source="merged_sizing_cones", required=False, default=0)
+    merged_sizing_cones = serializers.IntegerField(required=False, default=0)
+    mergedFromSetNos = serializers.CharField(source="merged_from_set_nos", required=False, allow_blank=True, default="")
+    merged_from_set_nos = serializers.CharField(required=False, allow_blank=True, default="")
+
+    stockId = serializers.SerializerMethodField()
+    stock_id = serializers.SerializerMethodField()
+    yarnName = serializers.SerializerMethodField()
+    yarn_name = serializers.SerializerMethodField()
+    yarnCount = serializers.SerializerMethodField()
+    yarn_count = serializers.SerializerMethodField()
+    yarnType = serializers.SerializerMethodField()
+    yarn_type = serializers.SerializerMethodField()
+
+    def get_stockId(self, obj):
+        if obj.yarn_outcome:
+            return obj.yarn_outcome.stock_id
+        return None
+
+    def get_stock_id(self, obj):
+        return self.get_stockId(obj)
+
+    def get_yarnName(self, obj):
+        if obj.yarn_outcome and obj.yarn_outcome.stock and obj.yarn_outcome.stock.yarn_name:
+            return obj.yarn_outcome.stock.yarn_name.name
+        if obj.yarn_outcome and obj.yarn_outcome.primary_intake and obj.yarn_outcome.primary_intake.yarn_name:
+            return obj.yarn_outcome.primary_intake.yarn_name.name
+        return obj.brand or ""
+
+    def get_yarn_name(self, obj):
+        return self.get_yarnName(obj)
+
+    def get_yarnCount(self, obj):
+        if obj.yarn_outcome and obj.yarn_outcome.stock and obj.yarn_outcome.stock.yarn_count:
+            return obj.yarn_outcome.stock.yarn_count.name
+        if obj.yarn_outcome and obj.yarn_outcome.primary_intake and obj.yarn_outcome.primary_intake.yarn_count:
+            return obj.yarn_outcome.primary_intake.yarn_count.name
+        return obj.count or ""
+
+    def get_yarn_count(self, obj):
+        return self.get_yarnCount(obj)
+
+    def get_yarnType(self, obj):
+        if obj.yarn_outcome and obj.yarn_outcome.stock and obj.yarn_outcome.stock.yarn_type:
+            return obj.yarn_outcome.stock.yarn_type.name
+        if obj.yarn_outcome and obj.yarn_outcome.primary_intake and obj.yarn_outcome.primary_intake.yarn_type:
+            return obj.yarn_outcome.primary_intake.yarn_type.name
+        return ""
+
+    def get_yarn_type(self, obj):
+        return self.get_yarnType(obj)
+
     returnBags = serializers.DecimalField(source="return_bags", max_digits=15, decimal_places=6, required=False, default=Decimal("0.000000"))
     return_bags = serializers.DecimalField(max_digits=15, decimal_places=6, required=False, default=Decimal("0.000000"))
     returnCones = serializers.DecimalField(source="return_cones", max_digits=15, decimal_places=6, required=False, default=Decimal("0.000000"))
@@ -760,6 +866,20 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "totalCones",
             "remainingBagsOnSizingStock",
             "remainingConesOnSizingStock",
+            "mergedSizingBags",
+            "merged_sizing_bags",
+            "mergedSizingCones",
+            "merged_sizing_cones",
+            "mergedFromSetNos",
+            "merged_from_set_nos",
+            "stockId",
+            "stock_id",
+            "yarnName",
+            "yarn_name",
+            "yarnCount",
+            "yarn_count",
+            "yarnType",
+            "yarn_type",
             "returnBags",
             "return_bags",
             "returnCones",
@@ -812,6 +932,14 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "id",
             "yarnOutcomeDetail",
             "yarnOutcomeStatus",
+            "stockId",
+            "stock_id",
+            "yarnName",
+            "yarn_name",
+            "yarnCount",
+            "yarn_count",
+            "yarnType",
+            "yarn_type",
             "returnPrice",
             "return_price",
             "amountDue",
@@ -855,6 +983,9 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "total_cones": "totalCones",
             "remaining_bags_on_sizing_stock": "remainingBagsOnSizingStock",
             "remaining_cones_on_sizing_stock": "remainingConesOnSizingStock",
+            "merged_sizing_bags": "mergedSizingBags",
+            "merged_sizing_cones": "mergedSizingCones",
+            "merged_from_set_nos": "mergedFromSetNos",
             "return_bags": "returnBags",
             "return_cones": "returnCones",
             "lagat_bags": "lagatBags",
