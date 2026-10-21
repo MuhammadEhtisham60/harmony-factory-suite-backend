@@ -34,7 +34,9 @@ from .services import (
     release_beam_assignment,
     sync_yarn_outcome_status,
     sync_sizing_outcome_to_intake,
+    revert_returned_beams_to_sizing,
 )
+from django.db import transaction
 
 
 class SizingViewSet(ModelViewSet):
@@ -308,7 +310,10 @@ class SizingOutcomeViewSet(ModelViewSet):
             )
 
         yarn_outcome = instance.yarn_outcome
-        instance.delete()
+        with transaction.atomic():
+            instance.delete()
+            # Returned beams go back to 'Sizing' so they can be returned again
+            revert_returned_beams_to_sizing(yarn_outcome, user=request.user)
         if yarn_outcome:
             sync_yarn_outcome_status(yarn_outcome)
             sync_sizing_outcome_to_intake(yarn_outcome)
@@ -346,6 +351,7 @@ class SizingOutcomeViewSet(ModelViewSet):
         created_assignments = assign_beams_to_outcome(
             sizing_outcome=outcome,
             beam_ids=beam_ids,
+            beam_yarn_length=serializer.validated_data.get("beam_yarn_length"),
             user=request.user,
             request=request,
         )

@@ -229,11 +229,15 @@ class ClothPatchSerializer(serializers.ModelSerializer):
     updated_at = serializers.DateTimeField(read_only=True)
     createdBy = serializers.SerializerMethodField()
     updatedBy = serializers.SerializerMethodField()
+    setNo = serializers.SerializerMethodField()
+    set_no = serializers.SerializerMethodField()
 
     class Meta:
         model = ClothPatch
         fields = [
             "id",
+            "setNo",
+            "set_no",
             "patchNumber",
             "patch_number",
             "clothName",
@@ -272,6 +276,8 @@ class ClothPatchSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id",
+            "setNo",
+            "set_no",
             "cleanAllocatedLength",
             "clean_allocated_length",
             "defectedAllocatedLength",
@@ -322,6 +328,14 @@ class ClothPatchSerializer(serializers.ModelSerializer):
         if obj.updated_by:
             return {"id": obj.updated_by.id, "username": obj.updated_by.username}
         return None
+
+    def get_setNo(self, obj):
+        if obj.beam_loading and obj.beam_loading.sizing_outcome:
+            return obj.beam_loading.sizing_outcome.set_no or ""
+        return ""
+
+    def get_set_no(self, obj):
+        return self.get_setNo(obj)
 
     def to_internal_value(self, data):
         data = data.copy() if hasattr(data, "copy") else dict(data)
@@ -564,11 +578,15 @@ class CleanClothStockSerializer(serializers.ModelSerializer):
     updated_at = serializers.DateTimeField(read_only=True)
     createdBy = serializers.SerializerMethodField()
     updatedBy = serializers.SerializerMethodField()
+    setNo = serializers.SerializerMethodField()
+    set_no = serializers.SerializerMethodField()
 
     class Meta:
         model = CleanClothStock
         fields = [
             "id",
+            "setNo",
+            "set_no",
             "clothStock",
             "clothStockId",
             "cloth_stock",
@@ -595,6 +613,8 @@ class CleanClothStockSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id",
+            "setNo",
+            "set_no",
             "clothName",
             "cloth_name",
             "patchNumber",
@@ -608,6 +628,14 @@ class CleanClothStockSerializer(serializers.ModelSerializer):
             "createdBy",
             "updatedBy",
         ]
+
+    def get_setNo(self, obj):
+        if obj.cloth_patch and obj.cloth_patch.beam_loading and obj.cloth_patch.beam_loading.sizing_outcome:
+            return obj.cloth_patch.beam_loading.sizing_outcome.set_no or ""
+        return ""
+
+    def get_set_no(self, obj):
+        return self.get_setNo(obj)
 
     def get_clothName(self, obj):
         if obj.cloth_stock:
@@ -804,11 +832,15 @@ class DefectedClothStockSerializer(serializers.ModelSerializer):
     updated_at = serializers.DateTimeField(read_only=True)
     createdBy = serializers.SerializerMethodField()
     updatedBy = serializers.SerializerMethodField()
+    setNo = serializers.SerializerMethodField()
+    set_no = serializers.SerializerMethodField()
 
     class Meta:
         model = DefectedClothStock
         fields = [
             "id",
+            "setNo",
+            "set_no",
             "clothStock",
             "clothStockId",
             "cloth_stock",
@@ -839,6 +871,8 @@ class DefectedClothStockSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id",
+            "setNo",
+            "set_no",
             "clothName",
             "cloth_name",
             "patchNumber",
@@ -852,6 +886,14 @@ class DefectedClothStockSerializer(serializers.ModelSerializer):
             "createdBy",
             "updatedBy",
         ]
+
+    def get_setNo(self, obj):
+        if obj.cloth_patch and obj.cloth_patch.beam_loading and obj.cloth_patch.beam_loading.sizing_outcome:
+            return obj.cloth_patch.beam_loading.sizing_outcome.set_no or ""
+        return ""
+
+    def get_set_no(self, obj):
+        return self.get_setNo(obj)
 
     def get_clothName(self, obj):
         if obj.cloth_stock:

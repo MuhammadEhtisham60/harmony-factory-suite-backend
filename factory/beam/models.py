@@ -5,6 +5,8 @@ Beam Model for the Factory module.
 from decimal import Decimal
 from django.db import models
 from django.conf import settings
+from django.db.models.signals import pre_delete
+from django.dispatch import receiver
 
 
 class Beam(models.Model):
@@ -106,6 +108,15 @@ class Beam(models.Model):
         null=True,
         blank=True,
         related_name="updated_beams"
+    )
+
+    dispatched_yarn_outcome = models.ForeignKey(
+        "factory.YarnOutcome",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="dispatched_beams",
+        help_text="Yarn outcome (sizing dispatch) this beam is currently out at sizing for"
     )
 
     class Meta:
@@ -450,4 +461,21 @@ class BeamDismountReconciliation(models.Model):
 
     def __str__(self):
         return f"Reconciliation for Loading #{self.beam_loading_id}: Actual {self.actual_length}m / Expected {self.expected_length}m"
+
+
+@receiver(pre_delete, sender="factory.YarnOutcome")
+def reset_dispatched_beams_on_yarn_outcome_delete(sender, instance, **kwargs):
+    """
+    When a yarn outcome (sizing dispatch) is deleted, every beam that was
+    dispatched under it and is still waiting at sizing goes back to Available.
+    Beams in any other status (e.g. Damaged) are left untouched.
+    """
+    Beam.objects.filter(
+        dispatched_yarn_outcome_id=instance.pk,
+        status=Beam.StatusChoices.SIZING,
+    ).update(
+        status=Beam.StatusChoices.AVAILABLE,
+        dispatched_yarn_outcome=None,
+    )
+
 

@@ -556,7 +556,14 @@ class CleanClothStockViewSet(ModelViewSet):
     """
     queryset = (
         CleanClothStock.objects
-        .select_related("cloth_stock", "cloth_stock__cloth_name", "cloth_patch", "created_by", "updated_by")
+        .select_related(
+            "cloth_stock",
+            "cloth_stock__cloth_name",
+            "cloth_patch",
+            "cloth_patch__beam_loading__sizing_outcome",
+            "created_by",
+            "updated_by",
+        )
         .all()
     )
     serializer_class = CleanClothStockSerializer
@@ -566,6 +573,7 @@ class CleanClothStockViewSet(ModelViewSet):
     filterset_class = CleanClothStockFilter
     search_fields = [
         "cloth_patch__patch_number",
+        "cloth_patch__beam_loading__sizing_outcome__set_no",
         "cloth_stock__cloth_name__name",
         "remarks",
     ]
@@ -639,7 +647,14 @@ class DefectedClothStockViewSet(ModelViewSet):
     """
     queryset = (
         DefectedClothStock.objects
-        .select_related("cloth_stock", "cloth_stock__cloth_name", "cloth_patch", "created_by", "updated_by")
+        .select_related(
+            "cloth_stock",
+            "cloth_stock__cloth_name",
+            "cloth_patch",
+            "cloth_patch__beam_loading__sizing_outcome",
+            "created_by",
+            "updated_by",
+        )
         .all()
     )
     serializer_class = DefectedClothStockSerializer
@@ -651,6 +666,7 @@ class DefectedClothStockViewSet(ModelViewSet):
         "defect_type",
         "defect_description",
         "cloth_patch__patch_number",
+        "cloth_patch__beam_loading__sizing_outcome__set_no",
         "cloth_stock__cloth_name__name",
         "remarks",
     ]

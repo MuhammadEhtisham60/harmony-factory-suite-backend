@@ -117,22 +117,16 @@ class YarnOutcomeViewSet(ModelViewSet):
                     outcome = serializer.save()
 
                     if outcome.outcome_type == YarnOutcome.OutcomeTypeChoices.SIZING:
-                        from factory.yarn.sizing.models import SizingBeamAssignment
-                        from factory.yarn.sizing.services import assign_beams_to_outcome
+                        from factory.yarn.sizing.services import mark_beams_as_sizing
                         raw_beam_ids = item_payload.get("beam_ids") or item_payload.get("beamIds")
                         single_beam = item_payload.get("beam") or item_payload.get("beam_id") or item_payload.get("beamId")
                         user = request.user if request.user and request.user.is_authenticated else None
+                        # Dispatch only marks beams as 'Sizing'; they are linked to a
+                        # sizing outcome later, when the set is returned.
                         if raw_beam_ids and isinstance(raw_beam_ids, list):
-                            assign_beams_to_outcome(outcome=outcome, beam_ids=raw_beam_ids, user=user, request=request)
+                            mark_beams_as_sizing(outcome, raw_beam_ids, user=user, request=request)
                         elif single_beam:
-                            assign_beams_to_outcome(outcome=outcome, beam_ids=[single_beam], user=user, request=request)
-                        else:
-                            SizingBeamAssignment.objects.create(
-                                yarn_outcome=outcome,
-                                status=SizingBeamAssignment.StatusChoices.ASSIGNED,
-                                created_by=user,
-                                updated_by=user,
-                            )
+                            mark_beams_as_sizing(outcome, [single_beam], user=user, request=request)
                     created_outcomes.append(outcome)
 
             log_activity(
@@ -157,10 +151,10 @@ class YarnOutcomeViewSet(ModelViewSet):
         serializer.is_valid(raise_exception=True)
         outcome = serializer.save()
 
-        # When outcomeType is Sizing: create SizingBeamAssignment using created YarnOutcome id
+        # When outcomeType is Sizing: only mark the chosen beams as 'Sizing'.
+        # They get linked to a sizing outcome later, when the set is returned.
         if outcome.outcome_type == YarnOutcome.OutcomeTypeChoices.SIZING:
-            from factory.yarn.sizing.models import SizingBeamAssignment
-            from factory.yarn.sizing.services import assign_beams_to_outcome
+            from factory.yarn.sizing.services import mark_beams_as_sizing
 
             raw_beam_ids = (
                 request.data.get("beam_ids")
@@ -174,26 +168,9 @@ class YarnOutcomeViewSet(ModelViewSet):
 
             user = request.user if request.user and request.user.is_authenticated else None
             if raw_beam_ids and isinstance(raw_beam_ids, list):
-                assign_beams_to_outcome(
-                    outcome=outcome,
-                    beam_ids=raw_beam_ids,
-                    user=user,
-                    request=request,
-                )
+                mark_beams_as_sizing(outcome, raw_beam_ids, user=user, request=request)
             elif single_beam:
-                assign_beams_to_outcome(
-                    outcome=outcome,
-                    beam_ids=[single_beam],
-                    user=user,
-                    request=request,
-                )
-            else:
-                SizingBeamAssignment.objects.create(
-                    yarn_outcome=outcome,
-                    status=SizingBeamAssignment.StatusChoices.ASSIGNED,
-                    created_by=user,
-                    updated_by=user,
-                )
+                mark_beams_as_sizing(outcome, [single_beam], user=user, request=request)
 
         stock_name = outcome.stock.yarn_name.name if outcome.stock and outcome.stock.yarn_name else ""
         log_activity(

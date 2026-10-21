@@ -118,6 +118,21 @@ def assign_beams_to_outcome(outcome=None, beam_ids=None, user=None, request=None
             beam_map = {b.id: b for b in locked_beams}
             ordered_beams = [beam_map[bid] for bid in beam_ids]
 
+            # On return from sizing, every beam needs its returned length
+            if is_sizing_outcome:
+                provided_lengths = kwargs.get("beam_yarn_length")
+                provided_lengths = provided_lengths if isinstance(provided_lengths, dict) else {}
+                missing_len = [
+                    b.beam_number for b in ordered_beams
+                    if provided_lengths.get(str(b.id), provided_lengths.get(b.id)) in (None, "")
+                ]
+                if missing_len:
+                    raise ValidationError({
+                        "beam_yarn_length": [
+                            f"Length is required for beam(s): {', '.join(missing_len)}."
+                        ]
+                    })
+
             expected_status = (
                 kwargs.get("allowed_status")
                 or (Beam.StatusChoices.SIZING if is_sizing_outcome else Beam.StatusChoices.AVAILABLE)
@@ -214,8 +229,11 @@ def assign_beams_to_outcome(outcome=None, beam_ids=None, user=None, request=None
 
             for beam in ordered_beams:
                 beam.status = Beam.StatusChoices.LOADED if is_sizing_outcome else Beam.StatusChoices.SIZING
+                if is_sizing_outcome:
+                    # Beam has come back from sizing; it is no longer pending on a dispatch
+                    beam.dispatched_yarn_outcome = None
                 beam.updated_by = user
-                beam.save(update_fields=["status", "updated_by", "updated_at"])
+                beam.save(update_fields=["status", "dispatched_yarn_outcome", "updated_by", "updated_at"])
 
             created_assignments = [assignment]
 
@@ -243,6 +261,105 @@ def assign_beams_to_outcome(outcome=None, beam_ids=None, user=None, request=None
         raise ValidationError({
             "beam_ids": ["One or more beams already have an active sizing assignment."]
         })
+
+
+def normalize_beam_ids(raw_beam_ids):
+    """Coerce a mixed list of ids into unique ints, preserving order."""
+    result = []
+    for bid in raw_beam_ids or []:
+        try:
+            bid = int(bid)
+        except (TypeError, ValueError):
+            raise ValidationError({"beam_ids": [f"Invalid beam id '{bid}'."]})
+        if bid not in result:
+            result.append(bid)
+    return result
+
+
+def mark_beams_as_sizing(yarn_outcome, beam_ids, user=None, request=None):
+    """
+    Dispatch step: mark Available beams as 'Sizing' and remember which yarn
+    outcome they were sent under. No SizingBeamAssignment is created here;
+    that happens when the set is returned (SizingOutcome).
+    """
+    beam_ids = normalize_beam_ids(beam_ids)
+    if not beam_ids:
+        return []
+
+    with transaction.atomic():
+        locked = list(Beam.objects.select_for_update().filter(id__in=beam_ids))
+        beam_map = {b.id: b for b in locked}
+        missing = [bid for bid in beam_ids if bid not in beam_map]
+        if missing:
+            raise ValidationError({
+                "beam_ids": [f"Beam with ID {m} does not exist." for m in missing]
+            })
+
+        ordered = [beam_map[bid] for bid in beam_ids]
+        for beam in ordered:
+            if beam.status != Beam.StatusChoices.AVAILABLE:
+                raise ValidationError({
+                    "beam_ids": [
+                        f"Beam '{beam.beam_number}' cannot be sent to sizing because its status is "
+                        f"'{beam.status}'. Only 'Available' beams can be sent."
+                    ]
+                })
+
+        for beam in ordered:
+            # A free beam may still carry the assignment from its previous sizing cycle
+            # (e.g. if its loom loading was deleted). Close it so the beam starts a fresh cycle.
+            SizingBeamAssignment.objects.filter(
+                beam=beam,
+                status__in=[
+                    SizingBeamAssignment.StatusChoices.ASSIGNED,
+                    SizingBeamAssignment.StatusChoices.IN_USE,
+                    SizingBeamAssignment.StatusChoices.RECEIVED,
+                    SizingBeamAssignment.StatusChoices.COMPLETED,
+                ],
+            ).update(
+                status=SizingBeamAssignment.StatusChoices.RELEASED,
+                released_at=timezone.now(),
+            )
+
+            beam.status = Beam.StatusChoices.SIZING
+            beam.dispatched_yarn_outcome = yarn_outcome
+            beam.updated_by = user
+            beam.save(update_fields=["status", "dispatched_yarn_outcome", "updated_by", "updated_at"])
+
+        log_activity(
+            request=request,
+            action="Send Beams to Sizing",
+            description=(
+                f"Marked {len(ordered)} beam(s) [{', '.join(b.beam_number for b in ordered)}] "
+                f"as Sizing for Yarn Outcome #{getattr(yarn_outcome, 'id', '')}."
+            ),
+            module="Yarn – Sizing",
+            status="Success",
+            user=user,
+        )
+        return ordered
+
+
+def revert_returned_beams_to_sizing(yarn_outcome, user=None):
+    """
+    Used when a SizingOutcome (return) is deleted: its returned beams go back to
+    'Sizing' (re-linked to the dispatch) and the return assignment is removed.
+    Beams already past 'Loaded' (on a loom etc.) are not touched.
+    """
+    if not yarn_outcome:
+        return
+    assignments = SizingBeamAssignment.objects.filter(
+        yarn_outcome=yarn_outcome,
+        status=SizingBeamAssignment.StatusChoices.RECEIVED,
+    )
+    for assignment in assignments:
+        for beam in assignment.beam.all():
+            if beam.status == Beam.StatusChoices.LOADED:
+                beam.status = Beam.StatusChoices.SIZING
+                beam.dispatched_yarn_outcome = yarn_outcome
+                beam.updated_by = user
+                beam.save(update_fields=["status", "dispatched_yarn_outcome", "updated_by", "updated_at"])
+        assignment.delete()
 
 
 def sync_yarn_outcome_status(yarn_outcome):
