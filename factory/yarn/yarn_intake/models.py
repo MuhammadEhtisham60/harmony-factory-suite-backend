@@ -472,10 +472,14 @@ class YarnOutcome(models.Model):
     # ── Merged Sizing Mill Stock ──────────────────────────────────────────
     merged_sizing_bags = models.PositiveIntegerField(
         default=0,
+        null=True,
+        blank=True,
         help_text="Bags merged from existing sizing stock of the same quality at the sizing mill."
     )
     merged_sizing_cones = models.PositiveIntegerField(
         default=0,
+        null=True,
+        blank=True,
         help_text="Cones merged from existing sizing stock of the same quality at the sizing mill."
     )
     merged_from_sizing_outcomes = models.ManyToManyField(
@@ -569,6 +573,10 @@ class YarnOutcome(models.Model):
             self.outcome_weight_lb = self.outcome_weight_kg * LB_PER_KG
 
     def save(self, *args, **kwargs):
+        if self.merged_sizing_bags is None:
+            self.merged_sizing_bags = 0
+        if self.merged_sizing_cones is None:
+            self.merged_sizing_cones = 0
         self.calculate_outcome_fields()
         if not self.stock_id:
             if self.pk and hasattr(self, "items") and self.items.exists():
