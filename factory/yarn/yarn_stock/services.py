@@ -41,11 +41,19 @@ def normalize_stock_fields(yarn_name, yarn_type, yarn_count, production_type="")
     from factory.yarn.yarn_type.models import YarnType
     from factory.yarn.yarn_count.models import YarnCount
 
+    raw_prod = (production_type or "").strip()
+    if raw_prod.lower() == "conversion":
+        prod_type = "Conversion"
+    elif raw_prod.lower() == "self":
+        prod_type = "Self"
+    else:
+        prod_type = raw_prod
+
     return {
         "yarn_name": _resolve_model_instance(yarn_name, YarnName),
         "yarn_type": _resolve_model_instance(yarn_type, YarnType),
         "yarn_count": _resolve_model_instance(yarn_count, YarnCount),
-        "production_type": (production_type or "").strip(),
+        "production_type": prod_type,
     }
 
 
@@ -279,10 +287,65 @@ def validate_outcome_stock_pool(stock, outcome_bags, outcome_weight_kg=None, exc
         raise ValidationError(errors)
 
 
+def reconcile_intake_stock_pools():
+    """
+    Ensures every YarnIntake is assigned to the correct YarnStock pool
+    matching (yarn_name, yarn_type, yarn_count, production_type).
+    Separates 'Conversion' intakes from 'Self' intakes into their own individual pools.
+    """
+    from factory.yarn.yarn_intake.models import YarnIntake
+    affected_stock_ids = set()
+
+    for intake in YarnIntake.objects.select_related("stock", "yarn_name", "yarn_type", "yarn_count").all():
+        raw_prod = (intake.production_type or "").strip()
+        if raw_prod.lower() == "conversion" or (not raw_prod and (intake.rate_per_lb or Decimal("0")) == Decimal("0")):
+            prod_type = "Conversion"
+        elif not raw_prod:
+            prod_type = "Self"
+        elif raw_prod.lower() == "self":
+            prod_type = "Self"
+        else:
+            prod_type = raw_prod
+
+        if intake.production_type != prod_type:
+            intake.production_type = prod_type
+            intake.save(update_fields=["production_type"])
+
+        correct_stock = get_or_create_yarn_stock(
+            yarn_name=intake.yarn_name,
+            yarn_type=intake.yarn_type,
+            yarn_count=intake.yarn_count,
+            production_type=prod_type,
+            user=intake.created_by,
+        )
+
+        if not intake.stock_id or intake.stock_id != correct_stock.id:
+            if intake.stock_id:
+                affected_stock_ids.add(intake.stock_id)
+            intake.stock = correct_stock
+            intake.save(update_fields=["stock"])
+            affected_stock_ids.add(correct_stock.id)
+        else:
+            affected_stock_ids.add(correct_stock.id)
+
+    # Recalculate all affected stocks
+    for sid in affected_stock_ids:
+        try:
+            st = YarnStock.objects.get(pk=sid)
+            recalculate_yarn_stock(st)
+        except YarnStock.DoesNotExist:
+            pass
+
+    # Clean up empty orphan stocks if any (0 intakes and 0 outcomes)
+    YarnStock.objects.filter(intakes__isnull=True, outcomes__isnull=True).delete()
+
+
 def reconcile_all_stocks():
     """
-    Reconciles all YarnStock records in the database.
+    Reconciles all YarnStock records in the database, including assigning
+    Conversion and Self intakes to their respective pools.
     """
+    reconcile_intake_stock_pools()
     count = 0
     for stock in YarnStock.objects.all():
         recalculate_yarn_stock(stock)
