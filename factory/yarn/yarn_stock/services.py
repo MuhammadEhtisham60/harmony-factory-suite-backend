@@ -173,12 +173,20 @@ def calculate_stock_aggregates(stock):
     else:
         stock_price = Decimal("0.000000")
 
+    # Cumulative intake purchase price: total price of yarn purchases, never minus dispatched yarn price
+    cumulative_intake_price = Decimal("0.000000")
+    for itk in stock.intakes.all():
+        net_lb = Decimal(str(itk.net_weight_lb or 0))
+        rate_lb = Decimal(str(itk.rate_per_lb or 0))
+        cumulative_intake_price += (net_lb * rate_lb)
+    cumulative_intake_price = cumulative_intake_price.quantize(Decimal("0.000001"))
+
     return {
         "total_intake_bags": total_intake_bags,
         "total_intake_cones": total_intake_cones,
         "total_intake_weight_kg": total_intake_weight_kg,
         "total_intake_weight_lb": total_intake_weight_lb,
-        "total_intake_rate": total_intake_rate,
+        "total_intake_rate": cumulative_intake_price,
         "total_outcome_bags": total_outcome_bags,
         "total_outcome_cones": total_outcome_cones,
         "total_outcome_weight_kg": total_outcome_weight_kg,
@@ -193,8 +201,8 @@ def calculate_stock_aggregates(stock):
         "available_weight_kg": available_weight_kg,
         "available_weight_lb": available_weight_lb,
         "price": stock_price,
-        "total_price": remaining_total_price,
-        "cumulative_intake_price": total_intake_rate,
+        "total_price": cumulative_intake_price,
+        "cumulative_intake_price": cumulative_intake_price,
         "remaining_bags": available_boxes,
         "remaining_cones": available_cones,
         "remaining_weight_kg": available_weight_kg,

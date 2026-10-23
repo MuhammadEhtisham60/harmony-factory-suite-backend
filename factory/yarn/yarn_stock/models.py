@@ -102,7 +102,7 @@ class YarnStock(models.Model):
         max_digits=18,
         decimal_places=6,
         default=Decimal("0.000000"),
-        help_text="Total price of yarn of this quality from contributing intakes."
+        help_text="Cumulative total price of yarn purchases from contributing intakes (cumulativeIntakePrice). Never subtracts dispatched yarn price."
     )
     remaining_bags = models.IntegerField(
         default=0,
@@ -232,10 +232,13 @@ class YarnStock(models.Model):
         elif self.total_weight_lb and not self.remaining_weight_lb:
             self.remaining_weight_lb = self.total_weight_lb
 
-        if self.remaining_total_price and not self.total_price:
-            self.total_price = self.remaining_total_price
-        elif self.total_price and not self.remaining_total_price:
-            self.remaining_total_price = self.total_price
+        # total_price acts as cumulativeIntakePrice (never minus dispatching yarn price)
+        if self.pk and (not self.total_price or self.total_price <= Decimal("0.000000")):
+            cum_price = Decimal("0.000000")
+            for intake in self.intakes.all():
+                cum_price += (Decimal(str(intake.net_weight_lb or 0)) * Decimal(str(intake.rate_per_lb or 0)))
+            if cum_price > Decimal("0.000000"):
+                self.total_price = cum_price.quantize(Decimal("0.000001"))
 
         # Recalculate price: remaining_total_price divided by remaining_bags
         update_fields = kwargs.get("update_fields")
@@ -387,7 +390,9 @@ class YarnStock(models.Model):
 
     @property
     def cumulative_intake_price(self):
-        """Total cumulative valuation of all intakes that ever contributed to this pool."""
+        """Total cumulative valuation of all intakes that ever contributed to this pool (never decreases on dispatch)."""
+        if self.total_price and self.total_price > Decimal("0.000000"):
+            return self.total_price
         total = Decimal("0.000000")
         for intake in self.intakes.all():
             total += (Decimal(str(intake.net_weight_lb or 0)) * Decimal(str(intake.rate_per_lb or 0)))
