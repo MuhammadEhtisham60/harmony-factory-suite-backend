@@ -584,32 +584,56 @@ class YarnOutcome(models.Model):
             if self.outcome_bags > 0:
                 self.outcome_weight_per_bag_kg = (self.outcome_weight_kg / Decimal(str(self.outcome_bags))).quantize(Decimal("0.000001"))
 
-            # Calculate total_price: valuation of the dispatched yarn across all outcome types
-            if not self.total_price or self.total_price <= Decimal("0"):
-                items_val = Decimal("0.000000")
-                for item in self.items.select_related("yarn_intake").all():
-                    if item.yarn_intake and item.yarn_intake.rate_per_lb:
-                        items_val += (item.weight_lb or Decimal("0")) * item.yarn_intake.rate_per_lb
-                if items_val > Decimal("0"):
-                    self.total_price = items_val.quantize(Decimal("0.000001"))
+            pass
         else:
             outcome_bags = Decimal(str(self.outcome_bags or 0))
             weight_per_bag = Decimal(str(self.outcome_weight_per_bag_kg or 0))
             self.outcome_weight_kg = outcome_bags * weight_per_bag
             self.outcome_weight_lb = self.outcome_weight_kg * LB_PER_KG
 
-            if not self.total_price or self.total_price <= Decimal("0"):
-                intake = getattr(self, "_initial_yarn_intake", None)
+        # Resolve stock if not set yet
+        stock = self.stock
+        if not stock:
+            if self.pk and hasattr(self, "items") and self.items.exists():
+                first_item = self.items.select_related("yarn_intake__stock").first()
+                if first_item and first_item.yarn_intake and first_item.yarn_intake.stock:
+                    stock = first_item.yarn_intake.stock
+                    self.stock = stock
+            elif hasattr(self, "_initial_yarn_intake") and self._initial_yarn_intake:
+                intake = self._initial_yarn_intake
                 if isinstance(intake, int):
                     intake = YarnIntake.objects.filter(pk=intake).first()
-                if intake and intake.rate_per_lb:
-                    self.total_price = (self.outcome_weight_lb * intake.rate_per_lb).quantize(Decimal("0.000001"))
-                elif self.stock and (self.total_price is None or self.total_price <= Decimal("0")):
-                    intakes_with_rate = self.stock.intakes.filter(rate_per_lb__gt=0)
-                    if intakes_with_rate.exists():
-                        avg_rate = intakes_with_rate.aggregate(models.Avg("rate_per_lb"))["rate_per_lb__avg"]
-                        if avg_rate:
-                            self.total_price = (self.outcome_weight_lb * Decimal(str(avg_rate))).quantize(Decimal("0.000001"))
+                if intake and getattr(intake, "stock", None):
+                    stock = intake.stock
+                    self.stock = stock
+
+        # Calculate total_price: dispatched yarn price = Weight in lb * (remaining_total_price / remaining_weight_lb)
+        if not self.total_price or self.total_price <= Decimal("0"):
+            pool_rate = Decimal("0.000000")
+            if stock:
+                rem_w_lb = Decimal(str(stock.remaining_weight_lb or 0))
+                rem_tp = Decimal(str(stock.remaining_total_price or 0))
+                if rem_w_lb > Decimal("0.000000") and rem_tp > Decimal("0.000000"):
+                    pool_rate = (rem_tp / rem_w_lb).quantize(Decimal("0.000001"))
+                elif stock.price_per_lb and stock.price_per_lb > Decimal("0.000000"):
+                    pool_rate = stock.price_per_lb
+
+            if pool_rate > Decimal("0.000000"):
+                self.total_price = (self.outcome_weight_lb * pool_rate).quantize(Decimal("0.000001"))
+            else:
+                items_val = Decimal("0.000000")
+                if hasattr(self, "items") and self.items.exists():
+                    for item in self.items.select_related("yarn_intake").all():
+                        if item.yarn_intake and item.yarn_intake.rate_per_lb:
+                            items_val += (item.weight_lb or Decimal("0")) * item.yarn_intake.rate_per_lb
+                if items_val > Decimal("0"):
+                    self.total_price = items_val.quantize(Decimal("0.000001"))
+                elif hasattr(self, "_initial_yarn_intake") and self._initial_yarn_intake:
+                    itk = self._initial_yarn_intake
+                    if isinstance(itk, int):
+                        itk = YarnIntake.objects.filter(pk=itk).first()
+                    if itk and itk.rate_per_lb:
+                        self.total_price = (self.outcome_weight_lb * itk.rate_per_lb).quantize(Decimal("0.000001"))
 
     def save(self, *args, **kwargs):
         if self.merged_sizing_bags is None:
