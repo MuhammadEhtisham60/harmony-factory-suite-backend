@@ -374,18 +374,20 @@ class YarnStock(models.Model):
 
     @property
     def price_per_kg(self):
-        """Average rate per kilogram derived from rate per pound."""
+        """Rate per kilogram calculated by remaining_total_price divided by remaining_weight_kg."""
+        rem_weight_kg = self.remaining_weight_kg or Decimal("0.000000")
+        rem_total_price = self.remaining_total_price or Decimal("0.000000")
+        if rem_weight_kg > Decimal("0.000000") and rem_total_price > Decimal("0.000000"):
+            return (rem_total_price / rem_weight_kg).quantize(Decimal("0.000001"))
         return (self.price_per_lb * LB_PER_KG).quantize(Decimal("0.000001"))
 
     @property
     def price_per_lb(self):
-        """Average rate per pound calculated from contributing intakes (simple average of rate_per_lb)."""
-        intakes_with_rate = self.intakes.filter(rate_per_lb__gt=0)
-        target = intakes_with_rate if intakes_with_rate.exists() else self.intakes
-        agg = target.aggregate(models.Avg("rate_per_lb"))
-        avg_val = agg["rate_per_lb__avg"]
-        if avg_val is not None:
-            return Decimal(str(avg_val)).quantize(Decimal("0.000001"))
+        """Rate per pound calculated by remaining_total_price divided by remaining_weight_lb."""
+        rem_weight_lb = self.remaining_weight_lb or Decimal("0.000000")
+        rem_total_price = self.remaining_total_price or Decimal("0.000000")
+        if rem_weight_lb > Decimal("0.000000") and rem_total_price > Decimal("0.000000"):
+            return (rem_total_price / rem_weight_lb).quantize(Decimal("0.000001"))
         return Decimal("0.000000")
 
     @property
