@@ -37,6 +37,7 @@ urlpatterns = [
     path('api/v1/', include('factory.yarn.yarn_intake.urls')),
     path('api/v1/', include('factory.yarn.yarn_outcome.urls')),
     path('api/v1/', include('factory.yarn.sizing.urls')),
+    path('api/v1/', include('factory.yarn.warping.urls')),
 ]
 
 if settings.DEBUG:

@@ -14,4 +14,5 @@ from factory.yarn.yarn_count.models import YarnCount
 from factory.yarn.yarn_stock.models import YarnStock
 from factory.yarn.yarn_intake.models import YarnIntake, YarnOutcome, YarnOutcomeItem
 from factory.yarn.sizing.models import Sizing, SizingOutcome, SizingBeamAssignment
+from factory.yarn.warping.models import Warping
 from factory.cloth.models import ClothName, ClothPatch, ClothStock, CleanClothStock, DefectedClothStock

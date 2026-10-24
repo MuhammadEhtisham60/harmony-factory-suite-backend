@@ -305,6 +305,11 @@ def mark_beams_as_sizing(yarn_outcome, beam_ids, user=None, request=None):
                     ]
                 })
 
+        profile = getattr(yarn_outcome, "processing_profile", None)
+        target_status = profile.beam_status if profile else Beam.StatusChoices.SIZING
+        label = profile.label if profile else "Sizing"
+        module = profile.module if profile else "Yarn – Sizing"
+
         for beam in ordered:
             # A free beam may still carry the assignment from its previous sizing cycle
             # (e.g. if its loom loading was deleted). Close it so the beam starts a fresh cycle.
@@ -321,19 +326,19 @@ def mark_beams_as_sizing(yarn_outcome, beam_ids, user=None, request=None):
                 released_at=timezone.now(),
             )
 
-            beam.status = Beam.StatusChoices.SIZING
+            beam.status = target_status
             beam.dispatched_yarn_outcome = yarn_outcome
             beam.updated_by = user
             beam.save(update_fields=["status", "dispatched_yarn_outcome", "updated_by", "updated_at"])
 
         log_activity(
             request=request,
-            action="Send Beams to Sizing",
+            action=f"Send Beams to {label}",
             description=(
                 f"Marked {len(ordered)} beam(s) [{', '.join(b.beam_number for b in ordered)}] "
-                f"as Sizing for Yarn Outcome #{getattr(yarn_outcome, 'id', '')}."
+                f"as {label} for Yarn Outcome #{getattr(yarn_outcome, 'id', '')}."
             ),
-            module="Yarn – Sizing",
+            module=module,
             status="Success",
             user=user,
         )
@@ -348,6 +353,8 @@ def revert_returned_beams_to_sizing(yarn_outcome, user=None):
     """
     if not yarn_outcome:
         return
+    profile = getattr(yarn_outcome, "processing_profile", None)
+    target_status = profile.beam_status if profile else Beam.StatusChoices.SIZING
     assignments = SizingBeamAssignment.objects.filter(
         yarn_outcome=yarn_outcome,
         status=SizingBeamAssignment.StatusChoices.RECEIVED,
@@ -355,7 +362,7 @@ def revert_returned_beams_to_sizing(yarn_outcome, user=None):
     for assignment in assignments:
         for beam in assignment.beam.all():
             if beam.status == Beam.StatusChoices.LOADED:
-                beam.status = Beam.StatusChoices.SIZING
+                beam.status = target_status
                 beam.dispatched_yarn_outcome = yarn_outcome
                 beam.updated_by = user
                 beam.save(update_fields=["status", "dispatched_yarn_outcome", "updated_by", "updated_at"])
@@ -380,12 +387,13 @@ def sync_yarn_outcome_status(yarn_outcome):
         if not yarn_outcome:
             return None
 
-    if yarn_outcome.outcome_type != YarnOutcome.OutcomeTypeChoices.SIZING:
+    profile = getattr(yarn_outcome, "processing_profile", None)
+    if not profile:
         return yarn_outcome.status
 
     sizing_outcomes = yarn_outcome.sizing_outcomes.all()
     if not sizing_outcomes.exists():
-        new_status = YarnOutcome.StatusChoices.IN_SIZING
+        new_status = profile.in_progress_status
     else:
         total_lagat = sizing_outcomes.aggregate(total=Sum("lagat_bags"))["total"] or Decimal("0")
         total_returned = sizing_outcomes.aggregate(total=Sum("return_bags"))["total"] or Decimal("0")
@@ -401,7 +409,7 @@ def sync_yarn_outcome_status(yarn_outcome):
         )
 
         if total_accounted <= Decimal("0") and latest_remaining_stock == 0:
-            new_status = YarnOutcome.StatusChoices.IN_SIZING
+            new_status = profile.in_progress_status
         elif latest_remaining_stock > 0 or (sent_bags > Decimal("0") and total_accounted < sent_bags):
             new_status = YarnOutcome.StatusChoices.PARTIALLY_RECEIVED
         else:
@@ -462,10 +470,16 @@ def create_sizing_outcome(yarn_outcome=None, outcome_date=None, remarks="", beam
     """
     beam_yarn_length = extra_fields.pop("beam_yarn_length", None)
     sizing = extra_fields.pop("sizing", None)
-    if not yarn_outcome and sizing:
+    warping = extra_fields.pop("warping", None)
+    if not yarn_outcome and (sizing or warping):
         from factory.yarn.yarn_intake.models import YarnIntake, Supplier, YarnOutcome
         from django.utils import timezone
-        yarn_outcome = YarnOutcome.objects.filter(sizing=sizing, outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING).first()
+        if sizing:
+            unit_filter = {"sizing": sizing, "outcome_type": YarnOutcome.OutcomeTypeChoices.SIZING}
+        else:
+            unit_filter = {"warping": warping, "outcome_type": YarnOutcome.OutcomeTypeChoices.WARPING}
+
+        yarn_outcome = YarnOutcome.objects.filter(**unit_filter).first()
         if not yarn_outcome:
             intake = YarnIntake.objects.first()
             if not intake:
@@ -483,11 +497,10 @@ def create_sizing_outcome(yarn_outcome=None, outcome_date=None, remarks="", beam
                 )
             yarn_outcome = YarnOutcome.objects.create(
                 yarn_intake=intake,
-                outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING,
-                sizing=sizing,
                 outcome_bags=0,
                 outcome_weight_per_bag_kg=0,
                 outcome_date=outcome_date or timezone.now().date(),
+                **unit_filter,
             )
 
     with transaction.atomic():

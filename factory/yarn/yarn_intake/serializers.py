@@ -20,6 +20,7 @@ from factory.yarn.yarn_type.models import YarnType
 from factory.yarn.yarn_count.models import YarnCount
 from factory.yarn.yarn_buyer.models import YarnBuyer
 from factory.yarn.sizing.models import Sizing
+from factory.yarn.warping.models import Warping
 from factory.yarn.yarn_stock.models import YarnStock, LB_PER_KG
 from factory.yarn.yarn_stock.serializers import YarnStockMinSerializer
 from .models import YarnIntake, YarnOutcome, YarnOutcomeItem
@@ -203,6 +204,11 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True
     )
+    warping = serializers.PrimaryKeyRelatedField(
+        queryset=Warping.objects.all(),
+        required=False,
+        allow_null=True
+    )
 
     # ── Writable input fields ─────────────────────────────────────────────
     outcomeType = serializers.ChoiceField(
@@ -297,6 +303,7 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
     stockDetail = serializers.SerializerMethodField()
     yarnBuyerDetail = serializers.SerializerMethodField()
     sizingDetail = serializers.SerializerMethodField()
+    warpingDetail = serializers.SerializerMethodField()
 
     class Meta:
         model = YarnOutcome
@@ -336,6 +343,8 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
             "yarnBuyerDetail",
             "sizing",
             "sizingDetail",
+            "warping",
+            "warpingDetail",
             "totalPrice",
             "ratePerKg",
             "status",
@@ -361,7 +370,7 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
             "yarnName", "yarnType", "yarnCount", "yarnIntakeDetail",
             "beamAssignments", "totalBeams", "status", "sizingOutcome", "isReceived", "isPartiallyReceived",
             "createdAt", "updatedAt", "createdBy", "updatedBy",
-            "stockDetail", "yarnBuyerDetail", "sizingDetail",
+            "stockDetail", "yarnBuyerDetail", "sizingDetail", "warpingDetail",
         ]
 
     def get_mergedFromSets(self, obj):
@@ -392,11 +401,12 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         return []
 
     def get_status(self, obj):
-        if obj.outcome_type == YarnOutcome.OutcomeTypeChoices.SIZING:
+        profile = getattr(obj, "processing_profile", None)
+        if profile:
             if hasattr(obj, "sizing_outcomes") and obj.sizing_outcomes.exists():
                 from factory.yarn.sizing.services import sync_yarn_outcome_status
                 return sync_yarn_outcome_status(obj)
-            return getattr(obj, "status", None) or YarnOutcome.StatusChoices.IN_SIZING
+            return getattr(obj, "status", None) or profile.in_progress_status
         return getattr(obj, "status", None) or "Dispatched"
 
     def get_isReceived(self, obj):
@@ -570,6 +580,12 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
     def get_sizingDetail(self, obj):
         if obj.sizing:
             return SizingMinSerializer(obj.sizing).data
+        return None
+
+    def get_warpingDetail(self, obj):
+        if obj.warping:
+            from factory.yarn.warping.serializers import WarpingMinSerializer
+            return WarpingMinSerializer(obj.warping).data
         return None
 
     # ── Validation ────────────────────────────────────────────────────────
@@ -794,6 +810,10 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
             "sizing",
             getattr(self.instance, "sizing", None) if self.instance else None
         )
+        warping = attrs.get(
+            "warping",
+            getattr(self.instance, "warping", None) if self.instance else None
+        )
 
         if outcome_type == YarnOutcome.OutcomeTypeChoices.SOLD:
             if not yarn_buyer:
@@ -801,13 +821,24 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
                     "yarnBuyer": ["Yarn buyer is required for Sold outcome type."]
                 })
             attrs["sizing"] = None
+            attrs["warping"] = None
 
         elif outcome_type == YarnOutcome.OutcomeTypeChoices.WEFT:
             attrs["yarn_buyer"] = None
             attrs["sizing"] = None
+            attrs["warping"] = None
+
+        elif outcome_type == YarnOutcome.OutcomeTypeChoices.WARPING:
+            attrs["yarn_buyer"] = None
+            attrs["sizing"] = None
+            if not warping:
+                raise serializers.ValidationError({
+                    "warping": ["Warping reference is required for Warping outcome type."]
+                })
 
         else:  # Sizing
             attrs["yarn_buyer"] = None
+            attrs["warping"] = None
             if not sizing:
                 raise serializers.ValidationError({
                     "sizing": ["Sizing reference is required for Sizing outcome type."]

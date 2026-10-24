@@ -68,6 +68,16 @@ MODULE_PERMISSIONS = [
         ]
     },
     {
+        "module": "warping",
+        "name": "Warping",
+        "permissions": [
+            {"code": "warping.view", "name": "View Warping Units", "description": "View warping unit list and details"},
+            {"code": "warping.add", "name": "Add Warping Unit", "description": "Create new warping unit records"},
+            {"code": "warping.edit", "name": "Edit Warping Unit", "description": "Update warping unit details"},
+            {"code": "warping.delete", "name": "Delete Warping Unit", "description": "Delete warping unit records"},
+        ]
+    },
+    {
         "module": "yarn_stock",
         "name": "Yarn Stock",
         "permissions": [

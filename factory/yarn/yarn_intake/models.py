@@ -38,7 +38,9 @@ from factory.yarn.yarn_type.models import YarnType
 from factory.yarn.yarn_count.models import YarnCount
 from factory.yarn.yarn_buyer.models import YarnBuyer
 from factory.purchase.supplier.models import Supplier
+from factory.yarn.processing import profile_for
 from factory.yarn.sizing.models import Sizing
+from factory.yarn.warping.models import Warping
 from factory.yarn.yarn_stock.models import YarnStock, LB_PER_KG
 
 
@@ -389,17 +391,27 @@ class YarnOutcome(models.Model):
       Sizing:
         yarn_buyer  must be None
         total_price saves valuation of dispatched yarn (Rs)
-        sizing       optional (FK to Sizing)
+        sizing       required (FK to Sizing)
+        warping      must be None
+
+      Warping:
+        yarn_buyer  must be None
+        total_price saves valuation of dispatched yarn (Rs)
+        warping      required (FK to Warping)
+        sizing       must be None
 
       Weft:
         yarn_buyer  must be None
         total_price saves valuation of dispatched yarn (Rs)
-        sizing       must be None
+        sizing / warping  must be None
 
       Sold:
         yarn_buyer  required
         total_price saves agreed sale price or valuation of dispatched yarn
-        sizing       must be None
+        sizing / warping  must be None
+
+    Sizing and Warping are *processing* dispatches: they share the same set
+    return, beam and ledger workflow (see `factory.yarn.processing`).
 
     outcome_weight_kg = outcome_bags * outcome_weight_per_bag_kg
     outcome_weight_lb = outcome_weight_kg * LB_PER_KG
@@ -410,6 +422,7 @@ class YarnOutcome(models.Model):
 
     class OutcomeTypeChoices(models.TextChoices):
         SIZING = "Sizing", "Sizing"
+        WARPING = "Warping", "Warping"
         WEFT = "Weft", "Weft"
         SOLD = "Sold", "Sold"
 
@@ -465,8 +478,17 @@ class YarnOutcome(models.Model):
         related_name="yarn_outcomes"
     )
 
+    warping = models.ForeignKey(
+        Warping,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="yarn_outcomes"
+    )
+
     class StatusChoices(models.TextChoices):
         IN_SIZING = "In Sizing", "In Sizing"
+        IN_WARPING = "In Warping", "In Warping"
         PARTIALLY_RECEIVED = "Partially Received", "Partially Received"
         RECEIVED = "Received", "Received"
         DISPATCHED = "Dispatched", "Dispatched"
@@ -552,19 +574,38 @@ class YarnOutcome(models.Model):
             f"{self.outcome_bags} bags"
         )
 
+    @property
+    def processing_profile(self):
+        """ProcessingProfile for Sizing / Warping dispatches, None for Weft / Sold."""
+        return profile_for(self)
+
+    @property
+    def processing_unit(self):
+        """The mill master record (Sizing or Warping) this dispatch was sent to."""
+        profile = self.processing_profile
+        return profile.unit_of(self) if profile else None
+
+    @property
+    def processing_unit_name(self):
+        profile = self.processing_profile
+        return profile.unit_name_of(self) if profile else ""
+
     def clean(self):
         super().clean()
         from django.core.exceptions import ValidationError
-        if self.outcome_type == self.OutcomeTypeChoices.SIZING:
-            if not self.sizing_id:
-                raise ValidationError({"sizing": "Sizing reference is required for Sizing outcome type."})
+        profile = self.processing_profile
+        if profile:
+            if not getattr(self, profile.unit_id_field):
+                raise ValidationError({
+                    profile.unit_field: f"{profile.label} reference is required for {profile.label} outcome type."
+                })
             if self.yarn_buyer_id:
                 self.yarn_buyer = None
                 self.yarn_buyer_id = None
-        elif self.outcome_type in (self.OutcomeTypeChoices.WEFT, self.OutcomeTypeChoices.SOLD):
-            if self.sizing_id:
-                self.sizing = None
-                self.sizing_id = None
+        for other in ("sizing", "warping"):
+            if (not profile or other != profile.unit_field) and getattr(self, f"{other}_id"):
+                setattr(self, other, None)
+                setattr(self, f"{other}_id", None)
 
     def calculate_outcome_fields(self):
         """
@@ -622,7 +663,7 @@ class YarnOutcome(models.Model):
                 self.total_price = (self.outcome_weight_lb * pool_rate).quantize(Decimal("0.000001"))
             else:
                 items_val = Decimal("0.000000")
-                if hasattr(self, "items") and self.items.exists():
+                if self.pk and hasattr(self, "items") and self.items.exists():
                     for item in self.items.select_related("yarn_intake").all():
                         if item.yarn_intake and item.yarn_intake.rate_per_lb:
                             items_val += (item.weight_lb or Decimal("0")) * item.yarn_intake.rate_per_lb
@@ -640,6 +681,12 @@ class YarnOutcome(models.Model):
             self.merged_sizing_bags = 0
         if self.merged_sizing_cones is None:
             self.merged_sizing_cones = 0
+        if not self.pk:
+            profile = self.processing_profile
+            if profile and self.status == self.StatusChoices.IN_SIZING:
+                self.status = profile.in_progress_status
+            elif self.outcome_type in (self.OutcomeTypeChoices.WEFT, self.OutcomeTypeChoices.SOLD) and self.status == self.StatusChoices.IN_SIZING:
+                self.status = self.StatusChoices.DISPATCHED
         self.calculate_outcome_fields()
         if not self.stock_id:
             if self.pk and hasattr(self, "items") and self.items.exists():

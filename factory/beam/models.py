@@ -14,6 +14,7 @@ class Beam(models.Model):
     class StatusChoices(models.TextChoices):
         AVAILABLE = "Available", "Available"
         SIZING = "Sizing", "Sizing"
+        WARPING = "Warping", "Warping"
         LOADED = "Loaded", "Loaded"
         IN_PRODUCTION = "In Production", "In Production"
         COMPLETED = "Completed", "Completed"
@@ -466,13 +467,13 @@ class BeamDismountReconciliation(models.Model):
 @receiver(pre_delete, sender="factory.YarnOutcome")
 def reset_dispatched_beams_on_yarn_outcome_delete(sender, instance, **kwargs):
     """
-    When a yarn outcome (sizing dispatch) is deleted, every beam that was
-    dispatched under it and is still waiting at sizing goes back to Available.
-    Beams in any other status (e.g. Damaged) are left untouched.
+    When a yarn outcome (sizing/warping dispatch) is deleted, every beam that
+    was dispatched under it and is still waiting at the mill goes back to
+    Available. Beams in any other status (e.g. Damaged) are left untouched.
     """
     Beam.objects.filter(
         dispatched_yarn_outcome_id=instance.pk,
-        status=Beam.StatusChoices.SIZING,
+        status__in=[Beam.StatusChoices.SIZING, Beam.StatusChoices.WARPING],
     ).update(
         status=Beam.StatusChoices.AVAILABLE,
         dispatched_yarn_outcome=None,
