@@ -555,8 +555,17 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         ret["total_set_cones"] = instance.total_set_cones
         ret["yarnPrice"] = str(instance.total_price) if instance.total_price is not None else "0.000000"
         ret["yarnTotalPrice"] = str(instance.total_price) if instance.total_price is not None else "0.000000"
-        ret["dispatchedYarnValue"] = str(instance.total_price) if instance.total_price is not None else "0.000000"
-        ret["total_price"] = str(instance.total_price) if instance.total_price is not None else "0.000000"
+        if instance.sizing:
+            ret["sizing"] = instance.sizing_id
+            ret["sizingId"] = instance.sizing_id
+            ret["sizingName"] = instance.sizing.sizing_name
+            ret["sizingUnit"] = instance.sizing.sizing_name
+        if instance.warping:
+            ret["warping"] = instance.warping_id
+            ret["warpingId"] = instance.warping_id
+            ret["warpingName"] = instance.warping.warping_name
+            ret["warpingUnit"] = instance.warping.warping_name
+
         ret["mergedFromSets"] = self.get_mergedFromSets(instance)
         ret["merged_from_sets"] = ret["mergedFromSets"]
 
