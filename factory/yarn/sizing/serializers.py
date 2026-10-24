@@ -1235,6 +1235,8 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
         validated_data.pop("beamYarnLength", None)
         validated_data.pop("sizing_id", None)
         validated_data.pop("sizing", None)
+        validated_data.pop("warping_id", None)
+        validated_data.pop("warping", None)
         validated_data.pop("yarn_outcome_id", None)
 
         request = self.context.get("request")
@@ -1264,6 +1266,8 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
         validated_data.pop("beamYarnLength", None)
         validated_data.pop("sizing_id", None)
         validated_data.pop("sizing", None)
+        validated_data.pop("warping_id", None)
+        validated_data.pop("warping", None)
         validated_data.pop("yarn_outcome_id", None)
 
         request = self.context.get("request")

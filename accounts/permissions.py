@@ -34,6 +34,9 @@ class HasERPModulePermission(BasePermission):
             # If no specific permission specified, allow authenticated active user
             return True
 
+        if isinstance(required_perm, (list, tuple, set)):
+            return any(request.user.has_perm_code(p) for p in required_perm)
+
         return request.user.has_perm_code(required_perm)
 
 

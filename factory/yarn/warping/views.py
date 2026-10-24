@@ -15,8 +15,13 @@ from accounts.pagination import StandardResultsSetPagination
 from accounts.permissions import HasERPModulePermission
 from audit_logs.utils import log_activity
 
+from django.db import models
+from rest_framework.exceptions import PermissionDenied
+
 from factory.yarn.sizing.models import SizingOutcome
 from factory.yarn.sizing.serializers import SizingOutcomeSerializer
+from factory.yarn.sizing.views import SizingOutcomeViewSet
+from factory.yarn.sizing.services import sync_yarn_outcome_status, sync_sizing_outcome_to_intake
 from .models import Warping
 from .serializers import WarpingSerializer
 from .filters import WarpingFilter
@@ -151,3 +156,113 @@ class WarpingViewSet(ModelViewSet):
             return self.get_paginated_response(serializer.data)
         serializer = SizingOutcomeSerializer(qs, many=True, context={"request": request})
         return Response({"success": True, "data": serializer.data})
+
+
+class WarpingOutcomeViewSet(SizingOutcomeViewSet):
+    """
+    CRUD for Warping Outcome (returned set from warping unit) and Beam assignment.
+
+    Endpoints:
+        GET    /warping-outcomes/                   – list warping outcomes
+        POST   /warping-outcomes/                   – create warping outcome & assign beams
+        GET    /warping-outcomes/{id}/              – retrieve warping outcome detail
+        PUT    /warping-outcomes/{id}/              – update warping outcome
+        PATCH  /warping-outcomes/{id}/              – partial update
+        DELETE /warping-outcomes/{id}/              – delete warping outcome
+        POST   /warping-outcomes/{id}/assign-beams/ – assign additional beams
+        GET    /warping-outcomes/{id}/beams/        – list assigned beams
+        POST   /warping-outcomes/{id}/release-beam/ – release a beam
+    """
+
+    permission_map = {
+        "GET": ("warping.view", "sizing.view"),
+        "POST": ("warping.add", "sizing.add"),
+        "PUT": ("warping.edit", "sizing.edit"),
+        "PATCH": ("warping.edit", "sizing.edit"),
+        "DELETE": ("warping.delete", "sizing.delete"),
+    }
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(
+            models.Q(yarn_outcome__outcome_type="Warping")
+            | models.Q(yarn_outcome__warping__isnull=False)
+        )
+
+    def create(self, request, *args, **kwargs):
+        raw_beams = request.data.get("beam_ids") or request.data.get("beamIds")
+        if raw_beams:
+            if not request.user.is_superuser and not (
+                request.user.has_perm_code("beams.assign")
+                or request.user.has_perm_code("warping.add")
+                or request.user.has_perm_code("sizing.add")
+            ):
+                raise PermissionDenied("You do not have permission to assign beams.")
+
+        serializer = SizingOutcomeSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        outcome = serializer.save()
+
+        refreshed = (
+            SizingOutcome.objects
+            .select_related("yarn_outcome", "yarn_outcome__sizing", "yarn_outcome__warping", "created_by", "updated_by")
+            .get(id=outcome.id)
+        )
+        out = SizingOutcomeSerializer(refreshed, context={"request": request})
+        return Response(
+            {
+                "success": True,
+                "message": f"Warping outcome #{outcome.id} created successfully with {outcome.total_beams} beam(s).",
+                "data": out.data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = SizingOutcomeSerializer(
+            instance, data=request.data, partial=partial, context={"request": request}
+        )
+        serializer.is_valid(raise_exception=True)
+        updated = serializer.save()
+
+        if updated.yarn_outcome:
+            sync_yarn_outcome_status(updated.yarn_outcome)
+            sync_sizing_outcome_to_intake(updated.yarn_outcome)
+
+        log_activity(
+            request=request,
+            action="Update Warping Outcome",
+            description=f"Updated Warping Outcome #{updated.id}.",
+            module="Yarn – Warping",
+            status="Success",
+        )
+        return Response({
+            "success": True,
+            "message": "Warping outcome updated successfully.",
+            "data": SizingOutcomeSerializer(updated, context={"request": request}).data,
+        })
+
+    @action(detail=True, methods=["post"], url_path="assign-beams")
+    def assign_beams(self, request, pk=None):
+        if not request.user.is_superuser and not (
+            request.user.has_perm_code("beams.assign")
+            or request.user.has_perm_code("warping.edit")
+            or request.user.has_perm_code("sizing.edit")
+        ):
+            raise PermissionDenied("You do not have permission to assign beams.")
+        return super().assign_beams(request, pk)
+
+    @action(detail=True, methods=["post"], url_path="release-beam")
+    def release_beam(self, request, pk=None):
+        if not request.user.is_superuser and not (
+            request.user.has_perm_code("beams.assign")
+            or request.user.has_perm_code("beams.edit")
+            or request.user.has_perm_code("warping.edit")
+            or request.user.has_perm_code("sizing.edit")
+        ):
+            raise PermissionDenied("You do not have permission to release beams.")
+        return super().release_beam(request, pk)
+
+

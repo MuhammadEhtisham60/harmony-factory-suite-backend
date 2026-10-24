@@ -209,3 +209,45 @@ class WarpingWorkflowTests(APITestCase):
         res = self.client.get(f"/api/v1/warpings/{self.warping.id}/outcomes/")
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res.data["results"]), 2)
+
+        # Test dedicated warping-outcomes endpoint
+        res = self.client.get("/api/v1/warping-outcomes/")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data["results"]), 2)
+
+        # Test creating outcome via /api/v1/warping-outcomes/
+        outcome3 = YarnOutcome.objects.create(
+            outcome_type=YarnOutcome.OutcomeTypeChoices.WARPING,
+            warping=self.warping,
+            outcome_bags=10,
+            outcome_date=timezone.now().date(),
+            status=YarnOutcome.StatusChoices.IN_WARPING,
+        )
+        res_post = self.client.post("/api/v1/warping-outcomes/", {
+            "yarnOutcomeId": outcome3.id,
+            "warpingId": self.warping.id,
+            "setNo": "WARP-SET-003",
+            "outcomeDate": str(timezone.now().date()),
+            "lagatBags": 10,
+            "returnBags": 0,
+            "remainingBagsOnSizingStock": 0,
+        })
+        self.assertEqual(res_post.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(res_post.data["data"]["setNo"], "WARP-SET-003")
+
+        # Test assigning a beam with status Warping
+        self.beam1.status = Beam.StatusChoices.WARPING
+        self.beam1.save()
+        res_beam = self.client.post("/api/v1/warping-outcomes/", {
+            "yarnOutcomeId": outcome3.id,
+            "warpingId": self.warping.id,
+            "setNo": "WARP-SET-004",
+            "outcomeDate": str(timezone.now().date()),
+            "lagatBags": 10,
+            "beamIds": [self.beam1.id],
+            "beamYarnLength": {str(self.beam1.id): 100},
+        }, format="json")
+        self.assertEqual(res_beam.status_code, status.HTTP_201_CREATED)
+        self.beam1.refresh_from_db()
+        self.assertEqual(self.beam1.status, Beam.StatusChoices.LOADED)
+
