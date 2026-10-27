@@ -38,6 +38,7 @@ urlpatterns = [
     path('api/v1/', include('factory.yarn.yarn_outcome.urls')),
     path('api/v1/', include('factory.yarn.sizing.urls')),
     path('api/v1/', include('factory.yarn.warping.urls')),
+    path('api/v1/', include('factory.yarn.supplier_ledger.urls')),
     path('api/v1/', include('factory.yarn.b_grade_yarn.urls')),
     path('api/v1/', include('factory.bank_account.urls')),
 ]

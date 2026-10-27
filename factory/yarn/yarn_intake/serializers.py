@@ -355,6 +355,10 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         source="merged_sizing_cones", required=False, default=0
     )
     merged_sizing_cones = serializers.IntegerField(required=False, default=0)
+    mergedBGradeCones = serializers.IntegerField(
+        source="merged_b_grade_cones", required=False, default=0
+    )
+    merged_b_grade_cones = serializers.IntegerField(required=False, default=0)
     totalSetBags = serializers.IntegerField(source="total_set_bags", read_only=True)
     total_set_bags = serializers.IntegerField(read_only=True)
     totalSetCones = serializers.IntegerField(source="total_set_cones", read_only=True)
@@ -434,6 +438,8 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
             "merged_sizing_bags",
             "mergedSizingCones",
             "merged_sizing_cones",
+            "mergedBGradeCones",
+            "merged_b_grade_cones",
             "totalSetBags",
             "total_set_bags",
             "totalSetCones",
@@ -494,6 +500,7 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
                     "bags": s.total_bags_on_sizing,
                     "remainingBags": s.remaining_bags_on_sizing_stock,
                     "remainingCones": s.remaining_cones_on_sizing_stock,
+                    "remainingBGradeCones": s.remaining_b_grade_cones,
                 }
                 for s in obj.merged_from_sizing_outcomes.all()
             ]
@@ -672,6 +679,8 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         ret["merged_sizing_bags"] = instance.merged_sizing_bags or 0
         ret["mergedSizingCones"] = instance.merged_sizing_cones or 0
         ret["merged_sizing_cones"] = instance.merged_sizing_cones or 0
+        ret["mergedBGradeCones"] = instance.merged_b_grade_cones or 0
+        ret["merged_b_grade_cones"] = instance.merged_b_grade_cones or 0
         ret["totalSetBags"] = instance.total_set_bags
         ret["total_set_bags"] = instance.total_set_bags
         ret["totalSetCones"] = instance.total_set_cones
@@ -941,8 +950,13 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
                     or self.initial_data.get("merged_sizing_bags")
                     or 0
                 )
+                merged_bg_cand = int(
+                    self.initial_data.get("mergedBGradeCones")
+                    or self.initial_data.get("merged_b_grade_cones")
+                    or 0
+                )
                 if not self.instance:
-                    if (outcome_type_cand == YarnOutcome.OutcomeTypeChoices.SIZING and merged_bags_cand > 0) or len(parsed_bg_items) > 0:
+                    if (outcome_type_cand in (YarnOutcome.OutcomeTypeChoices.SIZING, YarnOutcome.OutcomeTypeChoices.WARPING) and (merged_bags_cand > 0 or merged_bg_cand > 0)) or len(parsed_bg_items) > 0:
                         parsed_items = []
                         attrs["outcome_bags"] = 0
                         attrs["outcome_weight_per_bag_kg"] = Decimal("0")
@@ -1091,6 +1105,12 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
             or self.initial_data.get("merged_sizing_cones")
             or 0
         )
+        merged_b_grade_cones = int(
+            attrs.get("merged_b_grade_cones")
+            or self.initial_data.get("mergedBGradeCones")
+            or self.initial_data.get("merged_b_grade_cones")
+            or 0
+        )
         raw_merged_so_ids = (
             self.initial_data.get("mergedFromSizingOutcomeIds")
             or self.initial_data.get("merged_from_sizing_outcome_ids")
@@ -1113,6 +1133,7 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
 
         attrs["merged_sizing_bags"] = merged_sizing_bags
         attrs["merged_sizing_cones"] = merged_sizing_cones
+        attrs["merged_b_grade_cones"] = merged_b_grade_cones
         attrs["_resolved_merged_sos"] = resolved_merged_sos
 
         if outcome_type == YarnOutcome.OutcomeTypeChoices.SIZING:
@@ -1129,6 +1150,21 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
                         attrs["stock"] = m_so.yarn_outcome.stock
                         break
 
+        elif outcome_type == YarnOutcome.OutcomeTypeChoices.WARPING:
+            for m_so in resolved_merged_sos:
+                m_warping_id = m_so.warping_id or (m_so.yarn_outcome and m_so.yarn_outcome.warping_id)
+                if m_warping_id and warping and m_warping_id != warping.id:
+                    raise serializers.ValidationError({
+                        "mergedFromSizingOutcomeIds": [
+                            f"Set '{m_so.set_no or m_so.id}' belongs to another warping unit (#{m_warping_id})."
+                        ]
+                    })
+            if not attrs.get("stock") and resolved_merged_sos:
+                for m_so in resolved_merged_sos:
+                    if m_so.yarn_outcome and m_so.yarn_outcome.stock:
+                        attrs["stock"] = m_so.yarn_outcome.stock
+                        break
+
         outcome_bags = attrs.get(
             "outcome_bags",
             getattr(self.instance, "outcome_bags", 0) if self.instance else 0
@@ -1136,7 +1172,7 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         total_bg_cones = sum(b["cones"] for b in attrs.get("_parsed_bg_items", []))
         if outcome_bags <= 0:
             if not (
-                (outcome_type == YarnOutcome.OutcomeTypeChoices.SIZING and merged_sizing_bags > 0)
+                ((outcome_type in (YarnOutcome.OutcomeTypeChoices.SIZING, YarnOutcome.OutcomeTypeChoices.WARPING)) and (merged_sizing_bags > 0 or merged_b_grade_cones > 0))
                 or total_bg_cones > 0
             ):
                 raise serializers.ValidationError({
@@ -1212,16 +1248,20 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
 
                 rem_bags_to_deduct = outcome.merged_sizing_bags or 0
                 rem_cones_to_deduct = outcome.merged_sizing_cones or 0
+                rem_bg_to_deduct = outcome.merged_b_grade_cones or 0
 
                 for s_so in resolved_merged_sos:
                     locked_so = SizingOutcome.objects.select_for_update().get(id=s_so.id)
                     ded_b = min(locked_so.remaining_bags_on_sizing_stock, rem_bags_to_deduct)
                     ded_c = min(locked_so.remaining_cones_on_sizing_stock, rem_cones_to_deduct)
+                    ded_bg = min(locked_so.remaining_b_grade_cones, rem_bg_to_deduct)
                     locked_so.remaining_bags_on_sizing_stock -= ded_b
                     locked_so.remaining_cones_on_sizing_stock -= ded_c
+                    locked_so.remaining_b_grade_cones -= ded_bg
                     rem_bags_to_deduct -= ded_b
                     rem_cones_to_deduct -= ded_c
-                    locked_so.save(update_fields=["remaining_bags_on_sizing_stock", "remaining_cones_on_sizing_stock", "updated_at"])
+                    rem_bg_to_deduct -= ded_bg
+                    locked_so.save(update_fields=["remaining_bags_on_sizing_stock", "remaining_cones_on_sizing_stock", "remaining_b_grade_cones", "updated_at"])
                     if locked_so.yarn_outcome:
                         sync_yarn_outcome_status(locked_so.yarn_outcome)
 
@@ -1249,6 +1289,8 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         validated_data.pop("beam", None)
         validated_data.pop("ratePerKg", None)
         validated_data.pop("stockId", None)
+        validated_data.pop("mergedBGradeCones", None)
+        validated_data.pop("merged_b_grade_cones", None)
 
         request = self.context.get("request")
         user = request.user if request and request.user and request.user.is_authenticated else None

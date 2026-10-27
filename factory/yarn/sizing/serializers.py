@@ -32,6 +32,8 @@ class YarnOutcomeMinSerializer(serializers.ModelSerializer):
     merged_sizing_bags = serializers.IntegerField(read_only=True)
     mergedSizingCones = serializers.IntegerField(source="merged_sizing_cones", read_only=True)
     merged_sizing_cones = serializers.IntegerField(read_only=True)
+    mergedBGradeCones = serializers.IntegerField(source="merged_b_grade_cones", read_only=True)
+    merged_b_grade_cones = serializers.IntegerField(read_only=True)
     bGradeCones = serializers.IntegerField(source="b_grade_cones", read_only=True)
     b_grade_cones = serializers.IntegerField(read_only=True)
     bGradeWeightKg = serializers.DecimalField(source="b_grade_weight_kg", max_digits=15, decimal_places=6, read_only=True)
@@ -50,6 +52,8 @@ class YarnOutcomeMinSerializer(serializers.ModelSerializer):
             "merged_sizing_bags",
             "mergedSizingCones",
             "merged_sizing_cones",
+            "mergedBGradeCones",
+            "merged_b_grade_cones",
             "bGradeCones",
             "b_grade_cones",
             "bGradeWeightKg",
@@ -699,6 +703,8 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
     merged_sizing_bags = serializers.IntegerField(required=False, default=0)
     mergedSizingCones = serializers.IntegerField(source="merged_sizing_cones", required=False, default=0)
     merged_sizing_cones = serializers.IntegerField(required=False, default=0)
+    mergedBGradeCones = serializers.IntegerField(source="merged_b_grade_cones", required=False, default=0)
+    merged_b_grade_cones = serializers.IntegerField(required=False, default=0)
     mergedFromSetNos = serializers.CharField(source="merged_from_set_nos", required=False, allow_blank=True, default="")
     merged_from_set_nos = serializers.CharField(required=False, allow_blank=True, default="")
 
@@ -925,6 +931,8 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "merged_sizing_bags",
             "mergedSizingCones",
             "merged_sizing_cones",
+            "mergedBGradeCones",
+            "merged_b_grade_cones",
             "mergedFromSetNos",
             "merged_from_set_nos",
             "stockId",
@@ -1056,6 +1064,7 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "remaining_cones_on_sizing_stock": "remainingConesOnSizingStock",
             "merged_sizing_bags": "mergedSizingBags",
             "merged_sizing_cones": "mergedSizingCones",
+            "merged_b_grade_cones": "mergedBGradeCones",
             "merged_from_set_nos": "mergedFromSetNos",
             "return_bags": "returnBags",
             "return_cones": "returnCones",

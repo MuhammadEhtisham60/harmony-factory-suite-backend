@@ -214,6 +214,31 @@ class YarnIntake(models.Model):
         help_text="Current remaining available inventory total price / valuation in this intake batch."
     )
 
+    class PaymentStatusChoices(models.TextChoices):
+        UNPAID = "Unpaid", "Unpaid"
+        PARTIALLY_PAID = "Partially Paid", "Partially Paid"
+        PAID = "Paid", "Paid"
+
+    # ── Payment & Payables tracking ───────────────────────────────────────
+    amount_paid = models.DecimalField(
+        max_digits=18,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="Total amount paid to supplier for this intake batch"
+    )
+    amount_due = models.DecimalField(
+        max_digits=18,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="Remaining payable amount due to supplier for this intake batch"
+    )
+    payment_status = models.CharField(
+        max_length=20,
+        choices=PaymentStatusChoices.choices,
+        default=PaymentStatusChoices.UNPAID,
+        help_text="Payment status: Unpaid, Partially Paid, Paid"
+    )
+
     # ── Audit ──────────────────────────────────────────────────────────────
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -369,6 +394,23 @@ class YarnIntake(models.Model):
                 production_type=prod_type,
                 user=self.created_by,
             )
+        # Calculate amount_due and payment_status
+        tot = self.initial_total_rate or self.total_rate or Decimal("0.000000")
+        paid = self.amount_paid if self.amount_paid is not None else Decimal("0.000000")
+        if tot > Decimal("0.000000"):
+            if paid >= tot:
+                self.amount_due = Decimal("0.000000")
+                self.payment_status = self.PaymentStatusChoices.PAID
+            elif paid > Decimal("0.000000"):
+                self.amount_due = tot - paid
+                self.payment_status = self.PaymentStatusChoices.PARTIALLY_PAID
+            else:
+                self.amount_due = tot
+                self.payment_status = self.PaymentStatusChoices.UNPAID
+        else:
+            self.amount_due = Decimal("0.000000")
+            self.payment_status = self.PaymentStatusChoices.PAID
+
         super().save(*args, **kwargs)
         if self.stock_id and not kwargs.get("update_fields"):
             recalculate_yarn_stock(self.stock)
@@ -519,6 +561,12 @@ class YarnOutcome(models.Model):
         blank=True,
         help_text="Cones merged from existing sizing stock of the same quality at the sizing mill."
     )
+    merged_b_grade_cones = models.PositiveIntegerField(
+        default=0,
+        null=True,
+        blank=True,
+        help_text="B-grade cones merged from existing warping/sizing stock at the unit."
+    )
     merged_from_sizing_outcomes = models.ManyToManyField(
         "factory.SizingOutcome",
         blank=True,
@@ -657,11 +705,11 @@ class YarnOutcome(models.Model):
                 total_kg=models.Sum("weight_kg"),
                 total_lb=models.Sum("weight_lb"),
             )
-            self.b_grade_cones = bg_agg["total_cones"] or 0
+            self.b_grade_cones = (bg_agg["total_cones"] or 0) + (self.merged_b_grade_cones or 0)
             self.b_grade_weight_kg = bg_agg["total_kg"] or Decimal("0.000000")
             self.b_grade_weight_lb = bg_agg["total_lb"] or Decimal("0.000000")
         else:
-            self.b_grade_cones = getattr(self, "b_grade_cones", 0) or 0
+            self.b_grade_cones = (getattr(self, "b_grade_cones", 0) or 0) or (self.merged_b_grade_cones or 0)
             self.b_grade_weight_kg = getattr(self, "b_grade_weight_kg", Decimal("0.000000")) or Decimal("0.000000")
             self.b_grade_weight_lb = getattr(self, "b_grade_weight_lb", Decimal("0.000000")) or Decimal("0.000000")
 
@@ -762,6 +810,7 @@ class YarnOutcome(models.Model):
         merged_sos = list(self.merged_from_sizing_outcomes.all()) if self.pk else []
         merged_bags = self.merged_sizing_bags or 0
         merged_cones = self.merged_sizing_cones or 0
+        merged_bg_cones = self.merged_b_grade_cones or 0
 
         stock = self.stock
         intake_ids = list(self.items.values_list("yarn_intake_id", flat=True)) if self.pk else []
@@ -789,7 +838,8 @@ class YarnOutcome(models.Model):
             for source_so in merged_sos:
                 source_so.remaining_bags_on_sizing_stock += merged_bags
                 source_so.remaining_cones_on_sizing_stock += merged_cones
-                source_so.save(update_fields=["remaining_bags_on_sizing_stock", "remaining_cones_on_sizing_stock", "updated_at"])
+                source_so.remaining_b_grade_cones = (source_so.remaining_b_grade_cones or 0) + merged_bg_cones
+                source_so.save(update_fields=["remaining_bags_on_sizing_stock", "remaining_cones_on_sizing_stock", "remaining_b_grade_cones", "updated_at"])
                 sync_yarn_outcome_status(source_so.yarn_outcome)
 
         if stock:

@@ -171,6 +171,13 @@ class SizingOutcome(models.Model):
         help_text="Cones merged from previous sizing stock into this set"
     )
 
+    merged_b_grade_cones = models.PositiveIntegerField(
+        default=0,
+        null=True,
+        blank=True,
+        help_text="B-grade cones merged from previous set balance into this set"
+    )
+
     merged_from_set_nos = models.CharField(
         max_length=255,
         blank=True,
@@ -421,6 +428,8 @@ class SizingOutcome(models.Model):
                     self.merged_sizing_bags = yo.merged_sizing_bags
                 if not self.merged_sizing_cones and getattr(yo, "merged_sizing_cones", 0):
                     self.merged_sizing_cones = yo.merged_sizing_cones
+                if not self.merged_b_grade_cones and getattr(yo, "merged_b_grade_cones", 0):
+                    self.merged_b_grade_cones = yo.merged_b_grade_cones
                 if not self.merged_from_set_nos and hasattr(yo, "merged_from_sizing_outcomes") and yo.merged_from_sizing_outcomes.exists():
                     set_nos = [s.set_no or f"SET-{s.id}" for s in yo.merged_from_sizing_outcomes.all()]
                     self.merged_from_set_nos = ", ".join(dict.fromkeys(set_nos))
