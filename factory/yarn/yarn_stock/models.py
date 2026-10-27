@@ -201,11 +201,13 @@ class YarnStock(models.Model):
         super().__init__(*args, **kwargs)
 
     def calculate_price(self):
-        """Calculates price per bag by dividing remaining_total_price by remaining_bags."""
+        """Calculates price per bag from remaining valuation or cumulative intake average."""
         rem_bags = self.remaining_bags or self.total_boxes or 0
         rem_total = self.remaining_total_price or Decimal("0.000000")
         if rem_bags > 0 and rem_total > Decimal("0.000000"):
             self.price = (Decimal(str(rem_total)) / Decimal(str(rem_bags))).quantize(Decimal("0.000001"))
+        elif self.total_received_boxes > 0 and self.cumulative_intake_price > Decimal("0.000000"):
+            self.price = (self.cumulative_intake_price / Decimal(str(self.total_received_boxes))).quantize(Decimal("0.000001"))
         else:
             self.price = Decimal("0.000000")
         return self.price
@@ -231,11 +233,6 @@ class YarnStock(models.Model):
             self.total_weight_lb = self.remaining_weight_lb
         elif self.total_weight_lb and not self.remaining_weight_lb:
             self.remaining_weight_lb = self.total_weight_lb
-
-        if self.remaining_total_price and not self.total_price:
-            self.total_price = self.remaining_total_price
-        elif self.total_price and not self.remaining_total_price:
-            self.remaining_total_price = self.total_price
 
         # Recalculate price: remaining_total_price divided by remaining_bags
         update_fields = kwargs.get("update_fields")

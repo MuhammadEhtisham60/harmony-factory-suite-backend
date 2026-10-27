@@ -86,7 +86,13 @@ def calculate_stock_aggregates(stock):
     total_intake_cones = intake_agg["total_cones"] or 0
     total_intake_weight_kg = intake_agg["total_weight_kg"] or Decimal("0.000000")
     total_intake_weight_lb = intake_agg["total_weight_lb"] or Decimal("0.000000")
-    total_intake_rate = intake_agg["total_rate"] or Decimal("0.000000")
+    # Cumulative valuation of all intake batches ever received into this stock pool
+    cumulative_intake_val = Decimal("0.000000")
+    for intake in stock.intakes.all():
+        cumulative_intake_val += (Decimal(str(intake.net_weight_lb or 0)) * Decimal(str(intake.rate_per_lb or 0)))
+    total_intake_rate = cumulative_intake_val.quantize(Decimal("0.000001"))
+    if total_intake_rate == Decimal("0.000000") and intake_agg["total_rate"]:
+        total_intake_rate = intake_agg["total_rate"]
 
     outcome_cone_expr = ExpressionWrapper(
         F("outcome_bags") * F("outcome_cones_per_bag"),
@@ -149,21 +155,19 @@ def calculate_stock_aggregates(stock):
     else:
         total_return_value = (return_weight_lb * simple_price).quantize(Decimal("0.000001"))
 
-    # Remaining total price: valuation of current available inventory in stock
-    if available_boxes > 0 and available_weight_kg > Decimal("0.000000"):
-        intakes_remaining_val = stock.intakes.aggregate(s=Sum("remaining_total_rate"))["s"]
-        if intakes_remaining_val is not None and intakes_remaining_val > Decimal("0.000000"):
-            remaining_total_price = Decimal(str(intakes_remaining_val)).quantize(Decimal("0.000001"))
-        else:
-            remaining_total_price = (available_weight_lb * simple_price).quantize(Decimal("0.000001"))
+    # Average price per bag across all intake entries received into this stock pool
+    if total_intake_bags > 0 and total_intake_rate > Decimal("0.000000"):
+        avg_price_per_bag = (total_intake_rate / Decimal(str(total_intake_bags))).quantize(Decimal("0.000001"))
+    else:
+        avg_price_per_bag = Decimal("0.000000")
+
+    # Remaining total price: remaining bags multiplied by average price of all entries
+    if available_boxes > 0 and avg_price_per_bag > Decimal("0.000000"):
+        remaining_total_price = (Decimal(str(available_boxes)) * avg_price_per_bag).quantize(Decimal("0.000001"))
     else:
         remaining_total_price = Decimal("0.000000")
 
-    # Price per bag: calculated by remaining_total_price divided by remaining_bags
-    if available_boxes > 0 and remaining_total_price > Decimal("0.000000"):
-        stock_price = (remaining_total_price / Decimal(str(available_boxes))).quantize(Decimal("0.000001"))
-    else:
-        stock_price = Decimal("0.000000")
+    stock_price = avg_price_per_bag
 
     return {
         "total_intake_bags": total_intake_bags,
@@ -185,7 +189,7 @@ def calculate_stock_aggregates(stock):
         "available_weight_kg": available_weight_kg,
         "available_weight_lb": available_weight_lb,
         "price": stock_price,
-        "total_price": remaining_total_price,
+        "total_price": total_intake_rate,
         "cumulative_intake_price": total_intake_rate,
         "remaining_bags": available_boxes,
         "remaining_cones": available_cones,
