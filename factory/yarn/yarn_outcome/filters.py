@@ -14,6 +14,10 @@ class YarnOutcomeFilter(django_filters.FilterSet):
     yarn_intake_id = django_filters.NumberFilter(method="filter_yarn_intake")
     outcome_type = django_filters.ChoiceFilter(choices=YarnOutcome.OutcomeTypeChoices.choices)
     yarn_buyer = django_filters.NumberFilter(field_name="yarn_buyer__id")
+    sizing = django_filters.NumberFilter(field_name="sizing__id")
+    sizing_id = django_filters.NumberFilter(field_name="sizing__id")
+    warping = django_filters.NumberFilter(field_name="warping__id")
+    warping_id = django_filters.NumberFilter(field_name="warping__id")
     yarn_name = django_filters.CharFilter(method="filter_yarn_name")
     yarn_type = django_filters.CharFilter(method="filter_yarn_type")
     yarn_count = django_filters.CharFilter(method="filter_yarn_count")
@@ -32,6 +36,10 @@ class YarnOutcomeFilter(django_filters.FilterSet):
             "yarn_intake",
             "outcome_type",
             "yarn_buyer",
+            "sizing",
+            "sizing_id",
+            "warping",
+            "warping_id",
             "yarn_name",
             "yarn_type",
             "yarn_count",
@@ -76,4 +84,6 @@ class YarnOutcomeFilter(django_filters.FilterSet):
             | Q(items__yarn_intake__set_no__icontains=value)
             | Q(outcome_type__icontains=value)
             | Q(yarn_buyer__buyer_name__icontains=value)
+            | Q(sizing__sizing_name__icontains=value)
+            | Q(warping__warping_name__icontains=value)
         ).distinct()

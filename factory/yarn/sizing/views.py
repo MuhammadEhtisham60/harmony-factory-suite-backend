@@ -198,7 +198,7 @@ class SizingOutcomeViewSet(ModelViewSet):
 
     queryset = (
         SizingOutcome.objects
-        .select_related("yarn_outcome", "yarn_outcome__sizing", "created_by", "updated_by")
+        .select_related("yarn_outcome", "yarn_outcome__sizing", "yarn_outcome__warping", "created_by", "updated_by")
         .all()
     )
     serializer_class = SizingOutcomeSerializer
@@ -207,7 +207,7 @@ class SizingOutcomeViewSet(ModelViewSet):
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = SizingOutcomeFilter
-    search_fields = ["yarn_outcome__sizing__sizing_name", "sizing_name", "set_no", "set_bill", "remarks"]
+    search_fields = ["yarn_outcome__sizing__sizing_name", "yarn_outcome__warping__warping_name", "sizing_name", "set_no", "set_bill", "remarks"]
     ordering_fields = ["outcome_date", "created_at", "updated_at", "amount_paid", "amount_due", "payment_status"]
     ordering = ["-outcome_date", "-id"]
 
@@ -236,7 +236,7 @@ class SizingOutcomeViewSet(ModelViewSet):
         # Reload with related data for response
         refreshed = (
             SizingOutcome.objects
-            .select_related("yarn_outcome", "yarn_outcome__sizing", "created_by", "updated_by")
+            .select_related("yarn_outcome", "yarn_outcome__sizing", "yarn_outcome__warping", "created_by", "updated_by")
             .get(id=outcome.id)
         )
         out = SizingOutcomeSerializer(refreshed, context={"request": request})

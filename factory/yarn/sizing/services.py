@@ -133,18 +133,53 @@ def assign_beams_to_outcome(outcome=None, beam_ids=None, user=None, request=None
                         ]
                     })
 
-            expected_status = (
-                kwargs.get("allowed_status")
-                or (Beam.StatusChoices.SIZING if is_sizing_outcome else Beam.StatusChoices.AVAILABLE)
-            )
+            is_warping = False
+            if yarn_outcome:
+                is_warping = (
+                    getattr(yarn_outcome, "outcome_type", None) == "Warping"
+                    or getattr(yarn_outcome, "warping_id", None) is not None
+                    or getattr(yarn_outcome, "warping", None) is not None
+                )
+            if not is_warping and sizing_outcome:
+                yo = getattr(sizing_outcome, "yarn_outcome", None)
+                if yo:
+                    is_warping = (
+                        getattr(yo, "outcome_type", None) == "Warping"
+                        or getattr(yo, "warping_id", None) is not None
+                        or getattr(yo, "warping", None) is not None
+                    )
+                if not is_warping:
+                    is_warping = (
+                        getattr(sizing_outcome, "warping_id", None) is not None
+                        or getattr(sizing_outcome, "warping", None) is not None
+                    )
+
+            if is_sizing_outcome:
+                default_allowed = (
+                    (Beam.StatusChoices.WARPING, Beam.StatusChoices.AVAILABLE)
+                    if is_warping
+                    else Beam.StatusChoices.SIZING
+                )
+            else:
+                default_allowed = Beam.StatusChoices.AVAILABLE
+
+            expected_status = kwargs.get("allowed_status") or default_allowed
+            if isinstance(expected_status, (list, tuple, set)):
+                allowed_statuses = tuple(expected_status)
+            else:
+                allowed_statuses = (expected_status,)
 
             # Validate each beam's physical status and existing active assignments
             for beam in ordered_beams:
-                if beam.status != expected_status:
+                if beam.status not in allowed_statuses:
+                    if len(allowed_statuses) == 1:
+                        status_desc = f"'{allowed_statuses[0]}'"
+                    else:
+                        status_desc = f"'{allowed_statuses[0]}' or '{allowed_statuses[1]}'"
                     raise ValidationError({
                         "beam_ids": [
                             f"Beam '{beam.beam_number}' cannot be assigned because its status is "
-                            f"'{beam.status}'. Only '{expected_status}' beams can be assigned."
+                            f"'{beam.status}'. Only {status_desc} beams can be assigned."
                         ]
                     })
 
@@ -171,8 +206,12 @@ def assign_beams_to_outcome(outcome=None, beam_ids=None, user=None, request=None
                         ]
                     ):
                         pass
-                    elif beam.status == Beam.StatusChoices.AVAILABLE:
-                        # Physical beam is available; auto-release previous sizing cycle assignment
+                    elif beam.status in (Beam.StatusChoices.AVAILABLE, Beam.StatusChoices.WARPING):
+                        # Physical beam is available/warping; auto-release previous sizing cycle assignment
+                        active_assignment.status = SizingBeamAssignment.StatusChoices.RELEASED
+                        active_assignment.released_at = timezone.now()
+                        active_assignment.save(update_fields=["status", "released_at", "updated_at"])
+                    elif beam.status == Beam.StatusChoices.SIZING and beam.dispatched_yarn_outcome_id == getattr(yarn_outcome, "id", None):
                         active_assignment.status = SizingBeamAssignment.StatusChoices.RELEASED
                         active_assignment.released_at = timezone.now()
                         active_assignment.save(update_fields=["status", "released_at", "updated_at"])
@@ -228,9 +267,11 @@ def assign_beams_to_outcome(outcome=None, beam_ids=None, user=None, request=None
                 assignment.save(update_fields=["beam_yarn_length", "updated_at"])
 
             for beam in ordered_beams:
-                beam.status = Beam.StatusChoices.LOADED if is_sizing_outcome else Beam.StatusChoices.SIZING
+                beam.status = Beam.StatusChoices.LOADED if is_sizing_outcome else (
+                    Beam.StatusChoices.WARPING if is_warping else Beam.StatusChoices.SIZING
+                )
                 if is_sizing_outcome:
-                    # Beam has come back from sizing; it is no longer pending on a dispatch
+                    # Beam has come back from sizing/warping; it is no longer pending on a dispatch
                     beam.dispatched_yarn_outcome = None
                 beam.updated_by = user
                 beam.save(update_fields=["status", "dispatched_yarn_outcome", "updated_by", "updated_at"])
@@ -239,17 +280,27 @@ def assign_beams_to_outcome(outcome=None, beam_ids=None, user=None, request=None
 
             # Audit log
             beam_numbers = ", ".join(b.beam_number for b in ordered_beams)
-            sizing_unit = getattr(yarn_outcome, "sizing", None) if yarn_outcome else None
-            sizing_name = sizing_unit.sizing_name if sizing_unit else "N/A"
-            action_name = "Receive Beams from Sizing Outcome" if is_sizing_outcome else "Assign Beams to Sizing Outcome"
+            if is_warping:
+                warping_unit = getattr(yarn_outcome, "warping", None) if yarn_outcome else None
+                warping_name = warping_unit.warping_name if warping_unit else "N/A"
+                unit_label = f"Warping: {warping_name}"
+                action_name = "Receive Beams from Warping Outcome" if is_sizing_outcome else "Assign Beams to Warping Outcome"
+                mod_name = "Yarn – Warping"
+            else:
+                sizing_unit = getattr(yarn_outcome, "sizing", None) if yarn_outcome else None
+                sizing_name = sizing_unit.sizing_name if sizing_unit else "N/A"
+                unit_label = f"Sizing: {sizing_name}"
+                action_name = "Receive Beams from Sizing Outcome" if is_sizing_outcome else "Assign Beams to Sizing Outcome"
+                mod_name = "Yarn – Sizing"
+
             log_activity(
                 request=request,
                 action=action_name,
                 description=(
                     f"Recorded {len(ordered_beams)} beam(s) [{beam_numbers}] in "
-                    f"Outcome #{getattr(yarn_outcome, 'id', '')} (Sizing: {sizing_name}) with status '{target_status}'."
+                    f"Outcome #{getattr(yarn_outcome, 'id', '')} ({unit_label}) with status '{target_status}'."
                 ),
-                module="Yarn – Sizing",
+                module=mod_name,
                 status="Success",
                 user=user,
             )
@@ -305,6 +356,11 @@ def mark_beams_as_sizing(yarn_outcome, beam_ids, user=None, request=None):
                     ]
                 })
 
+        profile = getattr(yarn_outcome, "processing_profile", None)
+        target_status = profile.beam_status if profile else Beam.StatusChoices.SIZING
+        label = profile.label if profile else "Sizing"
+        module = profile.module if profile else "Yarn – Sizing"
+
         for beam in ordered:
             # A free beam may still carry the assignment from its previous sizing cycle
             # (e.g. if its loom loading was deleted). Close it so the beam starts a fresh cycle.
@@ -321,19 +377,19 @@ def mark_beams_as_sizing(yarn_outcome, beam_ids, user=None, request=None):
                 released_at=timezone.now(),
             )
 
-            beam.status = Beam.StatusChoices.SIZING
+            beam.status = target_status
             beam.dispatched_yarn_outcome = yarn_outcome
             beam.updated_by = user
             beam.save(update_fields=["status", "dispatched_yarn_outcome", "updated_by", "updated_at"])
 
         log_activity(
             request=request,
-            action="Send Beams to Sizing",
+            action=f"Send Beams to {label}",
             description=(
                 f"Marked {len(ordered)} beam(s) [{', '.join(b.beam_number for b in ordered)}] "
-                f"as Sizing for Yarn Outcome #{getattr(yarn_outcome, 'id', '')}."
+                f"as {label} for Yarn Outcome #{getattr(yarn_outcome, 'id', '')}."
             ),
-            module="Yarn – Sizing",
+            module=module,
             status="Success",
             user=user,
         )
@@ -348,6 +404,8 @@ def revert_returned_beams_to_sizing(yarn_outcome, user=None):
     """
     if not yarn_outcome:
         return
+    profile = getattr(yarn_outcome, "processing_profile", None)
+    target_status = profile.beam_status if profile else Beam.StatusChoices.SIZING
     assignments = SizingBeamAssignment.objects.filter(
         yarn_outcome=yarn_outcome,
         status=SizingBeamAssignment.StatusChoices.RECEIVED,
@@ -355,7 +413,7 @@ def revert_returned_beams_to_sizing(yarn_outcome, user=None):
     for assignment in assignments:
         for beam in assignment.beam.all():
             if beam.status == Beam.StatusChoices.LOADED:
-                beam.status = Beam.StatusChoices.SIZING
+                beam.status = target_status
                 beam.dispatched_yarn_outcome = yarn_outcome
                 beam.updated_by = user
                 beam.save(update_fields=["status", "dispatched_yarn_outcome", "updated_by", "updated_at"])
@@ -380,12 +438,13 @@ def sync_yarn_outcome_status(yarn_outcome):
         if not yarn_outcome:
             return None
 
-    if yarn_outcome.outcome_type != YarnOutcome.OutcomeTypeChoices.SIZING:
+    profile = getattr(yarn_outcome, "processing_profile", None)
+    if not profile:
         return yarn_outcome.status
 
     sizing_outcomes = yarn_outcome.sizing_outcomes.all()
     if not sizing_outcomes.exists():
-        new_status = YarnOutcome.StatusChoices.IN_SIZING
+        new_status = profile.in_progress_status
     else:
         total_lagat = sizing_outcomes.aggregate(total=Sum("lagat_bags"))["total"] or Decimal("0")
         total_returned = sizing_outcomes.aggregate(total=Sum("return_bags"))["total"] or Decimal("0")
@@ -401,7 +460,7 @@ def sync_yarn_outcome_status(yarn_outcome):
         )
 
         if total_accounted <= Decimal("0") and latest_remaining_stock == 0:
-            new_status = YarnOutcome.StatusChoices.IN_SIZING
+            new_status = profile.in_progress_status
         elif latest_remaining_stock > 0 or (sent_bags > Decimal("0") and total_accounted < sent_bags):
             new_status = YarnOutcome.StatusChoices.PARTIALLY_RECEIVED
         else:
@@ -462,10 +521,16 @@ def create_sizing_outcome(yarn_outcome=None, outcome_date=None, remarks="", beam
     """
     beam_yarn_length = extra_fields.pop("beam_yarn_length", None)
     sizing = extra_fields.pop("sizing", None)
-    if not yarn_outcome and sizing:
+    warping = extra_fields.pop("warping", None)
+    if not yarn_outcome and (sizing or warping):
         from factory.yarn.yarn_intake.models import YarnIntake, Supplier, YarnOutcome
         from django.utils import timezone
-        yarn_outcome = YarnOutcome.objects.filter(sizing=sizing, outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING).first()
+        if sizing:
+            unit_filter = {"sizing": sizing, "outcome_type": YarnOutcome.OutcomeTypeChoices.SIZING}
+        else:
+            unit_filter = {"warping": warping, "outcome_type": YarnOutcome.OutcomeTypeChoices.WARPING}
+
+        yarn_outcome = YarnOutcome.objects.filter(**unit_filter).first()
         if not yarn_outcome:
             intake = YarnIntake.objects.first()
             if not intake:
@@ -483,11 +548,10 @@ def create_sizing_outcome(yarn_outcome=None, outcome_date=None, remarks="", beam
                 )
             yarn_outcome = YarnOutcome.objects.create(
                 yarn_intake=intake,
-                outcome_type=YarnOutcome.OutcomeTypeChoices.SIZING,
-                sizing=sizing,
                 outcome_bags=0,
                 outcome_weight_per_bag_kg=0,
                 outcome_date=outcome_date or timezone.now().date(),
+                **unit_filter,
             )
 
     with transaction.atomic():
@@ -514,22 +578,48 @@ def create_sizing_outcome(yarn_outcome=None, outcome_date=None, remarks="", beam
                 request=request,
             )
 
-        sizing_title = (
-            yarn_outcome.sizing.sizing_name
-            if yarn_outcome and hasattr(yarn_outcome, "sizing") and yarn_outcome.sizing
-            else (sizing.sizing_name if sizing else "N/A")
-        )
-        log_activity(
-            request=request,
-            action="Create Sizing Outcome",
-            description=(
-                f"Created Sizing Outcome #{outcome.id} for sizing '{sizing_title}' "
-                f"with {len(assignments)} initial beam assignment(s)."
-            ),
-            module="Yarn – Sizing",
-            status="Success",
-            user=user,
-        )
+        is_warping_outcome = False
+        if yarn_outcome:
+            is_warping_outcome = (
+                getattr(yarn_outcome, "outcome_type", None) == "Warping"
+                or getattr(yarn_outcome, "warping_id", None) is not None
+                or getattr(yarn_outcome, "warping", None) is not None
+            )
+
+        if is_warping_outcome:
+            warping_title = (
+                yarn_outcome.warping.warping_name
+                if yarn_outcome and hasattr(yarn_outcome, "warping") and yarn_outcome.warping
+                else (warping.warping_name if warping else "N/A")
+            )
+            log_activity(
+                request=request,
+                action="Create Warping Outcome",
+                description=(
+                    f"Created Warping Outcome #{outcome.id} for warping '{warping_title}' "
+                    f"with {len(assignments)} initial beam assignment(s)."
+                ),
+                module="Yarn – Warping",
+                status="Success",
+                user=user,
+            )
+        else:
+            sizing_title = (
+                yarn_outcome.sizing.sizing_name
+                if yarn_outcome and hasattr(yarn_outcome, "sizing") and yarn_outcome.sizing
+                else (sizing.sizing_name if sizing else "N/A")
+            )
+            log_activity(
+                request=request,
+                action="Create Sizing Outcome",
+                description=(
+                    f"Created Sizing Outcome #{outcome.id} for sizing '{sizing_title}' "
+                    f"with {len(assignments)} initial beam assignment(s)."
+                ),
+                module="Yarn – Sizing",
+                status="Success",
+                user=user,
+            )
 
         return outcome
 

@@ -102,7 +102,7 @@ class YarnStock(models.Model):
         max_digits=18,
         decimal_places=6,
         default=Decimal("0.000000"),
-        help_text="Total price of yarn of this quality from contributing intakes."
+        help_text="Cumulative total price of yarn purchases from contributing intakes (cumulativeIntakePrice). Never subtracts dispatched yarn price."
     )
     remaining_bags = models.IntegerField(
         default=0,
@@ -201,13 +201,11 @@ class YarnStock(models.Model):
         super().__init__(*args, **kwargs)
 
     def calculate_price(self):
-        """Calculates price per bag from remaining valuation or cumulative intake average."""
+        """Calculates price per bag by dividing remaining_total_price by remaining_bags."""
         rem_bags = self.remaining_bags or self.total_boxes or 0
         rem_total = self.remaining_total_price or Decimal("0.000000")
         if rem_bags > 0 and rem_total > Decimal("0.000000"):
             self.price = (Decimal(str(rem_total)) / Decimal(str(rem_bags))).quantize(Decimal("0.000001"))
-        elif self.total_received_boxes > 0 and self.cumulative_intake_price > Decimal("0.000000"):
-            self.price = (self.cumulative_intake_price / Decimal(str(self.total_received_boxes))).quantize(Decimal("0.000001"))
         else:
             self.price = Decimal("0.000000")
         return self.price
@@ -233,6 +231,14 @@ class YarnStock(models.Model):
             self.total_weight_lb = self.remaining_weight_lb
         elif self.total_weight_lb and not self.remaining_weight_lb:
             self.remaining_weight_lb = self.total_weight_lb
+
+        # total_price acts as cumulativeIntakePrice (never minus dispatching yarn price)
+        if self.pk and (not self.total_price or self.total_price <= Decimal("0.000000")):
+            cum_price = Decimal("0.000000")
+            for intake in self.intakes.all():
+                cum_price += (Decimal(str(intake.net_weight_lb or 0)) * Decimal(str(intake.rate_per_lb or 0)))
+            if cum_price > Decimal("0.000000"):
+                self.total_price = cum_price.quantize(Decimal("0.000001"))
 
         # Recalculate price: remaining_total_price divided by remaining_bags
         update_fields = kwargs.get("update_fields")
@@ -368,23 +374,27 @@ class YarnStock(models.Model):
 
     @property
     def price_per_kg(self):
-        """Average rate per kilogram derived from rate per pound."""
+        """Rate per kilogram calculated by remaining_total_price divided by remaining_weight_kg."""
+        rem_weight_kg = self.remaining_weight_kg or Decimal("0.000000")
+        rem_total_price = self.remaining_total_price or Decimal("0.000000")
+        if rem_weight_kg > Decimal("0.000000") and rem_total_price > Decimal("0.000000"):
+            return (rem_total_price / rem_weight_kg).quantize(Decimal("0.000001"))
         return (self.price_per_lb * LB_PER_KG).quantize(Decimal("0.000001"))
 
     @property
     def price_per_lb(self):
-        """Average rate per pound calculated from contributing intakes (simple average of rate_per_lb)."""
-        intakes_with_rate = self.intakes.filter(rate_per_lb__gt=0)
-        target = intakes_with_rate if intakes_with_rate.exists() else self.intakes
-        agg = target.aggregate(models.Avg("rate_per_lb"))
-        avg_val = agg["rate_per_lb__avg"]
-        if avg_val is not None:
-            return Decimal(str(avg_val)).quantize(Decimal("0.000001"))
+        """Rate per pound calculated by remaining_total_price divided by remaining_weight_lb."""
+        rem_weight_lb = self.remaining_weight_lb or Decimal("0.000000")
+        rem_total_price = self.remaining_total_price or Decimal("0.000000")
+        if rem_weight_lb > Decimal("0.000000") and rem_total_price > Decimal("0.000000"):
+            return (rem_total_price / rem_weight_lb).quantize(Decimal("0.000001"))
         return Decimal("0.000000")
 
     @property
     def cumulative_intake_price(self):
-        """Total cumulative valuation of all intakes that ever contributed to this pool."""
+        """Total cumulative valuation of all intakes that ever contributed to this pool (never decreases on dispatch)."""
+        if self.total_price and self.total_price > Decimal("0.000000"):
+            return self.total_price
         total = Decimal("0.000000")
         for intake in self.intakes.all():
             total += (Decimal(str(intake.net_weight_lb or 0)) * Decimal(str(intake.rate_per_lb or 0)))

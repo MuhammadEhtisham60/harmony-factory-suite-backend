@@ -60,6 +60,7 @@ class YarnOutcomeViewSet(ModelViewSet):
             "stock__yarn_type",
             "yarn_buyer",
             "sizing",
+            "warping",
             "created_by",
             "updated_by",
         )
@@ -85,6 +86,7 @@ class YarnOutcomeViewSet(ModelViewSet):
         "items__yarn_intake__set_no",
         "outcome_type",
         "yarn_buyer__buyer_name",
+        "warping__warping_name",
     ]
     ordering_fields = [
         "outcome_date", "outcome_type", "outcome_bags",
@@ -116,7 +118,7 @@ class YarnOutcomeViewSet(ModelViewSet):
                     serializer.is_valid(raise_exception=True)
                     outcome = serializer.save()
 
-                    if outcome.outcome_type == YarnOutcome.OutcomeTypeChoices.SIZING:
+                    if outcome.outcome_type in (YarnOutcome.OutcomeTypeChoices.SIZING, YarnOutcome.OutcomeTypeChoices.WARPING):
                         from factory.yarn.sizing.services import mark_beams_as_sizing
                         raw_beam_ids = item_payload.get("beam_ids") or item_payload.get("beamIds")
                         single_beam = item_payload.get("beam") or item_payload.get("beam_id") or item_payload.get("beamId")
@@ -151,9 +153,9 @@ class YarnOutcomeViewSet(ModelViewSet):
         serializer.is_valid(raise_exception=True)
         outcome = serializer.save()
 
-        # When outcomeType is Sizing: only mark the chosen beams as 'Sizing'.
+        # When outcomeType is Sizing or Warping: mark the chosen beams appropriately.
         # They get linked to a sizing outcome later, when the set is returned.
-        if outcome.outcome_type == YarnOutcome.OutcomeTypeChoices.SIZING:
+        if outcome.outcome_type in (YarnOutcome.OutcomeTypeChoices.SIZING, YarnOutcome.OutcomeTypeChoices.WARPING):
             from factory.yarn.sizing.services import mark_beams_as_sizing
 
             raw_beam_ids = (

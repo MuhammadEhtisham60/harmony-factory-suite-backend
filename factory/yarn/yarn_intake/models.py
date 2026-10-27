@@ -38,7 +38,9 @@ from factory.yarn.yarn_type.models import YarnType
 from factory.yarn.yarn_count.models import YarnCount
 from factory.yarn.yarn_buyer.models import YarnBuyer
 from factory.purchase.supplier.models import Supplier
+from factory.yarn.processing import profile_for
 from factory.yarn.sizing.models import Sizing
+from factory.yarn.warping.models import Warping
 from factory.yarn.yarn_stock.models import YarnStock, LB_PER_KG
 
 
@@ -344,19 +346,34 @@ class YarnIntake(models.Model):
         self.calculate_intake_fields()
         if not self.pk and not self.remaining_bags and self.bags and not self.outcome_bags:
             self.init_remaining_stock()
-        if not self.stock_id:
-            from factory.yarn.yarn_stock.services import get_or_create_yarn_stock
+        prod_type = (self.production_type or "").strip()
+        if not prod_type:
+            prod_type = "Conversion" if (self.rate_per_lb or Decimal("0")) == Decimal("0") else "Self"
+        elif prod_type.lower() == "conversion":
+            prod_type = "Conversion"
+        elif prod_type.lower() == "self":
+            prod_type = "Self"
+        self.production_type = prod_type
+
+        from factory.yarn.yarn_stock.services import get_or_create_yarn_stock, recalculate_yarn_stock
+        old_stock = self.stock
+        need_new_stock = (
+            not self.stock_id
+            or (self.stock and (self.stock.production_type or "").strip() != prod_type)
+        )
+        if need_new_stock:
             self.stock = get_or_create_yarn_stock(
                 yarn_name=self.yarn_name,
                 yarn_type=self.yarn_type,
                 yarn_count=self.yarn_count,
-                production_type=self.production_type,
+                production_type=prod_type,
                 user=self.created_by,
             )
         super().save(*args, **kwargs)
         if self.stock_id and not kwargs.get("update_fields"):
-            from factory.yarn.yarn_stock.services import recalculate_yarn_stock
             recalculate_yarn_stock(self.stock)
+            if old_stock and old_stock.id != self.stock_id:
+                recalculate_yarn_stock(old_stock)
 
     def delete(self, *args, **kwargs):
         stock = self.stock
@@ -373,18 +390,28 @@ class YarnOutcome(models.Model):
     Rules:
       Sizing:
         yarn_buyer  must be None
-        total_price must be 0
-        sizing       optional (FK to Sizing)
+        total_price saves valuation of dispatched yarn (Rs)
+        sizing       required (FK to Sizing)
+        warping      must be None
+
+      Warping:
+        yarn_buyer  must be None
+        total_price saves valuation of dispatched yarn (Rs)
+        warping      required (FK to Warping)
+        sizing       must be None
 
       Weft:
         yarn_buyer  must be None
-        total_price must be 0
-        sizing       must be None
+        total_price saves valuation of dispatched yarn (Rs)
+        sizing / warping  must be None
 
       Sold:
         yarn_buyer  required
-        total_price must be > 0
-        sizing       must be None
+        total_price saves agreed sale price or valuation of dispatched yarn
+        sizing / warping  must be None
+
+    Sizing and Warping are *processing* dispatches: they share the same set
+    return, beam and ledger workflow (see `factory.yarn.processing`).
 
     outcome_weight_kg = outcome_bags * outcome_weight_per_bag_kg
     outcome_weight_lb = outcome_weight_kg * LB_PER_KG
@@ -395,6 +422,7 @@ class YarnOutcome(models.Model):
 
     class OutcomeTypeChoices(models.TextChoices):
         SIZING = "Sizing", "Sizing"
+        WARPING = "Warping", "Warping"
         WEFT = "Weft", "Weft"
         SOLD = "Sold", "Sold"
 
@@ -450,8 +478,17 @@ class YarnOutcome(models.Model):
         related_name="yarn_outcomes"
     )
 
+    warping = models.ForeignKey(
+        Warping,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="yarn_outcomes"
+    )
+
     class StatusChoices(models.TextChoices):
         IN_SIZING = "In Sizing", "In Sizing"
+        IN_WARPING = "In Warping", "In Warping"
         PARTIALLY_RECEIVED = "Partially Received", "Partially Received"
         RECEIVED = "Received", "Received"
         DISPATCHED = "Dispatched", "Dispatched"
@@ -537,22 +574,43 @@ class YarnOutcome(models.Model):
             f"{self.outcome_bags} bags"
         )
 
+    @property
+    def processing_profile(self):
+        """ProcessingProfile for Sizing / Warping dispatches, None for Weft / Sold."""
+        return profile_for(self)
+
+    @property
+    def processing_unit(self):
+        """The mill master record (Sizing or Warping) this dispatch was sent to."""
+        profile = self.processing_profile
+        return profile.unit_of(self) if profile else None
+
+    @property
+    def processing_unit_name(self):
+        profile = self.processing_profile
+        return profile.unit_name_of(self) if profile else ""
+
     def clean(self):
         super().clean()
         from django.core.exceptions import ValidationError
-        if self.outcome_type == self.OutcomeTypeChoices.SIZING:
-            if not self.sizing_id:
-                raise ValidationError({"sizing": "Sizing reference is required for Sizing outcome type."})
+        profile = self.processing_profile
+        if profile:
+            if not getattr(self, profile.unit_id_field):
+                raise ValidationError({
+                    profile.unit_field: f"{profile.label} reference is required for {profile.label} outcome type."
+                })
             if self.yarn_buyer_id:
-                raise ValidationError({"yarn_buyer": "Yarn buyer must be null for Sizing outcome type."})
-        elif self.outcome_type in (self.OutcomeTypeChoices.WEFT, self.OutcomeTypeChoices.SOLD):
-            if self.sizing_id:
-                raise ValidationError({"sizing": f"Sizing must be null for {self.outcome_type} outcome type."})
+                self.yarn_buyer = None
+                self.yarn_buyer_id = None
+        for other in ("sizing", "warping"):
+            if (not profile or other != profile.unit_field) and getattr(self, f"{other}_id"):
+                setattr(self, other, None)
+                setattr(self, f"{other}_id", None)
 
     def calculate_outcome_fields(self):
         """
-        Recalculate backend-derived outcome weight fields.
-        If items exist, aggregates bags and weights from items.
+        Recalculate backend-derived outcome weight fields and total_price of dispatched yarn.
+        If items exist, aggregates bags and weights from items and computes total dispatched yarn price.
         Otherwise falls back to outcome_bags * outcome_weight_per_bag_kg.
         """
         if self.pk and hasattr(self, "items") and self.items.exists():
@@ -566,17 +624,69 @@ class YarnOutcome(models.Model):
             self.outcome_weight_lb = item_agg["total_lb"] or Decimal("0.000000")
             if self.outcome_bags > 0:
                 self.outcome_weight_per_bag_kg = (self.outcome_weight_kg / Decimal(str(self.outcome_bags))).quantize(Decimal("0.000001"))
+
+            pass
         else:
             outcome_bags = Decimal(str(self.outcome_bags or 0))
             weight_per_bag = Decimal(str(self.outcome_weight_per_bag_kg or 0))
             self.outcome_weight_kg = outcome_bags * weight_per_bag
             self.outcome_weight_lb = self.outcome_weight_kg * LB_PER_KG
 
+        # Resolve stock if not set yet
+        stock = self.stock
+        if not stock:
+            if self.pk and hasattr(self, "items") and self.items.exists():
+                first_item = self.items.select_related("yarn_intake__stock").first()
+                if first_item and first_item.yarn_intake and first_item.yarn_intake.stock:
+                    stock = first_item.yarn_intake.stock
+                    self.stock = stock
+            elif hasattr(self, "_initial_yarn_intake") and self._initial_yarn_intake:
+                intake = self._initial_yarn_intake
+                if isinstance(intake, int):
+                    intake = YarnIntake.objects.filter(pk=intake).first()
+                if intake and getattr(intake, "stock", None):
+                    stock = intake.stock
+                    self.stock = stock
+
+        # Calculate total_price: dispatched yarn price = Weight in lb * (remaining_total_price / remaining_weight_lb)
+        if not self.total_price or self.total_price <= Decimal("0"):
+            pool_rate = Decimal("0.000000")
+            if stock:
+                rem_w_lb = Decimal(str(stock.remaining_weight_lb or 0))
+                rem_tp = Decimal(str(stock.remaining_total_price or 0))
+                if rem_w_lb > Decimal("0.000000") and rem_tp > Decimal("0.000000"):
+                    pool_rate = (rem_tp / rem_w_lb).quantize(Decimal("0.000001"))
+                elif stock.price_per_lb and stock.price_per_lb > Decimal("0.000000"):
+                    pool_rate = stock.price_per_lb
+
+            if pool_rate > Decimal("0.000000"):
+                self.total_price = (self.outcome_weight_lb * pool_rate).quantize(Decimal("0.000001"))
+            else:
+                items_val = Decimal("0.000000")
+                if self.pk and hasattr(self, "items") and self.items.exists():
+                    for item in self.items.select_related("yarn_intake").all():
+                        if item.yarn_intake and item.yarn_intake.rate_per_lb:
+                            items_val += (item.weight_lb or Decimal("0")) * item.yarn_intake.rate_per_lb
+                if items_val > Decimal("0"):
+                    self.total_price = items_val.quantize(Decimal("0.000001"))
+                elif hasattr(self, "_initial_yarn_intake") and self._initial_yarn_intake:
+                    itk = self._initial_yarn_intake
+                    if isinstance(itk, int):
+                        itk = YarnIntake.objects.filter(pk=itk).first()
+                    if itk and itk.rate_per_lb:
+                        self.total_price = (self.outcome_weight_lb * itk.rate_per_lb).quantize(Decimal("0.000001"))
+
     def save(self, *args, **kwargs):
         if self.merged_sizing_bags is None:
             self.merged_sizing_bags = 0
         if self.merged_sizing_cones is None:
             self.merged_sizing_cones = 0
+        if not self.pk:
+            profile = self.processing_profile
+            if profile and self.status == self.StatusChoices.IN_SIZING:
+                self.status = profile.in_progress_status
+            elif self.outcome_type in (self.OutcomeTypeChoices.WEFT, self.OutcomeTypeChoices.SOLD) and self.status == self.StatusChoices.IN_SIZING:
+                self.status = self.StatusChoices.DISPATCHED
         self.calculate_outcome_fields()
         if not self.stock_id:
             if self.pk and hasattr(self, "items") and self.items.exists():
@@ -602,6 +712,14 @@ class YarnOutcome(models.Model):
                     cones_per_bag=self.outcome_cones_per_bag or intake.cones_per_bag,
                     weight_per_bag_kg=self.outcome_weight_per_bag_kg or intake.weight_per_bag_kg,
                 )
+                self.calculate_outcome_fields()
+                super().save(update_fields=[
+                    "outcome_bags",
+                    "outcome_weight_kg",
+                    "outcome_weight_lb",
+                    "outcome_weight_per_bag_kg",
+                    "total_price",
+                ])
 
     def delete(self, *args, **kwargs):
         # Restore merged sizing balance if this outcome was deleted before completion
@@ -743,8 +861,8 @@ class YarnOutcomeItem(models.Model):
     def calculate_weights(self):
         bags_dec = Decimal(str(self.bags or 0))
         wpb_dec = Decimal(str(self.weight_per_bag_kg or 0))
-        self.weight_kg = bags_dec * wpb_dec
-        self.weight_lb = self.weight_kg * LB_PER_KG
+        self.weight_kg = (bags_dec * wpb_dec).quantize(Decimal("0.000001"))
+        self.weight_lb = (self.weight_kg * LB_PER_KG).quantize(Decimal("0.000001"))
 
     def save(self, *args, **kwargs):
         if not self.weight_per_bag_kg and self.yarn_intake_id:

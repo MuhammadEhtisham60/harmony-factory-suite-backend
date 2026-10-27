@@ -68,11 +68,31 @@ MODULE_PERMISSIONS = [
         ]
     },
     {
+        "module": "warping",
+        "name": "Warping",
+        "permissions": [
+            {"code": "warping.view", "name": "View Warping Units", "description": "View warping unit list and details"},
+            {"code": "warping.add", "name": "Add Warping Unit", "description": "Create new warping unit records"},
+            {"code": "warping.edit", "name": "Edit Warping Unit", "description": "Update warping unit details"},
+            {"code": "warping.delete", "name": "Delete Warping Unit", "description": "Delete warping unit records"},
+        ]
+    },
+    {
         "module": "yarn_stock",
         "name": "Yarn Stock",
         "permissions": [
             {"code": "yarn_stock.view", "name": "View Yarn Stock", "description": "View shared yarn inventory pools and stock balance"},
             {"code": "yarn_stock.edit", "name": "Reconcile Yarn Stock", "description": "Reconcile and adjust yarn stock pools"},
+        ]
+    },
+    {
+        "module": "b_grade_yarn",
+        "name": "B-Grade Yarn",
+        "permissions": [
+            {"code": "b_grade_yarn.view", "name": "View B-Grade Yarn", "description": "View B-grade yarn stock and batches"},
+            {"code": "b_grade_yarn.add", "name": "Add B-Grade Yarn", "description": "Create new B-grade yarn records"},
+            {"code": "b_grade_yarn.edit", "name": "Edit B-Grade Yarn", "description": "Update B-grade yarn quantities and counts"},
+            {"code": "b_grade_yarn.delete", "name": "Delete B-Grade Yarn", "description": "Delete B-grade yarn records"},
         ]
     },
     {
@@ -161,6 +181,17 @@ MODULE_PERMISSIONS = [
             {"code": "sale.edit", "name": "Edit Sales Invoice", "description": "Edit sales invoices"},
             {"code": "sale.delete", "name": "Void Sales Order", "description": "Void sales orders"},
             {"code": "sale.dispatch", "name": "Dispatch Sales Order", "description": "Issue gate passes and mark dispatched"},
+        ]
+    },
+    {
+        "module": "bank_accounts",
+        "name": "Bank Accounts",
+        "permissions": [
+            {"code": "bank.view", "name": "View Bank Accounts", "description": "View bank accounts, transaction history, and balance statements"},
+            {"code": "bank.add", "name": "Add Bank Account", "description": "Create company bank accounts with opening balance"},
+            {"code": "bank.edit", "name": "Edit Bank Account", "description": "Update bank account credentials and settings"},
+            {"code": "bank.delete", "name": "Delete Bank Account", "description": "Delete or close bank accounts"},
+            {"code": "bank.transaction", "name": "Record Bank Transaction", "description": "Record credit deposits and debit payments"},
         ]
     },
     {

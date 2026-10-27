@@ -20,6 +20,7 @@ from factory.yarn.yarn_type.models import YarnType
 from factory.yarn.yarn_count.models import YarnCount
 from factory.yarn.yarn_buyer.models import YarnBuyer
 from factory.yarn.sizing.models import Sizing
+from factory.yarn.warping.models import Warping
 from factory.yarn.yarn_stock.models import YarnStock, LB_PER_KG
 from factory.yarn.yarn_stock.serializers import YarnStockMinSerializer
 from .models import YarnIntake, YarnOutcome, YarnOutcomeItem
@@ -203,6 +204,11 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True
     )
+    warping = serializers.PrimaryKeyRelatedField(
+        queryset=Warping.objects.all(),
+        required=False,
+        allow_null=True
+    )
 
     # ── Writable input fields ─────────────────────────────────────────────
     outcomeType = serializers.ChoiceField(
@@ -297,6 +303,7 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
     stockDetail = serializers.SerializerMethodField()
     yarnBuyerDetail = serializers.SerializerMethodField()
     sizingDetail = serializers.SerializerMethodField()
+    warpingDetail = serializers.SerializerMethodField()
 
     class Meta:
         model = YarnOutcome
@@ -336,6 +343,8 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
             "yarnBuyerDetail",
             "sizing",
             "sizingDetail",
+            "warping",
+            "warpingDetail",
             "totalPrice",
             "ratePerKg",
             "status",
@@ -361,7 +370,7 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
             "yarnName", "yarnType", "yarnCount", "yarnIntakeDetail",
             "beamAssignments", "totalBeams", "status", "sizingOutcome", "isReceived", "isPartiallyReceived",
             "createdAt", "updatedAt", "createdBy", "updatedBy",
-            "stockDetail", "yarnBuyerDetail", "sizingDetail",
+            "stockDetail", "yarnBuyerDetail", "sizingDetail", "warpingDetail",
         ]
 
     def get_mergedFromSets(self, obj):
@@ -392,11 +401,12 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         return []
 
     def get_status(self, obj):
-        if obj.outcome_type == YarnOutcome.OutcomeTypeChoices.SIZING:
+        profile = getattr(obj, "processing_profile", None)
+        if profile:
             if hasattr(obj, "sizing_outcomes") and obj.sizing_outcomes.exists():
                 from factory.yarn.sizing.services import sync_yarn_outcome_status
                 return sync_yarn_outcome_status(obj)
-            return getattr(obj, "status", None) or YarnOutcome.StatusChoices.IN_SIZING
+            return getattr(obj, "status", None) or profile.in_progress_status
         return getattr(obj, "status", None) or "Dispatched"
 
     def get_isReceived(self, obj):
@@ -543,6 +553,19 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         ret["total_set_bags"] = instance.total_set_bags
         ret["totalSetCones"] = instance.total_set_cones
         ret["total_set_cones"] = instance.total_set_cones
+        ret["yarnPrice"] = str(instance.total_price) if instance.total_price is not None else "0.000000"
+        ret["yarnTotalPrice"] = str(instance.total_price) if instance.total_price is not None else "0.000000"
+        if instance.sizing:
+            ret["sizing"] = instance.sizing_id
+            ret["sizingId"] = instance.sizing_id
+            ret["sizingName"] = instance.sizing.sizing_name
+            ret["sizingUnit"] = instance.sizing.sizing_name
+        if instance.warping:
+            ret["warping"] = instance.warping_id
+            ret["warpingId"] = instance.warping_id
+            ret["warpingName"] = instance.warping.warping_name
+            ret["warpingUnit"] = instance.warping.warping_name
+
         ret["mergedFromSets"] = self.get_mergedFromSets(instance)
         ret["merged_from_sets"] = ret["mergedFromSets"]
 
@@ -566,6 +589,12 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
     def get_sizingDetail(self, obj):
         if obj.sizing:
             return SizingMinSerializer(obj.sizing).data
+        return None
+
+    def get_warpingDetail(self, obj):
+        if obj.warping:
+            from factory.yarn.warping.serializers import WarpingMinSerializer
+            return WarpingMinSerializer(obj.warping).data
         return None
 
     # ── Validation ────────────────────────────────────────────────────────
@@ -790,44 +819,35 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
             "sizing",
             getattr(self.instance, "sizing", None) if self.instance else None
         )
+        warping = attrs.get(
+            "warping",
+            getattr(self.instance, "warping", None) if self.instance else None
+        )
 
         if outcome_type == YarnOutcome.OutcomeTypeChoices.SOLD:
             if not yarn_buyer:
                 raise serializers.ValidationError({
                     "yarnBuyer": ["Yarn buyer is required for Sold outcome type."]
                 })
-            if not total_price or Decimal(str(total_price)) <= Decimal("0"):
-                raise serializers.ValidationError({
-                    "totalPrice": ["Total price must be greater than 0 for Sold outcome type."]
-                })
-            if sizing:
-                raise serializers.ValidationError({
-                    "sizing": ["Sizing must be null for Sold outcome type."]
-                })
+            attrs["sizing"] = None
+            attrs["warping"] = None
 
         elif outcome_type == YarnOutcome.OutcomeTypeChoices.WEFT:
-            if yarn_buyer:
+            attrs["yarn_buyer"] = None
+            attrs["sizing"] = None
+            attrs["warping"] = None
+
+        elif outcome_type == YarnOutcome.OutcomeTypeChoices.WARPING:
+            attrs["yarn_buyer"] = None
+            attrs["sizing"] = None
+            if not warping:
                 raise serializers.ValidationError({
-                    "yarnBuyer": ["Yarn buyer must be null for Weft outcome type."]
-                })
-            if total_price and Decimal(str(total_price)) > Decimal("0"):
-                raise serializers.ValidationError({
-                    "totalPrice": ["Total price must be 0 for Weft outcome type."]
-                })
-            if sizing:
-                raise serializers.ValidationError({
-                    "sizing": ["Sizing must be null for Weft outcome type."]
+                    "warping": ["Warping reference is required for Warping outcome type."]
                 })
 
         else:  # Sizing
-            if yarn_buyer:
-                raise serializers.ValidationError({
-                    "yarnBuyer": ["Yarn buyer must be null for Sizing outcome type."]
-                })
-            if total_price and Decimal(str(total_price)) > Decimal("0"):
-                raise serializers.ValidationError({
-                    "totalPrice": ["Total price must be 0 for Sizing outcome type."]
-                })
+            attrs["yarn_buyer"] = None
+            attrs["warping"] = None
             if not sizing:
                 raise serializers.ValidationError({
                     "sizing": ["Sizing reference is required for Sizing outcome type."]
@@ -1057,6 +1077,7 @@ class YarnIntakeListSerializer(serializers.ModelSerializer):
     stock = serializers.PrimaryKeyRelatedField(read_only=True)
     stockDetail = serializers.SerializerMethodField()
     productionType = serializers.CharField(source="production_type", read_only=True)
+    production_type = serializers.CharField(read_only=True)
 
     # Intake totals
     conesPerBag = serializers.IntegerField(source="cones_per_bag")
@@ -1115,7 +1136,7 @@ class YarnIntakeListSerializer(serializers.ModelSerializer):
             "yarnNameId", "yarnTypeId", "yarnCountId",
             "yarnNameDetail", "yarnTypeDetail", "yarnCountDetail",
             "setNo",
-            "intakeDate", "supplierDetail", "stock", "stockDetail", "productionType",
+            "intakeDate", "supplierDetail", "stock", "stockDetail", "productionType", "production_type",
             "bags", "conesPerBag", "totalCones",
             "ratePerLb", "totalRate", "totalPrice", "initialTotalRate", "initial_total_rate",
             "weightPerBagKg", "netWeightKg", "netWeightLb",
@@ -1338,6 +1359,8 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
         data = data.copy() if hasattr(data, "copy") else dict(data)
         if "set_no" in data and "setNo" not in data:
             data["setNo"] = data["set_no"]
+        if "production_type" in data and "productionType" not in data:
+            data["productionType"] = data["production_type"]
 
         resolvers = [
             (["yarnNameId", "yarn_name_id", "yarnName", "yarn_name"], "yarn_name", YarnName),
@@ -1370,6 +1393,8 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
         ret["yarnNameDetail"] = {"id": instance.yarn_name.id, "name": instance.yarn_name.name} if instance.yarn_name else None
         ret["yarnTypeDetail"] = {"id": instance.yarn_type.id, "name": instance.yarn_type.name} if instance.yarn_type else None
         ret["yarnCountDetail"] = {"id": instance.yarn_count.id, "name": instance.yarn_count.name} if instance.yarn_count else None
+        ret["productionType"] = instance.production_type or ""
+        ret["production_type"] = instance.production_type or ""
         ret["returnBags"] = str(instance.return_bags) if instance.return_bags is not None else "0.000000"
         ret["return_bags"] = str(instance.return_bags) if instance.return_bags is not None else "0.000000"
         ret["returnCones"] = str(instance.return_cones) if instance.return_cones is not None else "0.000000"
@@ -1393,11 +1418,25 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
             for k in ["yarnName", "yarnType", "yarnCount", "yarnNameId", "yarnTypeId", "yarnCountId"]:
                 validated_data.pop(k, None)
 
+            prod_type = (
+                validated_data.get("production_type")
+                or self.initial_data.get("productionType")
+                or self.initial_data.get("production_type")
+                or ""
+            ).strip()
+            if not prod_type:
+                prod_type = "Conversion" if validated_data.get("rate_per_lb", Decimal("0")) == Decimal("0") else "Self"
+            elif prod_type.lower() == "conversion":
+                prod_type = "Conversion"
+            elif prod_type.lower() == "self":
+                prod_type = "Self"
+            validated_data["production_type"] = prod_type
+
             stock = get_or_create_yarn_stock(
                 yarn_name=yarn_name_val,
                 yarn_type=yarn_type_val,
                 yarn_count=yarn_count_val,
-                production_type=validated_data.get("production_type", ""),
+                production_type=prod_type,
                 user=user,
             )
             validated_data["stock"] = stock
@@ -1427,7 +1466,22 @@ class YarnIntakeDetailSerializer(serializers.ModelSerializer):
             new_yarn_name = validated_data.get("yarn_name", instance.yarn_name)
             new_yarn_type = validated_data.get("yarn_type", instance.yarn_type)
             new_yarn_count = validated_data.get("yarn_count", instance.yarn_count)
-            new_prod_type = validated_data.get("production_type", instance.production_type)
+            raw_prod_type = (
+                validated_data.get("production_type")
+                or self.initial_data.get("productionType")
+                or self.initial_data.get("production_type")
+                or instance.production_type
+                or ""
+            ).strip()
+            if not raw_prod_type:
+                new_prod_type = "Conversion" if validated_data.get("rate_per_lb", instance.rate_per_lb) == Decimal("0") else "Self"
+            elif raw_prod_type.lower() == "conversion":
+                new_prod_type = "Conversion"
+            elif raw_prod_type.lower() == "self":
+                new_prod_type = "Self"
+            else:
+                new_prod_type = raw_prod_type
+            validated_data["production_type"] = new_prod_type
 
             new_yarn_name_id = new_yarn_name.id if hasattr(new_yarn_name, "id") else new_yarn_name
             new_yarn_type_id = new_yarn_type.id if hasattr(new_yarn_type, "id") else new_yarn_type

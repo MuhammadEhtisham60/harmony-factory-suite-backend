@@ -1,0 +1,2947 @@
+[
+{
+  "model": "auth.permission",
+  "pk": 1,
+  "fields": {
+    "name": "Can add log entry",
+    "content_type": 1,
+    "codename": "add_logentry"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 2,
+  "fields": {
+    "name": "Can change log entry",
+    "content_type": 1,
+    "codename": "change_logentry"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 3,
+  "fields": {
+    "name": "Can delete log entry",
+    "content_type": 1,
+    "codename": "delete_logentry"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 4,
+  "fields": {
+    "name": "Can view log entry",
+    "content_type": 1,
+    "codename": "view_logentry"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 5,
+  "fields": {
+    "name": "Can add permission",
+    "content_type": 3,
+    "codename": "add_permission"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 6,
+  "fields": {
+    "name": "Can change permission",
+    "content_type": 3,
+    "codename": "change_permission"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 7,
+  "fields": {
+    "name": "Can delete permission",
+    "content_type": 3,
+    "codename": "delete_permission"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 8,
+  "fields": {
+    "name": "Can view permission",
+    "content_type": 3,
+    "codename": "view_permission"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 9,
+  "fields": {
+    "name": "Can add group",
+    "content_type": 2,
+    "codename": "add_group"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 10,
+  "fields": {
+    "name": "Can change group",
+    "content_type": 2,
+    "codename": "change_group"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 11,
+  "fields": {
+    "name": "Can delete group",
+    "content_type": 2,
+    "codename": "delete_group"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 12,
+  "fields": {
+    "name": "Can view group",
+    "content_type": 2,
+    "codename": "view_group"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 13,
+  "fields": {
+    "name": "Can add content type",
+    "content_type": 4,
+    "codename": "add_contenttype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 14,
+  "fields": {
+    "name": "Can change content type",
+    "content_type": 4,
+    "codename": "change_contenttype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 15,
+  "fields": {
+    "name": "Can delete content type",
+    "content_type": 4,
+    "codename": "delete_contenttype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 16,
+  "fields": {
+    "name": "Can view content type",
+    "content_type": 4,
+    "codename": "view_contenttype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 17,
+  "fields": {
+    "name": "Can add session",
+    "content_type": 5,
+    "codename": "add_session"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 18,
+  "fields": {
+    "name": "Can change session",
+    "content_type": 5,
+    "codename": "change_session"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 19,
+  "fields": {
+    "name": "Can delete session",
+    "content_type": 5,
+    "codename": "delete_session"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 20,
+  "fields": {
+    "name": "Can view session",
+    "content_type": 5,
+    "codename": "view_session"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 21,
+  "fields": {
+    "name": "Can add role",
+    "content_type": 6,
+    "codename": "add_role"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 22,
+  "fields": {
+    "name": "Can change role",
+    "content_type": 6,
+    "codename": "change_role"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 23,
+  "fields": {
+    "name": "Can delete role",
+    "content_type": 6,
+    "codename": "delete_role"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 24,
+  "fields": {
+    "name": "Can view role",
+    "content_type": 6,
+    "codename": "view_role"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 25,
+  "fields": {
+    "name": "Can add user",
+    "content_type": 7,
+    "codename": "add_user"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 26,
+  "fields": {
+    "name": "Can change user",
+    "content_type": 7,
+    "codename": "change_user"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 27,
+  "fields": {
+    "name": "Can delete user",
+    "content_type": 7,
+    "codename": "delete_user"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 28,
+  "fields": {
+    "name": "Can view user",
+    "content_type": 7,
+    "codename": "view_user"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 29,
+  "fields": {
+    "name": "Can add activity log",
+    "content_type": 8,
+    "codename": "add_activitylog"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 30,
+  "fields": {
+    "name": "Can change activity log",
+    "content_type": 8,
+    "codename": "change_activitylog"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 31,
+  "fields": {
+    "name": "Can delete activity log",
+    "content_type": 8,
+    "codename": "delete_activitylog"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 32,
+  "fields": {
+    "name": "Can view activity log",
+    "content_type": 8,
+    "codename": "view_activitylog"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 33,
+  "fields": {
+    "name": "Can add Supplier",
+    "content_type": 24,
+    "codename": "add_supplier"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 34,
+  "fields": {
+    "name": "Can change Supplier",
+    "content_type": 24,
+    "codename": "change_supplier"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 35,
+  "fields": {
+    "name": "Can delete Supplier",
+    "content_type": 24,
+    "codename": "delete_supplier"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 36,
+  "fields": {
+    "name": "Can view Supplier",
+    "content_type": 24,
+    "codename": "view_supplier"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 37,
+  "fields": {
+    "name": "Can add Supplier Bank Account",
+    "content_type": 25,
+    "codename": "add_supplierbankaccount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 38,
+  "fields": {
+    "name": "Can change Supplier Bank Account",
+    "content_type": 25,
+    "codename": "change_supplierbankaccount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 39,
+  "fields": {
+    "name": "Can delete Supplier Bank Account",
+    "content_type": 25,
+    "codename": "delete_supplierbankaccount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 40,
+  "fields": {
+    "name": "Can view Supplier Bank Account",
+    "content_type": 25,
+    "codename": "view_supplierbankaccount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 41,
+  "fields": {
+    "name": "Can add Customer",
+    "content_type": 16,
+    "codename": "add_customer"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 42,
+  "fields": {
+    "name": "Can change Customer",
+    "content_type": 16,
+    "codename": "change_customer"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 43,
+  "fields": {
+    "name": "Can delete Customer",
+    "content_type": 16,
+    "codename": "delete_customer"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 44,
+  "fields": {
+    "name": "Can view Customer",
+    "content_type": 16,
+    "codename": "view_customer"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 45,
+  "fields": {
+    "name": "Can add Customer Bank Account",
+    "content_type": 17,
+    "codename": "add_customerbankaccount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 46,
+  "fields": {
+    "name": "Can change Customer Bank Account",
+    "content_type": 17,
+    "codename": "change_customerbankaccount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 47,
+  "fields": {
+    "name": "Can delete Customer Bank Account",
+    "content_type": 17,
+    "codename": "delete_customerbankaccount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 48,
+  "fields": {
+    "name": "Can view Customer Bank Account",
+    "content_type": 17,
+    "codename": "view_customerbankaccount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 49,
+  "fields": {
+    "name": "Can add Loom",
+    "content_type": 19,
+    "codename": "add_loom"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 50,
+  "fields": {
+    "name": "Can change Loom",
+    "content_type": 19,
+    "codename": "change_loom"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 51,
+  "fields": {
+    "name": "Can delete Loom",
+    "content_type": 19,
+    "codename": "delete_loom"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 52,
+  "fields": {
+    "name": "Can view Loom",
+    "content_type": 19,
+    "codename": "view_loom"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 53,
+  "fields": {
+    "name": "Can add Beam",
+    "content_type": 9,
+    "codename": "add_beam"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 54,
+  "fields": {
+    "name": "Can change Beam",
+    "content_type": 9,
+    "codename": "change_beam"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 55,
+  "fields": {
+    "name": "Can delete Beam",
+    "content_type": 9,
+    "codename": "delete_beam"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 56,
+  "fields": {
+    "name": "Can view Beam",
+    "content_type": 9,
+    "codename": "view_beam"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 57,
+  "fields": {
+    "name": "Can add Yarn Buyer",
+    "content_type": 26,
+    "codename": "add_yarnbuyer"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 58,
+  "fields": {
+    "name": "Can change Yarn Buyer",
+    "content_type": 26,
+    "codename": "change_yarnbuyer"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 59,
+  "fields": {
+    "name": "Can delete Yarn Buyer",
+    "content_type": 26,
+    "codename": "delete_yarnbuyer"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 60,
+  "fields": {
+    "name": "Can view Yarn Buyer",
+    "content_type": 26,
+    "codename": "view_yarnbuyer"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 61,
+  "fields": {
+    "name": "Can add Yarn Intake",
+    "content_type": 28,
+    "codename": "add_yarnintake"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 62,
+  "fields": {
+    "name": "Can change Yarn Intake",
+    "content_type": 28,
+    "codename": "change_yarnintake"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 63,
+  "fields": {
+    "name": "Can delete Yarn Intake",
+    "content_type": 28,
+    "codename": "delete_yarnintake"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 64,
+  "fields": {
+    "name": "Can view Yarn Intake",
+    "content_type": 28,
+    "codename": "view_yarnintake"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 65,
+  "fields": {
+    "name": "Can add Yarn Outcome",
+    "content_type": 30,
+    "codename": "add_yarnoutcome"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 66,
+  "fields": {
+    "name": "Can change Yarn Outcome",
+    "content_type": 30,
+    "codename": "change_yarnoutcome"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 67,
+  "fields": {
+    "name": "Can delete Yarn Outcome",
+    "content_type": 30,
+    "codename": "delete_yarnoutcome"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 68,
+  "fields": {
+    "name": "Can view Yarn Outcome",
+    "content_type": 30,
+    "codename": "view_yarnoutcome"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 69,
+  "fields": {
+    "name": "Can add Sizing",
+    "content_type": 21,
+    "codename": "add_sizing"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 70,
+  "fields": {
+    "name": "Can change Sizing",
+    "content_type": 21,
+    "codename": "change_sizing"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 71,
+  "fields": {
+    "name": "Can delete Sizing",
+    "content_type": 21,
+    "codename": "delete_sizing"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 72,
+  "fields": {
+    "name": "Can view Sizing",
+    "content_type": 21,
+    "codename": "view_sizing"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 73,
+  "fields": {
+    "name": "Can add Sizing Outcome",
+    "content_type": 23,
+    "codename": "add_sizingoutcome"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 74,
+  "fields": {
+    "name": "Can change Sizing Outcome",
+    "content_type": 23,
+    "codename": "change_sizingoutcome"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 75,
+  "fields": {
+    "name": "Can delete Sizing Outcome",
+    "content_type": 23,
+    "codename": "delete_sizingoutcome"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 76,
+  "fields": {
+    "name": "Can view Sizing Outcome",
+    "content_type": 23,
+    "codename": "view_sizingoutcome"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 77,
+  "fields": {
+    "name": "Can add Sizing Beam Assignment",
+    "content_type": 22,
+    "codename": "add_sizingbeamassignment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 78,
+  "fields": {
+    "name": "Can change Sizing Beam Assignment",
+    "content_type": 22,
+    "codename": "change_sizingbeamassignment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 79,
+  "fields": {
+    "name": "Can delete Sizing Beam Assignment",
+    "content_type": 22,
+    "codename": "delete_sizingbeamassignment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 80,
+  "fields": {
+    "name": "Can view Sizing Beam Assignment",
+    "content_type": 22,
+    "codename": "view_sizingbeamassignment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 81,
+  "fields": {
+    "name": "Can add Beam Loading",
+    "content_type": 11,
+    "codename": "add_beamloading"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 82,
+  "fields": {
+    "name": "Can change Beam Loading",
+    "content_type": 11,
+    "codename": "change_beamloading"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 83,
+  "fields": {
+    "name": "Can delete Beam Loading",
+    "content_type": 11,
+    "codename": "delete_beamloading"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 84,
+  "fields": {
+    "name": "Can view Beam Loading",
+    "content_type": 11,
+    "codename": "view_beamloading"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 85,
+  "fields": {
+    "name": "Can add Production",
+    "content_type": 20,
+    "codename": "add_production"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 86,
+  "fields": {
+    "name": "Can change Production",
+    "content_type": 20,
+    "codename": "change_production"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 87,
+  "fields": {
+    "name": "Can delete Production",
+    "content_type": 20,
+    "codename": "delete_production"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 88,
+  "fields": {
+    "name": "Can view Production",
+    "content_type": 20,
+    "codename": "view_production"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 89,
+  "fields": {
+    "name": "Can add Yarn Stock",
+    "content_type": 32,
+    "codename": "add_yarnstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 90,
+  "fields": {
+    "name": "Can change Yarn Stock",
+    "content_type": 32,
+    "codename": "change_yarnstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 91,
+  "fields": {
+    "name": "Can delete Yarn Stock",
+    "content_type": 32,
+    "codename": "delete_yarnstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 92,
+  "fields": {
+    "name": "Can view Yarn Stock",
+    "content_type": 32,
+    "codename": "view_yarnstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 93,
+  "fields": {
+    "name": "Can add Yarn Name",
+    "content_type": 29,
+    "codename": "add_yarnname"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 94,
+  "fields": {
+    "name": "Can change Yarn Name",
+    "content_type": 29,
+    "codename": "change_yarnname"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 95,
+  "fields": {
+    "name": "Can delete Yarn Name",
+    "content_type": 29,
+    "codename": "delete_yarnname"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 96,
+  "fields": {
+    "name": "Can view Yarn Name",
+    "content_type": 29,
+    "codename": "view_yarnname"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 97,
+  "fields": {
+    "name": "Can add Yarn Type",
+    "content_type": 33,
+    "codename": "add_yarntype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 98,
+  "fields": {
+    "name": "Can change Yarn Type",
+    "content_type": 33,
+    "codename": "change_yarntype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 99,
+  "fields": {
+    "name": "Can delete Yarn Type",
+    "content_type": 33,
+    "codename": "delete_yarntype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 100,
+  "fields": {
+    "name": "Can view Yarn Type",
+    "content_type": 33,
+    "codename": "view_yarntype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 101,
+  "fields": {
+    "name": "Can add Yarn Count",
+    "content_type": 27,
+    "codename": "add_yarncount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 102,
+  "fields": {
+    "name": "Can change Yarn Count",
+    "content_type": 27,
+    "codename": "change_yarncount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 103,
+  "fields": {
+    "name": "Can delete Yarn Count",
+    "content_type": 27,
+    "codename": "delete_yarncount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 104,
+  "fields": {
+    "name": "Can view Yarn Count",
+    "content_type": 27,
+    "codename": "view_yarncount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 105,
+  "fields": {
+    "name": "Can add Beam Dismount Reconciliation",
+    "content_type": 10,
+    "codename": "add_beamdismountreconciliation"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 106,
+  "fields": {
+    "name": "Can change Beam Dismount Reconciliation",
+    "content_type": 10,
+    "codename": "change_beamdismountreconciliation"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 107,
+  "fields": {
+    "name": "Can delete Beam Dismount Reconciliation",
+    "content_type": 10,
+    "codename": "delete_beamdismountreconciliation"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 108,
+  "fields": {
+    "name": "Can view Beam Dismount Reconciliation",
+    "content_type": 10,
+    "codename": "view_beamdismountreconciliation"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 109,
+  "fields": {
+    "name": "Can add Cloth Name",
+    "content_type": 13,
+    "codename": "add_clothname"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 110,
+  "fields": {
+    "name": "Can change Cloth Name",
+    "content_type": 13,
+    "codename": "change_clothname"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 111,
+  "fields": {
+    "name": "Can delete Cloth Name",
+    "content_type": 13,
+    "codename": "delete_clothname"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 112,
+  "fields": {
+    "name": "Can view Cloth Name",
+    "content_type": 13,
+    "codename": "view_clothname"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 113,
+  "fields": {
+    "name": "Can add Cloth Patch",
+    "content_type": 14,
+    "codename": "add_clothpatch"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 114,
+  "fields": {
+    "name": "Can change Cloth Patch",
+    "content_type": 14,
+    "codename": "change_clothpatch"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 115,
+  "fields": {
+    "name": "Can delete Cloth Patch",
+    "content_type": 14,
+    "codename": "delete_clothpatch"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 116,
+  "fields": {
+    "name": "Can view Cloth Patch",
+    "content_type": 14,
+    "codename": "view_clothpatch"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 117,
+  "fields": {
+    "name": "Can add Cloth Stock",
+    "content_type": 15,
+    "codename": "add_clothstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 118,
+  "fields": {
+    "name": "Can change Cloth Stock",
+    "content_type": 15,
+    "codename": "change_clothstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 119,
+  "fields": {
+    "name": "Can delete Cloth Stock",
+    "content_type": 15,
+    "codename": "delete_clothstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 120,
+  "fields": {
+    "name": "Can view Cloth Stock",
+    "content_type": 15,
+    "codename": "view_clothstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 121,
+  "fields": {
+    "name": "Can add Clean Cloth Stock",
+    "content_type": 12,
+    "codename": "add_cleanclothstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 122,
+  "fields": {
+    "name": "Can change Clean Cloth Stock",
+    "content_type": 12,
+    "codename": "change_cleanclothstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 123,
+  "fields": {
+    "name": "Can delete Clean Cloth Stock",
+    "content_type": 12,
+    "codename": "delete_cleanclothstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 124,
+  "fields": {
+    "name": "Can view Clean Cloth Stock",
+    "content_type": 12,
+    "codename": "view_cleanclothstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 125,
+  "fields": {
+    "name": "Can add Defected Cloth Stock",
+    "content_type": 18,
+    "codename": "add_defectedclothstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 126,
+  "fields": {
+    "name": "Can change Defected Cloth Stock",
+    "content_type": 18,
+    "codename": "change_defectedclothstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 127,
+  "fields": {
+    "name": "Can delete Defected Cloth Stock",
+    "content_type": 18,
+    "codename": "delete_defectedclothstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 128,
+  "fields": {
+    "name": "Can view Defected Cloth Stock",
+    "content_type": 18,
+    "codename": "view_defectedclothstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 129,
+  "fields": {
+    "name": "Can add Yarn Outcome Item",
+    "content_type": 31,
+    "codename": "add_yarnoutcomeitem"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 130,
+  "fields": {
+    "name": "Can change Yarn Outcome Item",
+    "content_type": 31,
+    "codename": "change_yarnoutcomeitem"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 131,
+  "fields": {
+    "name": "Can delete Yarn Outcome Item",
+    "content_type": 31,
+    "codename": "delete_yarnoutcomeitem"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 132,
+  "fields": {
+    "name": "Can view Yarn Outcome Item",
+    "content_type": 31,
+    "codename": "view_yarnoutcomeitem"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 1,
+  "fields": {
+    "app_label": "admin",
+    "model": "logentry"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 2,
+  "fields": {
+    "app_label": "auth",
+    "model": "group"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 3,
+  "fields": {
+    "app_label": "auth",
+    "model": "permission"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 4,
+  "fields": {
+    "app_label": "contenttypes",
+    "model": "contenttype"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 5,
+  "fields": {
+    "app_label": "sessions",
+    "model": "session"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 6,
+  "fields": {
+    "app_label": "accounts",
+    "model": "role"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 7,
+  "fields": {
+    "app_label": "accounts",
+    "model": "user"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 8,
+  "fields": {
+    "app_label": "audit_logs",
+    "model": "activitylog"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 9,
+  "fields": {
+    "app_label": "factory",
+    "model": "beam"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 10,
+  "fields": {
+    "app_label": "factory",
+    "model": "beamdismountreconciliation"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 11,
+  "fields": {
+    "app_label": "factory",
+    "model": "beamloading"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 12,
+  "fields": {
+    "app_label": "factory",
+    "model": "cleanclothstock"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 13,
+  "fields": {
+    "app_label": "factory",
+    "model": "clothname"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 14,
+  "fields": {
+    "app_label": "factory",
+    "model": "clothpatch"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 15,
+  "fields": {
+    "app_label": "factory",
+    "model": "clothstock"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 16,
+  "fields": {
+    "app_label": "factory",
+    "model": "customer"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 17,
+  "fields": {
+    "app_label": "factory",
+    "model": "customerbankaccount"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 18,
+  "fields": {
+    "app_label": "factory",
+    "model": "defectedclothstock"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 19,
+  "fields": {
+    "app_label": "factory",
+    "model": "loom"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 20,
+  "fields": {
+    "app_label": "factory",
+    "model": "production"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 21,
+  "fields": {
+    "app_label": "factory",
+    "model": "sizing"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 22,
+  "fields": {
+    "app_label": "factory",
+    "model": "sizingbeamassignment"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 23,
+  "fields": {
+    "app_label": "factory",
+    "model": "sizingoutcome"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 24,
+  "fields": {
+    "app_label": "factory",
+    "model": "supplier"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 25,
+  "fields": {
+    "app_label": "factory",
+    "model": "supplierbankaccount"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 26,
+  "fields": {
+    "app_label": "factory",
+    "model": "yarnbuyer"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 27,
+  "fields": {
+    "app_label": "factory",
+    "model": "yarncount"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 28,
+  "fields": {
+    "app_label": "factory",
+    "model": "yarnintake"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 29,
+  "fields": {
+    "app_label": "factory",
+    "model": "yarnname"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 30,
+  "fields": {
+    "app_label": "factory",
+    "model": "yarnoutcome"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 31,
+  "fields": {
+    "app_label": "factory",
+    "model": "yarnoutcomeitem"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 32,
+  "fields": {
+    "app_label": "factory",
+    "model": "yarnstock"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 33,
+  "fields": {
+    "app_label": "factory",
+    "model": "yarntype"
+  }
+},
+{
+  "model": "accounts.role",
+  "pk": 1,
+  "fields": {
+    "name": "Super Admin",
+    "slug": "super_admin",
+    "description": "Unrestricted system access across all ERP modules.",
+    "status": "Active",
+    "is_system": true,
+    "permissions": [
+      "dashboard.view",
+      "dashboard.export",
+      "users.view",
+      "users.add",
+      "users.edit",
+      "users.delete",
+      "users.status",
+      "users.reset_pwd",
+      "roles.manage",
+      "activity.view",
+      "mfg.view",
+      "mfg.add",
+      "mfg.edit",
+      "mfg.delete",
+      "mfg.assign",
+      "mfg.status",
+      "yarn.view",
+      "yarn.add",
+      "yarn.edit",
+      "yarn.delete",
+      "sizing.view",
+      "sizing.add",
+      "sizing.edit",
+      "sizing.delete",
+      "beams.view",
+      "beams.add",
+      "beams.edit",
+      "beams.delete",
+      "beams.assign",
+      "looms.view",
+      "looms.add",
+      "looms.edit",
+      "looms.delete",
+      "looms.assign_beam",
+      "looms.production",
+      "po.view",
+      "po.add",
+      "po.edit",
+      "po.delete",
+      "po.approve",
+      "sale.view",
+      "sale.add",
+      "sale.edit",
+      "sale.delete",
+      "sale.dispatch",
+      "inv.view",
+      "inv.add",
+      "inv.edit",
+      "inv.delete",
+      "inv.adjust",
+      "emp.view",
+      "emp.add",
+      "emp.edit",
+      "emp.delete",
+      "payroll.process",
+      "att.view",
+      "att.mark",
+      "att.edit",
+      "att.export",
+      "rep.view",
+      "rep.generate",
+      "rep.export",
+      "settings.view",
+      "settings.company",
+      "settings.security"
+    ],
+    "created_at": "2026-09-29T14:29:24.515Z",
+    "updated_at": "2026-09-29T14:29:24.515Z"
+  }
+},
+{
+  "model": "accounts.role",
+  "pk": 2,
+  "fields": {
+    "name": "Production Manager",
+    "slug": "production_manager",
+    "description": "Comprehensive control over manufacturing, sizing, beams, and looms.",
+    "status": "Active",
+    "is_system": false,
+    "permissions": [
+      "dashboard.view",
+      "dashboard.export",
+      "mfg.view",
+      "mfg.add",
+      "mfg.edit",
+      "mfg.assign",
+      "mfg.status",
+      "yarn.view",
+      "yarn.add",
+      "yarn.edit",
+      "sizing.view",
+      "sizing.add",
+      "sizing.edit",
+      "beams.view",
+      "beams.add",
+      "beams.assign",
+      "looms.view",
+      "looms.add",
+      "looms.edit",
+      "looms.production"
+    ],
+    "created_at": "2026-09-29T14:29:24.524Z",
+    "updated_at": "2026-09-29T14:29:24.524Z"
+  }
+},
+{
+  "model": "accounts.role",
+  "pk": 3,
+  "fields": {
+    "name": "Quality Control Inspector",
+    "slug": "quality_control_inspector",
+    "description": "Performs yarn CSP audits and fabric inspection.",
+    "status": "Active",
+    "is_system": false,
+    "permissions": [
+      "dashboard.view",
+      "yarn.view",
+      "sizing.view",
+      "looms.view"
+    ],
+    "created_at": "2026-09-29T14:29:24.526Z",
+    "updated_at": "2026-09-29T14:29:24.526Z"
+  }
+},
+{
+  "model": "accounts.role",
+  "pk": 4,
+  "fields": {
+    "name": "Inventory Manager",
+    "slug": "inventory_manager",
+    "description": "Manages raw material stores, spare parts, and inventory SKUs.",
+    "status": "Active",
+    "is_system": false,
+    "permissions": [
+      "dashboard.view",
+      "yarn.view",
+      "yarn.add",
+      "yarn.edit",
+      "inv.view",
+      "inv.add",
+      "inv.edit",
+      "inv.delete",
+      "inv.adjust",
+      "po.view",
+      "po.add",
+      "po.edit"
+    ],
+    "created_at": "2026-09-29T14:29:24.528Z",
+    "updated_at": "2026-09-29T14:29:24.528Z"
+  }
+},
+{
+  "model": "accounts.role",
+  "pk": 5,
+  "fields": {
+    "name": "superrr",
+    "slug": "superrr",
+    "description": "",
+    "status": "Active",
+    "is_system": false,
+    "permissions": [
+      "dashboard.view",
+      "dashboard.export"
+    ],
+    "created_at": "2026-09-29T14:46:10.113Z",
+    "updated_at": "2026-09-29T14:46:10.113Z"
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 3,
+  "fields": {
+    "password": "pbkdf2_sha256$1500000$8Fi6Jbh2pOWLrkApHzrtd4$Svuq3CSk4S9nYW68iJ3CqtNerbsigI9QtaMvd3gC37w=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "tariq.mehmood",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-09-29T14:29:26.425Z",
+    "email": "qc@fahadweaving.com",
+    "phone": "+92 333 5544332",
+    "address": "",
+    "gender": "Male",
+    "designation": "QC Inspector",
+    "role": 3,
+    "status": "Active",
+    "two_factor_enabled": false,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 4,
+  "fields": {
+    "password": "pbkdf2_sha256$1500000$PKic1Rxl2KtgAmSWepwjl0$K0MnkzWFOKL5VZt3RB5TpbQJXPe4iRjphMh2BSsfbXo=",
+    "last_login": "2026-09-29T14:33:47.211Z",
+    "is_superuser": false,
+    "username": "sami",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-09-29T14:32:24.427Z",
+    "email": "sami@admin.com",
+    "phone": "687687598",
+    "address": "",
+    "gender": "Male",
+    "designation": "Machine Operator",
+    "role": 1,
+    "status": "Active",
+    "two_factor_enabled": false,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 5,
+  "fields": {
+    "password": "pbkdf2_sha256$1500000$zPvWpfMSi5TiufptBBvpTl$gp9Lu0JAGEM8mOokJFQKD4YHgX7McQSj4so/k/a9zyc=",
+    "last_login": "2026-09-29T14:47:02.951Z",
+    "is_superuser": false,
+    "username": "samii",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-09-29T14:41:31.777Z",
+    "email": "samii@admin.com",
+    "phone": "676876987",
+    "address": "",
+    "gender": "Male",
+    "designation": "Quality Inspector",
+    "role": 5,
+    "status": "Active",
+    "two_factor_enabled": false,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 6,
+  "fields": {
+    "password": "pbkdf2_sha256$1500000$thcMzxVuYmoDebsdVqzoWb$hvwDWf8w3w9L4TLxcEgQDq52gSNBymccdoKgeRHrQTg=",
+    "last_login": "2026-10-18T13:08:27.438Z",
+    "is_superuser": true,
+    "username": "admin",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-10-01T13:44:25.025Z",
+    "email": "admin@harmonymills.com",
+    "phone": "",
+    "address": "",
+    "gender": "Male",
+    "designation": "",
+    "role": null,
+    "status": "Active",
+    "two_factor_enabled": false,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 1,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Beam",
+    "description": "Created beam 'b1'.",
+    "module": "Factory – Beams",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T12:32:20.151Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 2,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Beam",
+    "description": "Created beam 'b2'.",
+    "module": "Factory – Beams",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T12:32:27.247Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 3,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Beam",
+    "description": "Created beam 'b3'.",
+    "module": "Factory – Beams",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T12:32:32.992Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 4,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Loom",
+    "description": "Created loom 'l1' (Code: l1).",
+    "module": "Factory – Looms",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T12:32:44.853Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 5,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Loom",
+    "description": "Created loom 'l2' (Code: l2).",
+    "module": "Factory – Looms",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T12:32:53.880Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 6,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Loom",
+    "description": "Created loom 'l3' (Code: l3).",
+    "module": "Factory – Looms",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T12:33:03.024Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 7,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Sizing",
+    "description": "Created sizing 'subhan'.",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T12:33:18.993Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 8,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Supplier",
+    "description": "Created supplier 'yarnsupplier' (SUP-0001) with 0 bank account(s).",
+    "module": "Purchase – Suppliers",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T12:33:39.583Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 9,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Yarn Name",
+    "description": "Created yarn name 'cotton'.",
+    "module": "Yarn – Setup",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T12:34:10.341Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 10,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Yarn Type",
+    "description": "Created yarn type 'cotton'.",
+    "module": "Yarn – Setup",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T12:34:23.559Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 11,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Yarn Count",
+    "description": "Created yarn count '10'.",
+    "module": "Yarn – Setup",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T12:34:29.446Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 12,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Yarn Intake",
+    "description": "Created yarn intake 'cotton' Set: BATCH-01, 10 bags.",
+    "module": "Yarn – Intake",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T12:35:32.462Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 13,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Yarn Intake",
+    "description": "Created yarn intake 'cotton' Set: BATCH-02, 15 bags.",
+    "module": "Yarn – Intake",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T12:36:41.523Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 14,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Assign Beams to Sizing Outcome",
+    "description": "Recorded 1 beam(s) [b1] in Outcome #1 (Sizing: subhan) with status 'ASSIGNED'.",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T12:38:11.453Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 15,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Yarn Outcome",
+    "description": "Created Sizing outcome of 10 bags from stock pool 'cotton'.",
+    "module": "Yarn – Outcome",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T12:38:11.457Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 16,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Receive Beams from Sizing Outcome",
+    "description": "Recorded 1 beam(s) [b1] in Outcome #1 (Sizing: subhan) with status 'RECEIVED'.",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T12:45:16.861Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 17,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Sizing Outcome",
+    "description": "Created Sizing Outcome #1 for sizing 'subhan' with 1 initial beam assignment(s).",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T12:45:16.862Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 18,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Assign Beams to Sizing Outcome",
+    "description": "Recorded 1 beam(s) [b2] in Outcome #2 (Sizing: subhan) with status 'ASSIGNED'.",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T13:37:02.383Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 19,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Yarn Outcome",
+    "description": "Created Sizing outcome of 3 bags from stock pool 'cotton'.",
+    "module": "Yarn – Outcome",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T13:37:02.387Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 20,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Receive Beams from Sizing Outcome",
+    "description": "Recorded 1 beam(s) [b2] in Outcome #2 (Sizing: subhan) with status 'RECEIVED'.",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T13:37:53.937Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 21,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Sizing Outcome",
+    "description": "Created Sizing Outcome #2 for sizing 'subhan' with 1 initial beam assignment(s).",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T13:37:53.939Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 22,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Assign Beams to Sizing Outcome",
+    "description": "Recorded 1 beam(s) [b3] in Outcome #3 (Sizing: subhan) with status 'ASSIGNED'.",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T13:49:34.363Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 23,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Yarn Outcome",
+    "description": "Created Sizing outcome of 2 bags from stock pool 'cotton'.",
+    "module": "Yarn – Outcome",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T13:49:34.376Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 24,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Receive Beams from Sizing Outcome",
+    "description": "Recorded 1 beam(s) [b3] in Outcome #3 (Sizing: subhan) with status 'RECEIVED'.",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T13:50:20.735Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 25,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Sizing Outcome",
+    "description": "Created Sizing Outcome #3 for sizing 'subhan' with 1 initial beam assignment(s).",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T13:50:20.737Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 26,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Beam",
+    "description": "Created beam 'b4'.",
+    "module": "Factory – Beams",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T14:19:35.390Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 27,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Assign Beams to Sizing Outcome",
+    "description": "Recorded 1 beam(s) [b4] in Outcome #4 (Sizing: subhan) with status 'ASSIGNED'.",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T14:20:01.371Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 28,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Yarn Outcome",
+    "description": "Created Sizing outcome of 2 bags from stock pool 'cotton'.",
+    "module": "Yarn – Outcome",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T14:20:01.375Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 29,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Receive Beams from Sizing Outcome",
+    "description": "Recorded 1 beam(s) [b4] in Outcome #4 (Sizing: subhan) with status 'RECEIVED'.",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T14:20:49.228Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 30,
+  "fields": {
+    "user": 6,
+    "username": "admin",
+    "user_full_name": "admin",
+    "action": "Create Sizing Outcome",
+    "description": "Created Sizing Outcome #4 for sizing 'subhan' with 1 initial beam assignment(s).",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-10-20T14:20:49.230Z"
+  }
+},
+{
+  "model": "factory.supplier",
+  "pk": 1,
+  "fields": {
+    "supplier_code": "SUP-0001",
+    "supplier_name": "yarnsupplier",
+    "company_name": "",
+    "address": "",
+    "phone": "578567",
+    "contact_person": "",
+    "email": "",
+    "status": "Active",
+    "supplier_type": "Yarn",
+    "registration_number": "",
+    "created_at": "2026-10-20T12:33:39.578Z",
+    "updated_at": "2026-10-20T12:33:39.578Z",
+    "created_by": 6,
+    "updated_by": 6
+  }
+},
+{
+  "model": "factory.loom",
+  "pk": 1,
+  "fields": {
+    "loom_code": "l1",
+    "loom_name": "l1",
+    "model_number": "",
+    "width": null,
+    "installation_date": null,
+    "location": "",
+    "status": "Active",
+    "notes": "",
+    "created_at": "2026-10-20T12:32:44.847Z",
+    "updated_at": "2026-10-20T12:32:44.847Z",
+    "created_by": 6,
+    "updated_by": 6
+  }
+},
+{
+  "model": "factory.loom",
+  "pk": 2,
+  "fields": {
+    "loom_code": "l2",
+    "loom_name": "l2",
+    "model_number": "",
+    "width": null,
+    "installation_date": null,
+    "location": "",
+    "status": "Active",
+    "notes": "",
+    "created_at": "2026-10-20T12:32:53.874Z",
+    "updated_at": "2026-10-20T12:32:53.874Z",
+    "created_by": 6,
+    "updated_by": 6
+  }
+},
+{
+  "model": "factory.loom",
+  "pk": 3,
+  "fields": {
+    "loom_code": "l3",
+    "loom_name": "l3",
+    "model_number": "",
+    "width": null,
+    "installation_date": null,
+    "location": "",
+    "status": "Active",
+    "notes": "",
+    "created_at": "2026-10-20T12:33:03.016Z",
+    "updated_at": "2026-10-20T12:33:03.016Z",
+    "created_by": 6,
+    "updated_by": 6
+  }
+},
+{
+  "model": "factory.beam",
+  "pk": 1,
+  "fields": {
+    "beam_name": "",
+    "beam_number": "b1",
+    "yarn_count": "",
+    "warp_count": null,
+    "total_ends": null,
+    "length": null,
+    "width": null,
+    "weight": null,
+    "production_order": "",
+    "status": "Loaded",
+    "notes": "",
+    "created_at": "2026-10-20T12:32:20.146Z",
+    "updated_at": "2026-10-20T12:45:16.854Z",
+    "created_by": 6,
+    "updated_by": 6,
+    "dispatched_yarn_outcome": null
+  }
+},
+{
+  "model": "factory.beam",
+  "pk": 2,
+  "fields": {
+    "beam_name": "",
+    "beam_number": "b2",
+    "yarn_count": "",
+    "warp_count": null,
+    "total_ends": null,
+    "length": null,
+    "width": null,
+    "weight": null,
+    "production_order": "",
+    "status": "Loaded",
+    "notes": "",
+    "created_at": "2026-10-20T12:32:27.245Z",
+    "updated_at": "2026-10-20T13:37:53.933Z",
+    "created_by": 6,
+    "updated_by": 6,
+    "dispatched_yarn_outcome": null
+  }
+},
+{
+  "model": "factory.beam",
+  "pk": 3,
+  "fields": {
+    "beam_name": "",
+    "beam_number": "b3",
+    "yarn_count": "",
+    "warp_count": null,
+    "total_ends": null,
+    "length": null,
+    "width": null,
+    "weight": null,
+    "production_order": "",
+    "status": "Loaded",
+    "notes": "",
+    "created_at": "2026-10-20T12:32:32.987Z",
+    "updated_at": "2026-10-20T13:50:20.728Z",
+    "created_by": 6,
+    "updated_by": 6,
+    "dispatched_yarn_outcome": null
+  }
+},
+{
+  "model": "factory.beam",
+  "pk": 4,
+  "fields": {
+    "beam_name": "",
+    "beam_number": "b4",
+    "yarn_count": "",
+    "warp_count": null,
+    "total_ends": null,
+    "length": null,
+    "width": null,
+    "weight": null,
+    "production_order": "",
+    "status": "Loaded",
+    "notes": "",
+    "created_at": "2026-10-20T14:19:35.387Z",
+    "updated_at": "2026-10-20T14:20:49.224Z",
+    "created_by": 6,
+    "updated_by": 6,
+    "dispatched_yarn_outcome": null
+  }
+},
+{
+  "model": "factory.yarnname",
+  "pk": 1,
+  "fields": {
+    "name": "cotton",
+    "description": "",
+    "status": "Active",
+    "created_at": "2026-10-20T12:34:10.335Z",
+    "updated_at": "2026-10-20T12:34:10.335Z",
+    "created_by": 6,
+    "updated_by": 6
+  }
+},
+{
+  "model": "factory.yarntype",
+  "pk": 1,
+  "fields": {
+    "name": "cotton",
+    "description": "",
+    "status": "Active",
+    "created_at": "2026-10-20T12:34:23.554Z",
+    "updated_at": "2026-10-20T12:34:23.554Z",
+    "created_by": 6,
+    "updated_by": 6
+  }
+},
+{
+  "model": "factory.yarncount",
+  "pk": 1,
+  "fields": {
+    "name": "10",
+    "description": "",
+    "status": "Active",
+    "created_at": "2026-10-20T12:34:29.438Z",
+    "updated_at": "2026-10-20T12:34:29.438Z",
+    "created_by": 6,
+    "updated_by": 6
+  }
+},
+{
+  "model": "factory.yarnstock",
+  "pk": 1,
+  "fields": {
+    "yarn_name": 1,
+    "yarn_type": 1,
+    "yarn_count": 1,
+    "production_type": "",
+    "price": "2798.174864",
+    "total_price": "36376.273230",
+    "remaining_bags": 13,
+    "remaining_cones": 312,
+    "remaining_weight_kg": "580.000000",
+    "remaining_weight_lb": "1278.681120",
+    "remaining_total_price": "36376.273230",
+    "total_boxes": 13,
+    "cones": 312,
+    "total_weight_kg": "580.000000",
+    "total_weight_lb": "1278.681120",
+    "created_at": "2026-10-20T12:35:32.418Z",
+    "updated_at": "2026-10-20T14:20:49.203Z",
+    "created_by": 6,
+    "updated_by": 6
+  }
+},
+{
+  "model": "factory.sizing",
+  "pk": 1,
+  "fields": {
+    "sizing_name": "subhan",
+    "contact_person": "",
+    "phone_no": "",
+    "email": "",
+    "address": "",
+    "status": "Active",
+    "notes": "",
+    "created_at": "2026-10-20T12:33:18.984Z",
+    "updated_at": "2026-10-20T12:33:18.984Z",
+    "created_by": 6,
+    "updated_by": 6
+  }
+},
+{
+  "model": "factory.sizingoutcome",
+  "pk": 1,
+  "fields": {
+    "yarn_outcome": 1,
+    "set_bill": "",
+    "outcome_date": "2026-10-20",
+    "set_no": "SET-1",
+    "sizing_name": "subhan",
+    "total_bags_on_sizing": 10,
+    "bag_packing_cone": 24,
+    "total_cones": 240,
+    "remaining_bags_on_sizing_stock": 0,
+    "remaining_cones_on_sizing_stock": 0,
+    "merged_sizing_bags": 0,
+    "merged_sizing_cones": 0,
+    "merged_from_set_nos": "",
+    "return_bags": "2.000000",
+    "return_cones": "0.000000",
+    "lagat_bags": "8.000000",
+    "lagat_cones": "192.000000",
+    "brand": "",
+    "width": "5.000000",
+    "set_length_meter": "100.000000",
+    "set_length_gaz": "109.360000",
+    "total_tarr": 5,
+    "yarn_beam": "",
+    "back_beam": "",
+    "count": "10",
+    "total_set_lumbai": "100.000000",
+    "total_set_shortage": "6.000000",
+    "rate_per_kg": "78.000000",
+    "net_weight_kg": "400.000000",
+    "total_rate": "31200.000000",
+    "amount_paid": "0.000000",
+    "amount_due": "31200.000000",
+    "payment_status": "Unpaid",
+    "remarks": "",
+    "created_at": "2026-10-20T12:45:16.754Z",
+    "updated_at": "2026-10-20T12:45:16.754Z",
+    "created_by": 6,
+    "updated_by": 6
+  }
+},
+{
+  "model": "factory.sizingoutcome",
+  "pk": 2,
+  "fields": {
+    "yarn_outcome": 2,
+    "set_bill": "",
+    "outcome_date": "2026-10-20",
+    "set_no": "SET-2",
+    "sizing_name": "subhan",
+    "total_bags_on_sizing": 3,
+    "bag_packing_cone": 24,
+    "total_cones": 72,
+    "remaining_bags_on_sizing_stock": 0,
+    "remaining_cones_on_sizing_stock": 0,
+    "merged_sizing_bags": 0,
+    "merged_sizing_cones": 0,
+    "merged_from_set_nos": "",
+    "return_bags": "1.000000",
+    "return_cones": "0.000000",
+    "lagat_bags": "2.000000",
+    "lagat_cones": "0.000000",
+    "brand": "",
+    "width": "1.000000",
+    "set_length_meter": "2.000000",
+    "set_length_gaz": "2.190000",
+    "total_tarr": 3,
+    "yarn_beam": "",
+    "back_beam": "",
+    "count": "10",
+    "total_set_lumbai": "2.000000",
+    "total_set_shortage": "3.000000",
+    "rate_per_kg": "33.000000",
+    "net_weight_kg": "120.000000",
+    "total_rate": "3960.000000",
+    "amount_paid": "0.000000",
+    "amount_due": "3960.000000",
+    "payment_status": "Unpaid",
+    "remarks": "",
+    "created_at": "2026-10-20T13:37:53.804Z",
+    "updated_at": "2026-10-20T13:37:53.804Z",
+    "created_by": 6,
+    "updated_by": 6
+  }
+},
+{
+  "model": "factory.sizingoutcome",
+  "pk": 3,
+  "fields": {
+    "yarn_outcome": 3,
+    "set_bill": "",
+    "outcome_date": "2026-10-20",
+    "set_no": "SET-3",
+    "sizing_name": "subhan",
+    "total_bags_on_sizing": 2,
+    "bag_packing_cone": 24,
+    "total_cones": 48,
+    "remaining_bags_on_sizing_stock": 0,
+    "remaining_cones_on_sizing_stock": 0,
+    "merged_sizing_bags": 0,
+    "merged_sizing_cones": 0,
+    "merged_from_set_nos": "",
+    "return_bags": "1.000000",
+    "return_cones": "0.000000",
+    "lagat_bags": "1.000000",
+    "lagat_cones": "0.000000",
+    "brand": "",
+    "width": "11.000000",
+    "set_length_meter": "3.000000",
+    "set_length_gaz": "3.280000",
+    "total_tarr": 1,
+    "yarn_beam": "",
+    "back_beam": "",
+    "count": "10",
+    "total_set_lumbai": "3.000000",
+    "total_set_shortage": "1.000000",
+    "rate_per_kg": "1.000000",
+    "net_weight_kg": "80.000000",
+    "total_rate": "80.000000",
+    "amount_paid": "0.000000",
+    "amount_due": "80.000000",
+    "payment_status": "Unpaid",
+    "remarks": "",
+    "created_at": "2026-10-20T13:50:20.551Z",
+    "updated_at": "2026-10-20T13:50:20.551Z",
+    "created_by": 6,
+    "updated_by": 6
+  }
+},
+{
+  "model": "factory.sizingoutcome",
+  "pk": 4,
+  "fields": {
+    "yarn_outcome": 4,
+    "set_bill": "",
+    "outcome_date": "2026-10-20",
+    "set_no": "SET-4",
+    "sizing_name": "subhan",
+    "total_bags_on_sizing": 2,
+    "bag_packing_cone": 24,
+    "total_cones": 48,
+    "remaining_bags_on_sizing_stock": 0,
+    "remaining_cones_on_sizing_stock": 0,
+    "merged_sizing_bags": 0,
+    "merged_sizing_cones": 0,
+    "merged_from_set_nos": "",
+    "return_bags": "1.000000",
+    "return_cones": "0.000000",
+    "lagat_bags": "1.000000",
+    "lagat_cones": "0.000000",
+    "brand": "",
+    "width": "1.000000",
+    "set_length_meter": "22.000000",
+    "set_length_gaz": "24.060000",
+    "total_tarr": 3,
+    "yarn_beam": "",
+    "back_beam": "",
+    "count": "101",
+    "total_set_lumbai": "22.000000",
+    "total_set_shortage": "3.000000",
+    "rate_per_kg": "3.000000",
+    "net_weight_kg": "80.000000",
+    "total_rate": "240.000000",
+    "amount_paid": "0.000000",
+    "amount_due": "240.000000",
+    "payment_status": "Unpaid",
+    "remarks": "",
+    "created_at": "2026-10-20T14:20:49.083Z",
+    "updated_at": "2026-10-20T14:20:49.083Z",
+    "created_by": 6,
+    "updated_by": 6
+  }
+},
+{
+  "model": "factory.sizingbeamassignment",
+  "pk": 1,
+  "fields": {
+    "yarn_outcome": 1,
+    "beam_yarn_length": {
+      "1": 100
+    },
+    "status": "RECEIVED",
+    "assigned_at": "2026-10-20T12:38:11.449Z",
+    "released_at": null,
+    "created_at": "2026-10-20T12:38:11.449Z",
+    "updated_at": "2026-10-20T12:45:16.853Z",
+    "created_by": 6,
+    "updated_by": 6,
+    "beam": [
+      1
+    ]
+  }
+},
+{
+  "model": "factory.sizingbeamassignment",
+  "pk": 2,
+  "fields": {
+    "yarn_outcome": 2,
+    "beam_yarn_length": {
+      "2": 2
+    },
+    "status": "RECEIVED",
+    "assigned_at": "2026-10-20T13:37:02.377Z",
+    "released_at": null,
+    "created_at": "2026-10-20T13:37:02.377Z",
+    "updated_at": "2026-10-20T13:37:53.932Z",
+    "created_by": 6,
+    "updated_by": 6,
+    "beam": [
+      2
+    ]
+  }
+},
+{
+  "model": "factory.sizingbeamassignment",
+  "pk": 3,
+  "fields": {
+    "yarn_outcome": 3,
+    "beam_yarn_length": {
+      "3": 3
+    },
+    "status": "RECEIVED",
+    "assigned_at": "2026-10-20T13:49:34.360Z",
+    "released_at": null,
+    "created_at": "2026-10-20T13:49:34.360Z",
+    "updated_at": "2026-10-20T13:50:20.727Z",
+    "created_by": 6,
+    "updated_by": 6,
+    "beam": [
+      3
+    ]
+  }
+},
+{
+  "model": "factory.sizingbeamassignment",
+  "pk": 4,
+  "fields": {
+    "yarn_outcome": 4,
+    "beam_yarn_length": {
+      "4": 22
+    },
+    "status": "RECEIVED",
+    "assigned_at": "2026-10-20T14:20:01.367Z",
+    "released_at": null,
+    "created_at": "2026-10-20T14:20:01.367Z",
+    "updated_at": "2026-10-20T14:20:49.223Z",
+    "created_by": 6,
+    "updated_by": 6,
+    "beam": [
+      4
+    ]
+  }
+},
+{
+  "model": "factory.yarnintake",
+  "pk": 1,
+  "fields": {
+    "yarn_name": 1,
+    "yarn_type": 1,
+    "yarn_count": 1,
+    "set_no": "BATCH-01",
+    "intake_date": "2026-10-20",
+    "supplier": 1,
+    "stock": 1,
+    "production_type": "",
+    "bags": 10,
+    "cones_per_bag": 24,
+    "rate_per_lb": "30.000000",
+    "weight_per_bag_kg": "45.000000",
+    "total_cones": 240,
+    "total_rate": "29762.405370",
+    "net_weight_kg": "450.000000",
+    "net_weight_lb": "992.080179",
+    "outcome_bags": 0,
+    "outcome_weight_kg": "0.000000",
+    "outcome_weight_lb": "0.000000",
+    "outcome_total_rate": "0.000000",
+    "return_bags": "0.000000",
+    "return_cones": "0.000000",
+    "return_weight_kg": "0.000000",
+    "return_weight_lb": "0.000000",
+    "return_total_rate": "0.000000",
+    "remaining_bags": 10,
+    "remaining_cones": 240,
+    "remaining_weight_kg": "450.000000",
+    "remaining_weight_lb": "992.080179",
+    "remaining_total_rate": "29762.405370",
+    "created_at": "2026-10-20T12:35:32.429Z",
+    "updated_at": "2026-10-20T12:35:32.429Z",
+    "created_by": 6,
+    "updated_by": 6
+  }
+},
+{
+  "model": "factory.yarnintake",
+  "pk": 2,
+  "fields": {
+    "yarn_name": 1,
+    "yarn_type": 1,
+    "yarn_count": 1,
+    "set_no": "BATCH-02",
+    "intake_date": "2026-10-20",
+    "supplier": 1,
+    "stock": 1,
+    "production_type": "",
+    "bags": 15,
+    "cones_per_bag": 24,
+    "rate_per_lb": "25.000000",
+    "weight_per_bag_kg": "40.000000",
+    "total_cones": 360,
+    "total_rate": "6613.867860",
+    "net_weight_kg": "600.000000",
+    "net_weight_lb": "1322.773572",
+    "outcome_bags": 17,
+    "outcome_weight_kg": "680.000000",
+    "outcome_weight_lb": "1499.143382",
+    "outcome_total_rate": "37478.584550",
+    "return_bags": "5.000000",
+    "return_cones": "0.000000",
+    "return_weight_kg": "200.000000",
+    "return_weight_lb": "440.924524",
+    "return_total_rate": "11023.113100",
+    "remaining_bags": 3,
+    "remaining_cones": 72,
+    "remaining_weight_kg": "120.000000",
+    "remaining_weight_lb": "264.554714",
+    "remaining_total_rate": "6613.867860",
+    "created_at": "2026-10-20T12:36:41.497Z",
+    "updated_at": "2026-10-20T12:36:41.497Z",
+    "created_by": 6,
+    "updated_by": 6
+  }
+},
+{
+  "model": "factory.yarnoutcome",
+  "pk": 1,
+  "fields": {
+    "stock": 1,
+    "outcome_type": "Sizing",
+    "outcome_bags": 10,
+    "outcome_cones_per_bag": 24,
+    "outcome_weight_per_bag_kg": "40.000000",
+    "outcome_weight_kg": "400.000000",
+    "outcome_weight_lb": "881.849048",
+    "yarn_buyer": null,
+    "sizing": 1,
+    "total_price": "0.000000",
+    "status": "Received",
+    "outcome_date": "2026-10-20",
+    "notes": "",
+    "merged_sizing_bags": 0,
+    "merged_sizing_cones": 0,
+    "created_at": "2026-10-20T12:38:11.356Z",
+    "updated_at": "2026-10-20T12:45:16.811Z",
+    "created_by": 6,
+    "updated_by": 6,
+    "merged_from_sizing_outcomes": []
+  }
+},
+{
+  "model": "factory.yarnoutcome",
+  "pk": 2,
+  "fields": {
+    "stock": 1,
+    "outcome_type": "Sizing",
+    "outcome_bags": 3,
+    "outcome_cones_per_bag": 24,
+    "outcome_weight_per_bag_kg": "40.000000",
+    "outcome_weight_kg": "120.000000",
+    "outcome_weight_lb": "264.554714",
+    "yarn_buyer": null,
+    "sizing": 1,
+    "total_price": "0.000000",
+    "status": "Received",
+    "outcome_date": "2026-10-20",
+    "notes": "",
+    "merged_sizing_bags": 0,
+    "merged_sizing_cones": 0,
+    "created_at": "2026-10-20T13:37:02.266Z",
+    "updated_at": "2026-10-20T13:37:53.874Z",
+    "created_by": 6,
+    "updated_by": 6,
+    "merged_from_sizing_outcomes": []
+  }
+},
+{
+  "model": "factory.yarnoutcome",
+  "pk": 3,
+  "fields": {
+    "stock": 1,
+    "outcome_type": "Sizing",
+    "outcome_bags": 2,
+    "outcome_cones_per_bag": 24,
+    "outcome_weight_per_bag_kg": "40.000000",
+    "outcome_weight_kg": "80.000000",
+    "outcome_weight_lb": "176.369810",
+    "yarn_buyer": null,
+    "sizing": 1,
+    "total_price": "0.000000",
+    "status": "Received",
+    "outcome_date": "2026-10-20",
+    "notes": "",
+    "merged_sizing_bags": 0,
+    "merged_sizing_cones": 0,
+    "created_at": "2026-10-20T13:49:34.257Z",
+    "updated_at": "2026-10-20T13:50:20.643Z",
+    "created_by": 6,
+    "updated_by": 6,
+    "merged_from_sizing_outcomes": []
+  }
+},
+{
+  "model": "factory.yarnoutcome",
+  "pk": 4,
+  "fields": {
+    "stock": 1,
+    "outcome_type": "Sizing",
+    "outcome_bags": 2,
+    "outcome_cones_per_bag": 24,
+    "outcome_weight_per_bag_kg": "40.000000",
+    "outcome_weight_kg": "80.000000",
+    "outcome_weight_lb": "176.369810",
+    "yarn_buyer": null,
+    "sizing": 1,
+    "total_price": "0.000000",
+    "status": "Received",
+    "outcome_date": "2026-10-20",
+    "notes": "",
+    "merged_sizing_bags": 0,
+    "merged_sizing_cones": 0,
+    "created_at": "2026-10-20T14:20:01.260Z",
+    "updated_at": "2026-10-20T14:20:49.160Z",
+    "created_by": 6,
+    "updated_by": 6,
+    "merged_from_sizing_outcomes": []
+  }
+},
+{
+  "model": "factory.yarnoutcomeitem",
+  "pk": 1,
+  "fields": {
+    "yarn_outcome": 1,
+    "yarn_intake": 2,
+    "bags": 10,
+    "cones_per_bag": 24,
+    "weight_per_bag_kg": "40.000000",
+    "weight_kg": "400.000000",
+    "weight_lb": "881.849048",
+    "created_at": "2026-10-20T12:38:11.358Z",
+    "updated_at": "2026-10-20T12:38:11.358Z"
+  }
+},
+{
+  "model": "factory.yarnoutcomeitem",
+  "pk": 2,
+  "fields": {
+    "yarn_outcome": 2,
+    "yarn_intake": 2,
+    "bags": 3,
+    "cones_per_bag": 24,
+    "weight_per_bag_kg": "40.000000",
+    "weight_kg": "120.000000",
+    "weight_lb": "264.554714",
+    "created_at": "2026-10-20T13:37:02.278Z",
+    "updated_at": "2026-10-20T13:37:02.278Z"
+  }
+},
+{
+  "model": "factory.yarnoutcomeitem",
+  "pk": 3,
+  "fields": {
+    "yarn_outcome": 3,
+    "yarn_intake": 2,
+    "bags": 2,
+    "cones_per_bag": 24,
+    "weight_per_bag_kg": "40.000000",
+    "weight_kg": "80.000000",
+    "weight_lb": "176.369810",
+    "created_at": "2026-10-20T13:49:34.259Z",
+    "updated_at": "2026-10-20T13:49:34.259Z"
+  }
+},
+{
+  "model": "factory.yarnoutcomeitem",
+  "pk": 4,
+  "fields": {
+    "yarn_outcome": 4,
+    "yarn_intake": 2,
+    "bags": 2,
+    "cones_per_bag": 24,
+    "weight_per_bag_kg": "40.000000",
+    "weight_kg": "80.000000",
+    "weight_lb": "176.369810",
+    "created_at": "2026-10-20T14:20:01.262Z",
+    "updated_at": "2026-10-20T14:20:01.262Z"
+  }
+}
+]

@@ -9,6 +9,7 @@ from factory.beam.models import Beam
 from factory.yarn.yarn_stock.models import LB_PER_KG
 from factory.yarn.yarn_intake.models import YarnOutcome
 from factory.yarn.sizing.models import Sizing, SizingOutcome, SizingBeamAssignment
+from factory.yarn.warping.models import Warping
 from factory.yarn.sizing.services import create_sizing_outcome, assign_beams_to_outcome
 
 
@@ -21,6 +22,8 @@ class YarnOutcomeMinSerializer(serializers.ModelSerializer):
     yarnCount = serializers.SerializerMethodField()
     intakeSetNo = serializers.SerializerMethodField()
     sizingName = serializers.CharField(source="sizing.sizing_name", read_only=True)
+    warpingName = serializers.CharField(source="warping.warping_name", read_only=True)
+    processingUnitName = serializers.CharField(source="processing_unit_name", read_only=True)
     stockId = serializers.IntegerField(source="stock_id", read_only=True)
     stock_id = serializers.IntegerField(read_only=True)
     totalSetBags = serializers.IntegerField(source="total_set_bags", read_only=True)
@@ -50,6 +53,8 @@ class YarnOutcomeMinSerializer(serializers.ModelSerializer):
             "yarnCount",
             "intakeSetNo",
             "sizingName",
+            "warpingName",
+            "processingUnitName",
             "status",
         ]
 
@@ -651,6 +656,16 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
     sizing_id = serializers.IntegerField(required=False, write_only=True)
     sizingDetail = SizingMinSerializer(source="sizing", read_only=True)
 
+    # Warping unit support
+    warping = serializers.PrimaryKeyRelatedField(
+        queryset=Warping.objects.all(),
+        required=False,
+        write_only=True,
+    )
+    warpingId = serializers.IntegerField(source="warping_id", required=False, write_only=True)
+    warping_id = serializers.IntegerField(required=False, write_only=True)
+    warpingDetail = serializers.SerializerMethodField()
+
     setNo = serializers.CharField(source="set_no", required=False, allow_blank=True, default="")
     set_no = serializers.CharField(required=False, allow_blank=True, default="")
     setBill = serializers.CharField(source="set_bill", required=False, allow_blank=True, default="")
@@ -855,6 +870,10 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "sizingId",
             "sizing_id",
             "sizingDetail",
+            "warping",
+            "warpingId",
+            "warping_id",
+            "warpingDetail",
             "setNo",
             "set_no",
             "setBill",
@@ -945,6 +964,7 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "amountDue",
             "amount_due",
             "sizingDetail",
+            "warpingDetail",
             "beamAssignments",
             "beamLoadings",
             "totalBeams",
@@ -970,6 +990,15 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
                 "username": obj.updated_by.username,
                 "fullName": getattr(obj.updated_by, "full_name", obj.updated_by.username),
             }
+        return None
+
+    def get_warpingDetail(self, obj):
+        warping = getattr(obj, "warping", None)
+        if not warping and obj.yarn_outcome:
+            warping = getattr(obj.yarn_outcome, "warping", None)
+        if warping:
+            from factory.yarn.warping.serializers import WarpingMinSerializer
+            return WarpingMinSerializer(warping).data
         return None
 
     def to_internal_value(self, data):
@@ -1005,6 +1034,7 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "payment_status": "paymentStatus",
             "outcome_date": "outcomeDate",
             "sizing_id": "sizingId",
+            "warping_id": "warpingId",
             "yarn_outcome_id": "yarnOutcomeId",
             "beam_yarn_length": "beamYarnLength",
         }
@@ -1094,6 +1124,64 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
                         "sizingId": [f"Sizing unit with ID {raw_sizing_id} does not exist."]
                     })
 
+            raw_warping_id = (
+                self.initial_data.get("warping_id")
+                or self.initial_data.get("warpingId")
+                or (attrs.get("warping").id if attrs.get("warping") else None)
+            )
+            if raw_warping_id:
+                try:
+                    warping_inst = Warping.objects.get(id=raw_warping_id)
+                    yo = None
+                    raw_beam_ids = (
+                        attrs.get("beam_ids")
+                        or attrs.get("beamIds")
+                        or self.initial_data.get("beam_ids")
+                        or self.initial_data.get("beamIds")
+                    )
+                    if raw_beam_ids and isinstance(raw_beam_ids, list):
+                        yo = YarnOutcome.objects.filter(
+                            warping=warping_inst,
+                            outcome_type=YarnOutcome.OutcomeTypeChoices.WARPING,
+                            beam_assignments__beam__id__in=raw_beam_ids,
+                        ).order_by("-id").first()
+                    if not yo:
+                        yo = YarnOutcome.objects.filter(
+                            warping=warping_inst,
+                            outcome_type=YarnOutcome.OutcomeTypeChoices.WARPING,
+                        ).order_by("-id").first()
+                    if not yo:
+                        from factory.yarn.yarn_intake.models import YarnIntake, Supplier
+                        from django.utils import timezone
+                        intake = YarnIntake.objects.first()
+                        if not intake:
+                            supplier = Supplier.objects.first()
+                            if not supplier:
+                                supplier = Supplier.objects.create(supplier_name="Auto Supplier", status="Active")
+                            intake = YarnIntake.objects.create(
+                                yarn_name="Default Intake",
+                                supplier=supplier,
+                                bags=0,
+                                cones_per_bag=0,
+                                weight_per_bag_kg=0,
+                                rate_per_lb=0,
+                                intake_date=attrs.get("outcome_date") or timezone.now().date(),
+                            )
+                        yo = YarnOutcome.objects.create(
+                            yarn_intake=intake,
+                            outcome_type=YarnOutcome.OutcomeTypeChoices.WARPING,
+                            warping=warping_inst,
+                            outcome_bags=0,
+                            outcome_weight_per_bag_kg=0,
+                            outcome_date=attrs.get("outcome_date") or timezone.now().date(),
+                        )
+                    if yo:
+                        attrs["yarn_outcome"] = yo
+                except Warping.DoesNotExist:
+                    raise serializers.ValidationError({
+                        "warpingId": [f"Warping unit with ID {raw_warping_id} does not exist."]
+                    })
+
         if not attrs.get("yarn_outcome") and not self.instance:
             raise serializers.ValidationError({
                 "yarn_outcome": ["Yarn outcome reference (yarn_outcome or yarn_outcome_id) is required."]
@@ -1147,6 +1235,8 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
         validated_data.pop("beamYarnLength", None)
         validated_data.pop("sizing_id", None)
         validated_data.pop("sizing", None)
+        validated_data.pop("warping_id", None)
+        validated_data.pop("warping", None)
         validated_data.pop("yarn_outcome_id", None)
 
         request = self.context.get("request")
@@ -1176,6 +1266,8 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
         validated_data.pop("beamYarnLength", None)
         validated_data.pop("sizing_id", None)
         validated_data.pop("sizing", None)
+        validated_data.pop("warping_id", None)
+        validated_data.pop("warping", None)
         validated_data.pop("yarn_outcome_id", None)
 
         request = self.context.get("request")

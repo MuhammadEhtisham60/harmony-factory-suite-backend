@@ -4,6 +4,7 @@ Filters for Sizing, SizingOutcome, and SizingBeamAssignment modules.
 
 import django_filters
 from django.db.models import Q
+from factory.yarn.processing import PROCESSING_OUTCOME_TYPES
 from .models import Sizing, SizingOutcome, SizingBeamAssignment
 
 
@@ -30,6 +31,11 @@ class SizingFilter(django_filters.FilterSet):
 class SizingOutcomeFilter(django_filters.FilterSet):
     yarn_outcome = django_filters.NumberFilter(field_name="yarn_outcome_id")
     sizing = django_filters.NumberFilter(field_name="yarn_outcome__sizing_id")
+    warping = django_filters.NumberFilter(field_name="yarn_outcome__warping_id")
+    outcome_type = django_filters.ChoiceFilter(
+        field_name="yarn_outcome__outcome_type",
+        choices=[(t, t) for t in PROCESSING_OUTCOME_TYPES],
+    )
     set_no = django_filters.CharFilter(lookup_expr="icontains")
     set_bill = django_filters.CharFilter(lookup_expr="icontains")
     outcome_date = django_filters.DateFilter(field_name="outcome_date")
@@ -40,12 +46,14 @@ class SizingOutcomeFilter(django_filters.FilterSet):
 
     class Meta:
         model = SizingOutcome
-        fields = ["yarn_outcome", "sizing", "outcome_date", "set_no", "set_bill", "payment_status"]
+        fields = ["yarn_outcome", "sizing", "warping", "outcome_type", "outcome_date", "set_no", "set_bill", "payment_status"]
 
     def filter_search(self, queryset, name, value):
         return queryset.filter(
             Q(yarn_outcome__sizing__sizing_name__icontains=value)
             | Q(yarn_outcome__sizing__contact_person__icontains=value)
+            | Q(yarn_outcome__warping__warping_name__icontains=value)
+            | Q(yarn_outcome__warping__contact_person__icontains=value)
             | Q(yarn_outcome__yarn_intakes__yarn_name__name__icontains=value)
             | Q(sizing_name__icontains=value)
             | Q(set_no__icontains=value)

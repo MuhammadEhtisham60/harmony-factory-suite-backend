@@ -100,7 +100,20 @@ if DATABASE_URL:
             )
         }
     except ImportError:
-        pass
+        from urllib.parse import urlparse, unquote
+        _u = urlparse(DATABASE_URL)
+        DATABASES = {
+            "default": {
+                "ENGINE": "django.db.backends.postgresql",
+                "NAME": _u.path.lstrip("/"),
+                "USER": unquote(_u.username) if _u.username else "",
+                "PASSWORD": unquote(_u.password) if _u.password else "",
+                "HOST": _u.hostname or "localhost",
+                "PORT": str(_u.port or 5432),
+                "OPTIONS": {"sslmode": "require"},
+                "CONN_MAX_AGE": 600,
+            }
+        }
 
 if "default" not in locals().get("DATABASES", {}):
     DATABASES = {

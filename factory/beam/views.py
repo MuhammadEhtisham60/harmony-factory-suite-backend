@@ -27,6 +27,10 @@ from .serializers import (
 from .filters import BeamFilter, BeamLoadingFilter, ProductionFilter
 
 
+class BeamPagination(StandardResultsSetPagination):
+    page_size = 50
+    max_page_size = 10000
+
 
 class BeamViewSet(ModelViewSet):
     """
@@ -49,7 +53,7 @@ class BeamViewSet(ModelViewSet):
         .all()
     )
     permission_classes = [IsAuthenticated, HasERPModulePermission]
-    pagination_class = StandardResultsSetPagination
+    pagination_class = BeamPagination
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = BeamFilter
@@ -230,17 +234,30 @@ class BeamViewSet(ModelViewSet):
     def available(self, request):
         """
         Returns list of currently available beams ready for sizing assignment.
+        Unlimited by default for dropdown selectors, or paginated if explicit 'page' query param is provided.
         """
         qs = (
             self.filter_queryset(self.get_queryset())
             .filter(status=Beam.StatusChoices.AVAILABLE)
         )
-        page = self.paginate_queryset(qs)
-        if page is not None:
-            serializer = BeamListSerializer(page, many=True, context={"request": request})
-            return self.get_paginated_response(serializer.data)
+        paginate = (
+            "page" in request.query_params
+            and request.query_params.get("page_size") != "all"
+            and request.query_params.get("all") not in ("true", "1")
+        )
+        if paginate:
+            page = self.paginate_queryset(qs)
+            if page is not None:
+                serializer = BeamListSerializer(page, many=True, context={"request": request})
+                return self.get_paginated_response(serializer.data)
+
         serializer = BeamListSerializer(qs, many=True, context={"request": request})
-        return Response({"success": True, "data": serializer.data})
+        return Response({
+            "success": True,
+            "count": qs.count(),
+            "results": serializer.data,
+            "data": serializer.data,
+        })
 
     @action(detail=True, methods=["get"], url_path="sizing-history")
     def sizing_history(self, request, pk=None):

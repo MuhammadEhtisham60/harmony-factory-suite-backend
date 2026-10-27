@@ -22,4 +22,5 @@ class FactoryConfig(AppConfig):
         import factory.yarn.yarn_stock.models
         import factory.yarn.yarn_intake.models
         import factory.yarn.sizing.models
+        import factory.yarn.warping.models
         import factory.cloth.models
