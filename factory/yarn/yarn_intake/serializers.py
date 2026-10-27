@@ -23,7 +23,64 @@ from factory.yarn.sizing.models import Sizing
 from factory.yarn.warping.models import Warping
 from factory.yarn.yarn_stock.models import YarnStock, LB_PER_KG
 from factory.yarn.yarn_stock.serializers import YarnStockMinSerializer
-from .models import YarnIntake, YarnOutcome, YarnOutcomeItem
+from factory.yarn.b_grade_yarn.models import BGradeYarn
+from .models import YarnIntake, YarnOutcome, YarnOutcomeItem, YarnOutcomeBGradeItem
+
+
+class YarnOutcomeBGradeItemSerializer(serializers.ModelSerializer):
+    """
+    Serializer for B-grade yarn batch items dispatched within a YarnOutcome.
+    """
+    bGradeYarn = serializers.PrimaryKeyRelatedField(
+        source="b_grade_yarn",
+        queryset=BGradeYarn.objects.all(),
+        required=False,
+    )
+    bGradeYarnId = serializers.IntegerField(
+        write_only=True,
+        required=False,
+    )
+    cones = serializers.IntegerField(min_value=1)
+    weightKg = serializers.DecimalField(
+        source="weight_kg", max_digits=15, decimal_places=6, read_only=True
+    )
+    weightLb = serializers.DecimalField(
+        source="weight_lb", max_digits=15, decimal_places=6, read_only=True
+    )
+    bGradeYarnDetail = serializers.SerializerMethodField()
+
+    class Meta:
+        model = YarnOutcomeBGradeItem
+        fields = [
+            "id",
+            "bGradeYarn",
+            "bGradeYarnId",
+            "cones",
+            "weightKg",
+            "weightLb",
+            "bGradeYarnDetail",
+        ]
+        read_only_fields = ["id", "weightKg", "weightLb", "bGradeYarnDetail"]
+
+    def get_bGradeYarnDetail(self, obj):
+        if obj.b_grade_yarn:
+            return {
+                "id": obj.b_grade_yarn.id,
+                "lotNumber": obj.b_grade_yarn.lot_number,
+                "productionType": obj.b_grade_yarn.production_type,
+                "remainingCones": obj.b_grade_yarn.cones,
+                "remainingWeightKg": str(obj.b_grade_yarn.weight_kg),
+            }
+        return None
+
+    def to_internal_value(self, data):
+        data = data.copy() if hasattr(data, "copy") else dict(data)
+        if "b_grade_yarn" in data and "bGradeYarn" not in data:
+            data["bGradeYarn"] = data["b_grade_yarn"]
+        if "b_grade_yarn_id" in data and "bGradeYarnId" not in data:
+            data["bGradeYarnId"] = data["b_grade_yarn_id"]
+        return super().to_internal_value(data)
+
 
 
 # ── Supplier mini-repr ─────────────────────────────────────────────────────
@@ -279,6 +336,20 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         child=serializers.IntegerField(), required=False, write_only=True
     )
 
+    # ── B-Grade Cones inputs & outputs ────────────────────────────────────
+    bGradeCones = serializers.IntegerField(source="b_grade_cones", read_only=True)
+    b_grade_cones = serializers.IntegerField(read_only=True)
+    bGradeWeightKg = serializers.DecimalField(
+        source="b_grade_weight_kg", max_digits=15, decimal_places=6, read_only=True
+    )
+    b_grade_weight_kg = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
+    bGradeWeightLb = serializers.DecimalField(
+        source="b_grade_weight_lb", max_digits=15, decimal_places=6, read_only=True
+    )
+    b_grade_weight_lb = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
+    bGradeItems = YarnOutcomeBGradeItemSerializer(source="b_grade_items", many=True, read_only=True)
+    b_grade_items = YarnOutcomeBGradeItemSerializer(many=True, read_only=True)
+
     # ── Read-only calculated ──────────────────────────────────────────────
     outcomeWeightKg = serializers.DecimalField(
         source="outcome_weight_kg", max_digits=15, decimal_places=6, read_only=True
@@ -339,6 +410,14 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
             "mergedFromSets",
             "mergedFromSizingOutcomeIds",
             "merged_from_sizing_outcome_ids",
+            "bGradeCones",
+            "b_grade_cones",
+            "bGradeWeightKg",
+            "b_grade_weight_kg",
+            "bGradeWeightLb",
+            "b_grade_weight_lb",
+            "bGradeItems",
+            "b_grade_items",
             "yarnBuyer",
             "yarnBuyerDetail",
             "sizing",
@@ -367,6 +446,8 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
             "id", "outcomeWeightKg", "outcomeWeightLb",
             "totalSetBags", "total_set_bags", "totalSetCones", "total_set_cones", "mergedFromSets",
             "intakes", "items", "intakeSetNumbers", "intakeSetNoDisplay",
+            "bGradeCones", "b_grade_cones", "bGradeWeightKg", "b_grade_weight_kg",
+            "bGradeWeightLb", "b_grade_weight_lb", "bGradeItems", "b_grade_items",
             "yarnName", "yarnType", "yarnCount", "yarnIntakeDetail",
             "beamAssignments", "totalBeams", "status", "sizingOutcome", "isReceived", "isPartiallyReceived",
             "createdAt", "updatedAt", "createdBy", "updatedBy",
@@ -533,6 +614,17 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         ret["intakeSetNumbers"] = list(dict.fromkeys(set_nos))
         ret["intakeSetNoDisplay"] = ", ".join(list(dict.fromkeys(set_nos))) if set_nos else ""
 
+        bg_items_qs = instance.b_grade_items.all().select_related("b_grade_yarn")
+        bg_items_data = YarnOutcomeBGradeItemSerializer(bg_items_qs, many=True, context=self.context).data
+        ret["bGradeItems"] = bg_items_data
+        ret["b_grade_items"] = bg_items_data
+        ret["bGradeCones"] = instance.b_grade_cones or 0
+        ret["b_grade_cones"] = instance.b_grade_cones or 0
+        ret["bGradeWeightKg"] = str(instance.b_grade_weight_kg) if instance.b_grade_weight_kg is not None else "0.000000"
+        ret["b_grade_weight_kg"] = str(instance.b_grade_weight_kg) if instance.b_grade_weight_kg is not None else "0.000000"
+        ret["bGradeWeightLb"] = str(instance.b_grade_weight_lb) if instance.b_grade_weight_lb is not None else "0.000000"
+        ret["b_grade_weight_lb"] = str(instance.b_grade_weight_lb) if instance.b_grade_weight_lb is not None else "0.000000"
+
         if hasattr(instance, "sizing_outcomes") and instance.sizing_outcomes.exists():
             so = instance.sizing_outcomes.order_by("-id").first()
             if so:
@@ -600,6 +692,93 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
     # ── Validation ────────────────────────────────────────────────────────
 
     def validate(self, attrs):
+        # ── Parse B-grade items if provided ─────────────────────────────────
+        raw_bg_items = (
+            self.initial_data.get("bGradeItems")
+            or self.initial_data.get("b_grade_items")
+            or self.initial_data.get("bGradeBatches")
+            or self.initial_data.get("b_grade_batches")
+        )
+        parsed_bg_items = []
+        if raw_bg_items is not None:
+            if not isinstance(raw_bg_items, (list, tuple)):
+                raw_bg_items = [raw_bg_items]
+            for idx, item in enumerate(raw_bg_items):
+                if not isinstance(item, dict):
+                    continue
+                raw_bg_id = (
+                    item.get("bGradeYarn")
+                    or item.get("b_grade_yarn")
+                    or item.get("bGradeYarnId")
+                    or item.get("b_grade_yarn_id")
+                    or item.get("id")
+                )
+                if not raw_bg_id:
+                    continue
+                try:
+                    bg_obj = BGradeYarn.objects.get(pk=raw_bg_id) if not isinstance(raw_bg_id, BGradeYarn) else raw_bg_id
+                except (BGradeYarn.DoesNotExist, ValueError):
+                    raise serializers.ValidationError({
+                        "bGradeItems": [f"Invalid B-grade yarn ID '{raw_bg_id}' at position {idx}."]
+                    })
+                raw_cones = item.get("cones") or item.get("bGradeCones") or item.get("b_grade_cones")
+                try:
+                    cones_val = int(raw_cones)
+                    if cones_val <= 0:
+                        raise ValueError()
+                except (ValueError, TypeError):
+                    raise serializers.ValidationError({
+                        "bGradeItems": [f"Cones must be a positive integer for B-grade batch #{bg_obj.id}."]
+                    })
+
+                avail_cones = bg_obj.cones
+                if self.instance:
+                    prev_bg_cones = self.instance.b_grade_items.filter(b_grade_yarn=bg_obj).aggregate(s=Sum("cones"))["s"] or 0
+                    avail_cones += prev_bg_cones
+
+                if cones_val > avail_cones:
+                    raise serializers.ValidationError({
+                        "bGradeItems": [
+                            f"Requested {cones_val} cones exceeds available {avail_cones} cones in B-grade batch #{bg_obj.id}."
+                        ]
+                    })
+
+                if bg_obj.cones > 0 and bg_obj.weight_kg > 0:
+                    avg_w = Decimal(str(bg_obj.weight_kg)) / Decimal(str(bg_obj.cones))
+                    if cones_val == bg_obj.cones:
+                        bg_kg = Decimal(str(bg_obj.weight_kg))
+                    else:
+                        bg_kg = (Decimal(str(cones_val)) * avg_w).quantize(Decimal("0.000001"))
+                else:
+                    bg_kg = Decimal("0.000000")
+                bg_lb = (bg_kg * LB_PER_KG).quantize(Decimal("0.000001"))
+
+                parsed_bg_items.append({
+                    "b_grade": bg_obj,
+                    "cones": cones_val,
+                    "weight_kg": bg_kg,
+                    "weight_lb": bg_lb,
+                })
+
+        # B-grade cones can only be dispatched for Warping and Weft outcomes
+        effective_outcome_type = (
+            attrs.get("outcome_type")
+            or self.initial_data.get("outcomeType")
+            or self.initial_data.get("outcome_type")
+            or (self.instance.outcome_type if self.instance else None)
+        )
+        if parsed_bg_items and effective_outcome_type not in [
+            YarnOutcome.OutcomeTypeChoices.WARPING,
+            YarnOutcome.OutcomeTypeChoices.WEFT,
+        ]:
+            raise serializers.ValidationError({
+                "bGradeItems": [
+                    f"B-grade cones can only be dispatched for Warping and Weft outcomes, not for {effective_outcome_type or 'this outcome'}."
+                ]
+            })
+
+        attrs["_parsed_bg_items"] = parsed_bg_items
+
         raw_items = (
             self.initial_data.get("intakes")
             or self.initial_data.get("items")
@@ -732,71 +911,86 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
                     or 0
                 )
                 if not self.instance:
-                    if outcome_type_cand == YarnOutcome.OutcomeTypeChoices.SIZING and merged_bags_cand > 0:
+                    if (outcome_type_cand == YarnOutcome.OutcomeTypeChoices.SIZING and merged_bags_cand > 0) or len(parsed_bg_items) > 0:
                         parsed_items = []
                         attrs["outcome_bags"] = 0
                         attrs["outcome_weight_per_bag_kg"] = Decimal("0")
                         attrs["outcome_cones_per_bag"] = 24
                         attrs["_parsed_items"] = []
+                        if not attrs.get("stock") and parsed_bg_items:
+                            bg_sample = parsed_bg_items[0]["b_grade"]
+                            matching_stock = YarnStock.objects.filter(
+                                yarn_name=bg_sample.yarn_name,
+                                yarn_type=bg_sample.yarn_type,
+                                yarn_count=bg_sample.yarn_count,
+                                production_type=bg_sample.production_type,
+                            ).first()
+                            if matching_stock:
+                                attrs["stock"] = matching_stock
                     else:
                         raise serializers.ValidationError({
                             "yarnIntake": [
-                                "Yarn dispatch must be from one or more yarn intake batches. "
-                                "Dispatching directly from stock pool is not allowed."
+                                "Yarn dispatch must be from one or more yarn intake batches, or B-grade yarn cones must be allocated."
                             ]
                         })
                 else:
                     parsed_items = None
 
         if parsed_items is not None:
-            from collections import defaultdict
-            bags_per_intake = defaultdict(int)
-            for item in parsed_items:
-                bags_per_intake[item["intake"].id] += item["bags"]
+            if parsed_items:
+                from collections import defaultdict
+                bags_per_intake = defaultdict(int)
+                for item in parsed_items:
+                    bags_per_intake[item["intake"].id] += item["bags"]
 
-            first_intake = parsed_items[0]["intake"]
-            first_stock = first_intake.stock
+                first_intake = parsed_items[0]["intake"]
+                first_stock = first_intake.stock
 
-            for item in parsed_items:
-                intake = item["intake"]
-                if intake.stock_id != first_stock.id:
-                    if (
-                        intake.yarn_name_id != first_intake.yarn_name_id
-                        or intake.yarn_type_id != first_intake.yarn_type_id
-                        or intake.yarn_count_id != first_intake.yarn_count_id
-                    ):
+                for item in parsed_items:
+                    intake = item["intake"]
+                    if intake.stock_id != first_stock.id:
+                        if (
+                            intake.yarn_name_id != first_intake.yarn_name_id
+                            or intake.yarn_type_id != first_intake.yarn_type_id
+                            or intake.yarn_count_id != first_intake.yarn_count_id
+                        ):
+                            raise serializers.ValidationError({
+                                "intakes": [
+                                    f"All selected yarn intakes must share the same yarn name, type, and count. "
+                                    f"Intake '{intake.set_no}' ({intake.yarn_name}) differs from '{first_intake.set_no}' ({first_intake.yarn_name})."
+                                ]
+                            })
+
+                for intake_id, total_requested in bags_per_intake.items():
+                    intake = YarnIntake.objects.get(pk=intake_id)
+                    available = intake.remaining_bags
+                    if self.instance:
+                        prev_item_bags = self.instance.items.filter(yarn_intake=intake).aggregate(s=Sum("bags"))["s"] or 0
+                        available += prev_item_bags
+
+                    if total_requested > available:
+                        err_field = "intakes" if raw_items is not None else "outcomeBags"
                         raise serializers.ValidationError({
-                            "intakes": [
-                                f"All selected yarn intakes must share the same yarn name, type, and count. "
-                                f"Intake '{intake.set_no}' ({intake.yarn_name}) differs from '{first_intake.set_no}' ({first_intake.yarn_name})."
+                            err_field: [
+                                f"Yarn intake batch '{intake.set_no or intake.id}' only has {available} bags remaining. "
+                                f"Cannot dispatch {total_requested} bags."
                             ]
                         })
 
-            for intake_id, total_requested in bags_per_intake.items():
-                intake = YarnIntake.objects.get(pk=intake_id)
-                available = intake.remaining_bags
-                if self.instance:
-                    prev_item_bags = self.instance.items.filter(yarn_intake=intake).aggregate(s=Sum("bags"))["s"] or 0
-                    available += prev_item_bags
+                total_bags = sum(it["bags"] for it in parsed_items)
+                total_kg = sum(Decimal(str(it["bags"])) * Decimal(str(it["weight_per_bag_kg"])) for it in parsed_items)
+                avg_wpb = (total_kg / Decimal(str(total_bags))).quantize(Decimal("0.000001")) if total_bags > 0 else Decimal("0")
+                avg_cones = parsed_items[0]["cones_per_bag"]
 
-                if total_requested > available:
-                    err_field = "intakes" if raw_items is not None else "outcomeBags"
-                    raise serializers.ValidationError({
-                        err_field: [
-                            f"Yarn intake batch '{intake.set_no or intake.id}' only has {available} bags remaining. "
-                            f"Cannot dispatch {total_requested} bags."
-                        ]
-                    })
+                attrs["outcome_bags"] = total_bags
+                attrs["outcome_weight_per_bag_kg"] = avg_wpb
+                attrs["outcome_cones_per_bag"] = avg_cones
+                attrs["stock"] = first_stock
+            else:
+                attrs["outcome_bags"] = 0
+                attrs["outcome_weight_per_bag_kg"] = Decimal("0")
+                attrs["outcome_cones_per_bag"] = 0
 
-            total_bags = sum(it["bags"] for it in parsed_items)
-            total_kg = sum(Decimal(str(it["bags"])) * Decimal(str(it["weight_per_bag_kg"])) for it in parsed_items)
-            avg_wpb = (total_kg / Decimal(str(total_bags))).quantize(Decimal("0.000001")) if total_bags > 0 else Decimal("0")
-            avg_cones = parsed_items[0]["cones_per_bag"]
-
-            attrs["outcome_bags"] = total_bags
-            attrs["outcome_weight_per_bag_kg"] = avg_wpb
-            attrs["outcome_cones_per_bag"] = avg_cones
-            attrs["stock"] = first_stock
             attrs["_parsed_items"] = parsed_items
 
         attrs.pop("yarn_intake", None)
@@ -908,16 +1102,21 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
             "outcome_bags",
             getattr(self.instance, "outcome_bags", 0) if self.instance else 0
         )
+        total_bg_cones = sum(b["cones"] for b in attrs.get("_parsed_bg_items", []))
         if outcome_bags <= 0:
-            if not (outcome_type == YarnOutcome.OutcomeTypeChoices.SIZING and merged_sizing_bags > 0):
+            if not (
+                (outcome_type == YarnOutcome.OutcomeTypeChoices.SIZING and merged_sizing_bags > 0)
+                or total_bg_cones > 0
+            ):
                 raise serializers.ValidationError({
-                    "outcomeBags": ["Outcome bags must be greater than 0."]
+                    "outcomeBags": ["Outcome bags must be greater than 0, or B-grade cones must be allocated."]
                 })
 
         return attrs
 
     def create(self, validated_data):
         items_data = validated_data.pop("_parsed_items", [])
+        bg_items_data = validated_data.pop("_parsed_bg_items", [])
         resolved_merged_sos = validated_data.pop("_resolved_merged_sos", [])
         validated_data.pop("yarn_intake", None)
         validated_data.pop("yarnIntake", None)
@@ -953,7 +1152,25 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
                 )
                 intakes_to_recalc.add(intake.id)
 
-            if items_data:
+            for bg_item in bg_items_data:
+                bg_obj = bg_item["b_grade"]
+                cones_ded = bg_item["cones"]
+                kg_ded = bg_item["weight_kg"]
+                lb_ded = bg_item["weight_lb"]
+                YarnOutcomeBGradeItem.objects.create(
+                    yarn_outcome=outcome,
+                    b_grade_yarn=bg_obj,
+                    cones=cones_ded,
+                    weight_kg=kg_ded,
+                    weight_lb=lb_ded,
+                )
+                locked_bg = BGradeYarn.objects.select_for_update().get(pk=bg_obj.pk)
+                locked_bg.cones = max(0, locked_bg.cones - cones_ded)
+                locked_bg.weight_kg = max(Decimal("0.000000"), locked_bg.weight_kg - kg_ded)
+                locked_bg.weight_lb = max(Decimal("0.000000"), locked_bg.weight_lb - lb_ded)
+                locked_bg.save(update_fields=["cones", "weight_kg", "weight_lb", "updated_at"])
+
+            if items_data or bg_items_data:
                 outcome.calculate_outcome_fields()
                 outcome.save()
 
@@ -992,6 +1209,7 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         items_data = validated_data.pop("_parsed_items", None)
+        bg_items_data = validated_data.pop("_parsed_bg_items", None)
         validated_data.pop("yarn_intake", None)
         validated_data.pop("yarnIntake", None)
         validated_data.pop("yarnIntakeId", None)
@@ -1032,12 +1250,44 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
                         weight_per_bag_kg=item["weight_per_bag_kg"],
                     )
                     new_intake_ids.add(intake.id)
-                instance.calculate_outcome_fields()
-                instance.save()
             else:
                 for item in instance.items.all():
                     if item.yarn_intake_id:
                         new_intake_ids.add(item.yarn_intake_id)
+
+            if bg_items_data is not None:
+                for old_bg in instance.b_grade_items.all():
+                    try:
+                        locked_bg = BGradeYarn.objects.select_for_update().get(pk=old_bg.b_grade_yarn_id)
+                        locked_bg.cones += old_bg.cones
+                        locked_bg.weight_kg += old_bg.weight_kg
+                        locked_bg.weight_lb += old_bg.weight_lb
+                        locked_bg.save(update_fields=["cones", "weight_kg", "weight_lb", "updated_at"])
+                    except BGradeYarn.DoesNotExist:
+                        pass
+                instance.b_grade_items.all().delete()
+
+                for bg_item in bg_items_data:
+                    bg_obj = bg_item["b_grade"]
+                    cones_ded = bg_item["cones"]
+                    kg_ded = bg_item["weight_kg"]
+                    lb_ded = bg_item["weight_lb"]
+                    YarnOutcomeBGradeItem.objects.create(
+                        yarn_outcome=instance,
+                        b_grade_yarn=bg_obj,
+                        cones=cones_ded,
+                        weight_kg=kg_ded,
+                        weight_lb=lb_ded,
+                    )
+                    locked_bg = BGradeYarn.objects.select_for_update().get(pk=bg_obj.pk)
+                    locked_bg.cones = max(0, locked_bg.cones - cones_ded)
+                    locked_bg.weight_kg = max(Decimal("0.000000"), locked_bg.weight_kg - kg_ded)
+                    locked_bg.weight_lb = max(Decimal("0.000000"), locked_bg.weight_lb - lb_ded)
+                    locked_bg.save(update_fields=["cones", "weight_kg", "weight_lb", "updated_at"])
+
+            if items_data is not None or bg_items_data is not None:
+                instance.calculate_outcome_fields()
+                instance.save()
 
             from .services import recalculate_yarn_intake_stock
             from factory.yarn.yarn_stock.services import recalculate_yarn_stock

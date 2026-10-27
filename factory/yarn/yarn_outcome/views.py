@@ -282,7 +282,19 @@ class YarnOutcomeViewSet(ModelViewSet):
                             b.save(update_fields=["status"])
                 locked_outcome.beam_assignments.all().delete()
 
-                # Delete the outcome (cascades to items)
+                # Restore any contributing B-grade items back to BGradeYarn
+                for bg_item in locked_outcome.b_grade_items.all():
+                    try:
+                        from factory.yarn.b_grade_yarn.models import BGradeYarn
+                        locked_bg = BGradeYarn.objects.select_for_update().get(pk=bg_item.b_grade_yarn_id)
+                        locked_bg.cones += bg_item.cones
+                        locked_bg.weight_kg += bg_item.weight_kg
+                        locked_bg.weight_lb += bg_item.weight_lb
+                        locked_bg.save(update_fields=["cones", "weight_kg", "weight_lb", "updated_at"])
+                    except Exception:
+                        pass
+
+                # Delete the outcome (cascades to items and b_grade_items)
                 locked_outcome.delete()
 
                 # Recalculate all affected intakes

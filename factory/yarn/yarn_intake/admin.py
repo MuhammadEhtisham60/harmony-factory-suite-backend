@@ -2,13 +2,20 @@
 Admin for the YarnIntake module.
 """
 from django.contrib import admin
-from .models import YarnIntake, YarnOutcome, YarnOutcomeItem
+from .models import YarnIntake, YarnOutcome, YarnOutcomeItem, YarnOutcomeBGradeItem
 
 
 class YarnOutcomeItemInline(admin.TabularInline):
     model = YarnOutcomeItem
     extra = 0
     fields = ["yarn_intake", "bags", "cones_per_bag", "weight_per_bag_kg", "weight_kg", "weight_lb"]
+    readonly_fields = ["weight_kg", "weight_lb"]
+
+
+class YarnOutcomeBGradeItemInline(admin.TabularInline):
+    model = YarnOutcomeBGradeItem
+    extra = 0
+    fields = ["b_grade_yarn", "cones", "weight_kg", "weight_lb"]
     readonly_fields = ["weight_kg", "weight_lb"]
 
 
@@ -40,13 +47,13 @@ class YarnIntakeAdmin(admin.ModelAdmin):
 @admin.register(YarnOutcome)
 class YarnOutcomeAdmin(admin.ModelAdmin):
     list_display = [
-        "id", "primary_intake", "outcome_type", "outcome_bags",
+        "id", "primary_intake", "outcome_type", "outcome_bags", "b_grade_cones",
         "outcome_weight_kg", "yarn_buyer", "total_price", "outcome_date",
     ]
     list_filter = ["outcome_type", "outcome_date"]
     search_fields = ["items__yarn_intake__yarn_name__name", "items__yarn_intake__set_no", "yarn_buyer__buyer_name"]
-    readonly_fields = ["outcome_weight_kg", "outcome_weight_lb", "created_at", "updated_at"]
-    inlines = [YarnOutcomeItemInline]
+    readonly_fields = ["outcome_weight_kg", "outcome_weight_lb", "b_grade_weight_kg", "b_grade_weight_lb", "created_at", "updated_at"]
+    inlines = [YarnOutcomeItemInline, YarnOutcomeBGradeItemInline]
 
 
 @admin.register(YarnOutcomeItem)
@@ -54,4 +61,12 @@ class YarnOutcomeItemAdmin(admin.ModelAdmin):
     list_display = ["yarn_outcome", "yarn_intake", "bags", "weight_kg", "weight_lb", "created_at"]
     list_filter = ["created_at"]
     search_fields = ["yarn_outcome__id", "yarn_intake__set_no"]
+    readonly_fields = ["weight_kg", "weight_lb", "created_at", "updated_at"]
+
+
+@admin.register(YarnOutcomeBGradeItem)
+class YarnOutcomeBGradeItemAdmin(admin.ModelAdmin):
+    list_display = ["yarn_outcome", "b_grade_yarn", "cones", "weight_kg", "weight_lb", "created_at"]
+    list_filter = ["created_at"]
+    search_fields = ["yarn_outcome__id", "b_grade_yarn__id"]
     readonly_fields = ["weight_kg", "weight_lb", "created_at", "updated_at"]

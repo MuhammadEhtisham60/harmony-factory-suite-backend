@@ -11,6 +11,41 @@ from factory.yarn.yarn_count.models import YarnCount
 from .models import BGradeYarn, LB_PER_KG
 
 
+class BGradeYarnDispatchRecordSerializer(serializers.Serializer):
+    """
+    Serializes a single dispatch record where B-grade yarn was dispatched to Warping/Sizing/etc.
+    """
+    id = serializers.IntegerField(read_only=True)
+    outcomeId = serializers.IntegerField(source="yarn_outcome_id", read_only=True)
+    setNo = serializers.SerializerMethodField()
+    outcomeType = serializers.CharField(source="yarn_outcome.outcome_type", read_only=True)
+    destinationName = serializers.SerializerMethodField()
+    outcomeDate = serializers.DateField(source="yarn_outcome.outcome_date", read_only=True)
+    cones = serializers.IntegerField(read_only=True)
+    weightKg = serializers.DecimalField(source="weight_kg", max_digits=15, decimal_places=4, read_only=True)
+    weightLb = serializers.DecimalField(source="weight_lb", max_digits=15, decimal_places=4, read_only=True)
+    createdAt = serializers.DateTimeField(source="created_at", read_only=True)
+
+    def get_setNo(self, obj):
+        if not obj.yarn_outcome:
+            return f"SET-{obj.yarn_outcome_id}"
+        return getattr(obj.yarn_outcome, "set_no", None) or f"SET-{obj.yarn_outcome.id}"
+
+    def get_destinationName(self, obj):
+        yo = obj.yarn_outcome
+        if not yo:
+            return ""
+        if yo.outcome_type == "Warping" and yo.warping:
+            return getattr(yo.warping, "warping_name", "") or getattr(yo.warping, "name", "")
+        elif yo.outcome_type == "Sizing" and yo.sizing:
+            return getattr(yo.sizing, "sizing_name", "") or getattr(yo.sizing, "name", "")
+        elif yo.outcome_type == "Sold" and yo.yarn_buyer:
+            return getattr(yo.yarn_buyer, "buyer_name", "") or getattr(yo.yarn_buyer, "name", "")
+        elif yo.outcome_type == "Weft":
+            return "Weft Floor"
+        return yo.outcome_type or ""
+
+
 class BGradeYarnSerializer(serializers.ModelSerializer):
     """
     Serializer for individual B-Grade yarn records (CRUD).
@@ -34,6 +69,9 @@ class BGradeYarnSerializer(serializers.ModelSerializer):
     lotNumber = serializers.CharField(source="lot_number", allow_blank=True, default="", required=False)
     entryDate = serializers.DateField(source="entry_date", required=False)
     remarks = serializers.CharField(allow_blank=True, default="", required=False)
+
+    dispatches = serializers.SerializerMethodField()
+    totalDispatchedCones = serializers.SerializerMethodField()
 
     createdAt = serializers.DateTimeField(source="created_at", read_only=True)
     updatedAt = serializers.DateTimeField(source="updated_at", read_only=True)
@@ -60,6 +98,8 @@ class BGradeYarnSerializer(serializers.ModelSerializer):
             "lotNumber",
             "entryDate",
             "remarks",
+            "dispatches",
+            "totalDispatchedCones",
             "createdAt",
             "updatedAt",
             "createdBy",
@@ -102,33 +142,66 @@ class BGradeYarnSerializer(serializers.ModelSerializer):
             "name": getattr(obj.updated_by, "get_full_name", lambda: "")() or getattr(obj.updated_by, "username", ""),
         }
 
+    def get_dispatches(self, obj):
+        items = obj.outcome_items.select_related(
+            "yarn_outcome",
+            "yarn_outcome__warping",
+            "yarn_outcome__sizing",
+            "yarn_outcome__yarn_buyer",
+        ).order_by("-id").all()
+        return BGradeYarnDispatchRecordSerializer(items, many=True).data
+
+    def get_totalDispatchedCones(self, obj):
+        return sum(item.cones for item in obj.outcome_items.all())
+
     def to_internal_value(self, data):
         ret = {}
-        for key in ["yarnName", "yarn_name", "yarnNameId", "yarn_name_id"]:
+        for key in ["yarnNameId", "yarn_name_id", "yarnName", "yarn_name"]:
             if key in data and data[key] not in (None, ""):
                 val = data[key]
-                if isinstance(val, int) or (isinstance(val, str) and val.strip().isdigit()):
-                    ret["yarn_name"] = YarnName.objects.get(pk=int(val))
+                if "id" in key.lower() or (isinstance(val, int) and not isinstance(val, bool)):
+                    obj = YarnName.objects.filter(pk=int(val)).first()
+                    if obj:
+                        ret["yarn_name"] = obj
+                    else:
+                        raise serializers.ValidationError({"yarnName": f"YarnName with ID '{val}' does not exist."})
                 elif isinstance(val, str) and val.strip():
-                    ret["yarn_name"], _ = YarnName.objects.get_or_create(name=val.strip())
+                    obj = YarnName.objects.filter(name__iexact=val.strip()).first()
+                    if not obj:
+                        obj, _ = YarnName.objects.get_or_create(name=val.strip())
+                    ret["yarn_name"] = obj
                 break
 
-        for key in ["yarnType", "yarn_type", "yarnTypeId", "yarn_type_id"]:
+        for key in ["yarnTypeId", "yarn_type_id", "yarnType", "yarn_type"]:
             if key in data and data[key] not in (None, ""):
                 val = data[key]
-                if isinstance(val, int) or (isinstance(val, str) and val.strip().isdigit()):
-                    ret["yarn_type"] = YarnType.objects.get(pk=int(val))
+                if "id" in key.lower() or (isinstance(val, int) and not isinstance(val, bool)):
+                    obj = YarnType.objects.filter(pk=int(val)).first()
+                    if obj:
+                        ret["yarn_type"] = obj
+                    else:
+                        raise serializers.ValidationError({"yarnType": f"YarnType with ID '{val}' does not exist."})
                 elif isinstance(val, str) and val.strip():
-                    ret["yarn_type"], _ = YarnType.objects.get_or_create(name=val.strip())
+                    obj = YarnType.objects.filter(name__iexact=val.strip()).first()
+                    if not obj:
+                        obj, _ = YarnType.objects.get_or_create(name=val.strip())
+                    ret["yarn_type"] = obj
                 break
 
-        for key in ["yarnCount", "yarn_count", "yarnCountId", "yarn_count_id"]:
+        for key in ["yarnCountId", "yarn_count_id", "yarnCount", "yarn_count"]:
             if key in data and data[key] not in (None, ""):
                 val = data[key]
-                if isinstance(val, int) or (isinstance(val, str) and val.strip().isdigit()):
-                    ret["yarn_count"] = YarnCount.objects.get(pk=int(val))
+                if "id" in key.lower() or (isinstance(val, int) and not isinstance(val, bool)):
+                    obj = YarnCount.objects.filter(pk=int(val)).first()
+                    if obj:
+                        ret["yarn_count"] = obj
+                    else:
+                        raise serializers.ValidationError({"yarnCount": f"YarnCount with ID '{val}' does not exist."})
                 elif isinstance(val, str) and val.strip():
-                    ret["yarn_count"], _ = YarnCount.objects.get_or_create(name=val.strip())
+                    obj = YarnCount.objects.filter(name__iexact=val.strip()).first()
+                    if not obj:
+                        obj, _ = YarnCount.objects.get_or_create(name=val.strip())
+                    ret["yarn_count"] = obj
                 break
 
         if "productionType" in data:
@@ -216,6 +289,7 @@ class BGradeYarnQualityWiseSerializer(serializers.Serializer):
 
     # Aggregated balances
     totalCones = serializers.IntegerField(read_only=True)
+    totalDispatchedCones = serializers.IntegerField(read_only=True, default=0)
     totalWeightKg = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
     totalWeightLb = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
 

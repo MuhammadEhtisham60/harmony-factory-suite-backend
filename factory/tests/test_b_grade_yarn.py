@@ -151,3 +151,122 @@ class BGradeYarnTests(TestCase):
         self.assertEqual(summary["totalQualities"], 2)
         self.assertEqual(summary["totalCones"], 220)
         self.assertEqual(summary["totalWeightKg"], Decimal("95.0000"))
+
+    def test_dispatch_b_grade_yarn_to_warping(self):
+        """Test dispatching B-grade cones to Warping and verifying inventory deduction & restore on delete."""
+        from factory.yarn.warping.models import Warping
+        from factory.yarn.yarn_intake.models import YarnOutcome, YarnOutcomeBGradeItem
+        from django.utils import timezone
+
+        warping = Warping.objects.create(warping_name="Al-Rehman Warping", status="Active")
+        bg_batch = BGradeYarn.objects.create(
+            yarn_name=self.yarn_name,
+            yarn_type=self.yarn_type,
+            yarn_count=self.yarn_count,
+            production_type="Self",
+            cones=50,
+            weight_kg=Decimal("25.000000"),
+            lot_number="WARP-BG-1",
+        )
+
+        # Dispatch 20 cones to Warping
+        payload = {
+            "outcomeType": "Warping",
+            "warping": warping.id,
+            "outcomeDate": str(timezone.now().date()),
+            "bGradeItems": [
+                {
+                    "bGradeYarn": bg_batch.id,
+                    "cones": 20,
+                }
+            ],
+        }
+
+        res = self.client.post("/api/v1/yarn-outcomes/", data=payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED, getattr(res, "data", None))
+
+        outcome_id = res.data["id"] if "id" in res.data else res.data["data"]["id"]
+        outcome = YarnOutcome.objects.get(pk=outcome_id)
+        self.assertEqual(outcome.outcome_type, "Warping")
+        self.assertEqual(outcome.b_grade_cones, 20)
+        self.assertEqual(outcome.b_grade_weight_kg, Decimal("10.000000"))  # 20 * (25 / 50) = 10 kg
+        self.assertEqual(outcome.outcome_weight_kg, Decimal("10.000000"))
+
+        # Verify B-grade batch stock was deducted
+        bg_batch.refresh_from_db()
+        self.assertEqual(bg_batch.cones, 30)  # 50 - 20 = 30
+        self.assertEqual(bg_batch.weight_kg, Decimal("15.000000"))  # 25 - 10 = 15 kg
+
+        # Verify B-grade batch dispatch record serializer
+        res_bg = self.client.get(f"/api/v1/b-grade-yarn/{bg_batch.id}/")
+        self.assertEqual(res_bg.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_bg.data["data"]["totalDispatchedCones"], 20)
+        self.assertEqual(len(res_bg.data["data"]["dispatches"]), 1)
+        dispatch_rec = res_bg.data["data"]["dispatches"][0]
+        self.assertEqual(dispatch_rec["outcomeId"], outcome.id)
+        self.assertEqual(dispatch_rec["cones"], 20)
+        self.assertEqual(dispatch_rec["outcomeType"], "Warping")
+        self.assertEqual(dispatch_rec["destinationName"], "Al-Rehman Warping")
+
+        # Verify quality-wise returns totalDispatchedCones
+        res_qw = self.client.get("/api/v1/b-grade-yarn/quality-wise/")
+        self.assertEqual(res_qw.status_code, status.HTTP_200_OK)
+        qual_res = next(r for r in res_qw.data["results"] if r["yarnCount"] == "30s / 1")
+        self.assertEqual(qual_res["totalDispatchedCones"], 20)
+
+        # Delete outcome and verify stock restored
+        del_res = self.client.delete(f"/api/v1/yarn-outcomes/{outcome_id}/")
+        self.assertEqual(del_res.status_code, status.HTTP_200_OK)
+
+        bg_batch.refresh_from_db()
+        self.assertEqual(bg_batch.cones, 50)  # restored to 50
+        self.assertEqual(bg_batch.weight_kg, Decimal("25.000000"))  # restored to 25 kg
+
+    def test_b_grade_dispatched_only_for_warping_and_weft(self):
+        """Ensure B-grade cones are rejected for Sizing and Sold, and accepted for Weft."""
+        from factory.yarn.sizing.models import Sizing
+        from django.utils import timezone
+
+        sizing = Sizing.objects.create(sizing_name="Standard Sizing", status="Active")
+        bg_batch = BGradeYarn.objects.create(
+            yarn_name=self.yarn_name,
+            yarn_type=self.yarn_type,
+            yarn_count=self.yarn_count,
+            production_type="Self",
+            cones=40,
+            weight_kg=Decimal("20.000000"),
+            lot_number="WEFT-TEST-1",
+        )
+
+        # 1. Attempt to dispatch B-grade to Sizing -> should fail 400
+        res_sizing = self.client.post("/api/v1/yarn-outcomes/", data={
+            "outcomeType": "Sizing",
+            "sizing": sizing.id,
+            "outcomeDate": str(timezone.now().date()),
+            "bGradeItems": [{"bGradeYarn": bg_batch.id, "cones": 10}],
+        }, format="json")
+        self.assertEqual(res_sizing.status_code, status.HTTP_400_BAD_REQUEST)
+        errs_sizing = res_sizing.data.get("errors", res_sizing.data)
+        self.assertIn("bGradeItems", errs_sizing)
+
+        # 2. Attempt to dispatch B-grade to Sold -> should fail 400
+        res_sold = self.client.post("/api/v1/yarn-outcomes/", data={
+            "outcomeType": "Sold",
+            "outcomeDate": str(timezone.now().date()),
+            "bGradeItems": [{"bGradeYarn": bg_batch.id, "cones": 10}],
+        }, format="json")
+        self.assertEqual(res_sold.status_code, status.HTTP_400_BAD_REQUEST)
+        errs_sold = res_sold.data.get("errors", res_sold.data)
+        self.assertIn("bGradeItems", errs_sold)
+
+        # 3. Dispatch B-grade to Weft -> should succeed 201
+        res_weft = self.client.post("/api/v1/yarn-outcomes/", data={
+            "outcomeType": "Weft",
+            "outcomeDate": str(timezone.now().date()),
+            "bGradeItems": [{"bGradeYarn": bg_batch.id, "cones": 15}],
+        }, format="json")
+        self.assertEqual(res_weft.status_code, status.HTTP_201_CREATED)
+        bg_batch.refresh_from_db()
+        self.assertEqual(bg_batch.cones, 25)  # 40 - 15 = 25
+
+

@@ -20,6 +20,7 @@ from audit_logs.utils import log_activity
 from .models import BGradeYarn
 from .serializers import BGradeYarnSerializer, BGradeYarnQualityWiseSerializer
 from .filters import BGradeYarnFilter
+from factory.yarn.yarn_intake.models import YarnOutcomeBGradeItem
 
 
 class BGradeYarnViewSet(ModelViewSet):
@@ -177,6 +178,18 @@ class BGradeYarnViewSet(ModelViewSet):
                 .distinct()
             )
 
+            # Total dispatched cones for this quality pool
+            dispatched_cones = (
+                YarnOutcomeBGradeItem.objects
+                .filter(
+                    b_grade_yarn__yarn_name_id=row["yarn_name_id"],
+                    b_grade_yarn__yarn_type_id=row["yarn_type_id"],
+                    b_grade_yarn__yarn_count_id=row["yarn_count_id"],
+                    b_grade_yarn__production_type=row["production_type"],
+                )
+                .aggregate(total=Sum("cones"))["total"] or 0
+            )
+
             # Synthesize quality key ID
             quality_key = f"{row['yarn_name_id']}-{row['yarn_type_id']}-{row['yarn_count_id']}-{row['production_type'] or 'default'}"
 
@@ -190,6 +203,7 @@ class BGradeYarnViewSet(ModelViewSet):
                 "yarnCountId": row["yarn_count_id"],
                 "productionType": row["production_type"] or "Self",
                 "totalCones": cones,
+                "totalDispatchedCones": dispatched_cones,
                 "totalWeightKg": str(w_kg.quantize(Decimal("0.0001"))),
                 "totalWeightLb": str(w_lb.quantize(Decimal("0.0001"))),
                 "entriesCount": row["entries_count"],

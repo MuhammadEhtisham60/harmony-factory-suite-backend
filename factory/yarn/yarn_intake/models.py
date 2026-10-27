@@ -526,6 +526,24 @@ class YarnOutcome(models.Model):
         help_text="Previous sizing outcome sets whose remaining balance was merged into this dispatch/set."
     )
 
+    # ── Dispatched B-Grade Cones ──────────────────────────────────────────
+    b_grade_cones = models.PositiveIntegerField(
+        default=0,
+        help_text="Total B-grade cones dispatched in this outcome"
+    )
+    b_grade_weight_kg = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="Total weight of dispatched B-grade cones in KG"
+    )
+    b_grade_weight_lb = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="Total weight of dispatched B-grade cones in LB"
+    )
+
     # ── Audit ──────────────────────────────────────────────────────────────
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -611,8 +629,10 @@ class YarnOutcome(models.Model):
         """
         Recalculate backend-derived outcome weight fields and total_price of dispatched yarn.
         If items exist, aggregates bags and weights from items and computes total dispatched yarn price.
-        Otherwise falls back to outcome_bags * outcome_weight_per_bag_kg.
+        Incorporates any dispatched B-grade yarn cones and their weights.
         """
+        standard_kg = Decimal("0.000000")
+        standard_lb = Decimal("0.000000")
         if self.pk and hasattr(self, "items") and self.items.exists():
             item_agg = self.items.aggregate(
                 total_bags=models.Sum("bags"),
@@ -620,17 +640,33 @@ class YarnOutcome(models.Model):
                 total_lb=models.Sum("weight_lb"),
             )
             self.outcome_bags = item_agg["total_bags"] or 0
-            self.outcome_weight_kg = item_agg["total_kg"] or Decimal("0.000000")
-            self.outcome_weight_lb = item_agg["total_lb"] or Decimal("0.000000")
+            standard_kg = item_agg["total_kg"] or Decimal("0.000000")
+            standard_lb = item_agg["total_lb"] or Decimal("0.000000")
             if self.outcome_bags > 0:
-                self.outcome_weight_per_bag_kg = (self.outcome_weight_kg / Decimal(str(self.outcome_bags))).quantize(Decimal("0.000001"))
-
-            pass
+                self.outcome_weight_per_bag_kg = (standard_kg / Decimal(str(self.outcome_bags))).quantize(Decimal("0.000001"))
         else:
             outcome_bags = Decimal(str(self.outcome_bags or 0))
             weight_per_bag = Decimal(str(self.outcome_weight_per_bag_kg or 0))
-            self.outcome_weight_kg = outcome_bags * weight_per_bag
-            self.outcome_weight_lb = self.outcome_weight_kg * LB_PER_KG
+            standard_kg = outcome_bags * weight_per_bag
+            standard_lb = standard_kg * LB_PER_KG
+
+        # Aggregate B-grade items if present
+        if self.pk and hasattr(self, "b_grade_items") and self.b_grade_items.exists():
+            bg_agg = self.b_grade_items.aggregate(
+                total_cones=models.Sum("cones"),
+                total_kg=models.Sum("weight_kg"),
+                total_lb=models.Sum("weight_lb"),
+            )
+            self.b_grade_cones = bg_agg["total_cones"] or 0
+            self.b_grade_weight_kg = bg_agg["total_kg"] or Decimal("0.000000")
+            self.b_grade_weight_lb = bg_agg["total_lb"] or Decimal("0.000000")
+        else:
+            self.b_grade_cones = getattr(self, "b_grade_cones", 0) or 0
+            self.b_grade_weight_kg = getattr(self, "b_grade_weight_kg", Decimal("0.000000")) or Decimal("0.000000")
+            self.b_grade_weight_lb = getattr(self, "b_grade_weight_lb", Decimal("0.000000")) or Decimal("0.000000")
+
+        self.outcome_weight_kg = standard_kg + self.b_grade_weight_kg
+        self.outcome_weight_lb = standard_lb + self.b_grade_weight_lb
 
         # Resolve stock if not set yet
         stock = self.stock
@@ -882,5 +918,67 @@ class YarnOutcomeItem(models.Model):
     def __str__(self):
         intake_str = self.yarn_intake.set_no if self.yarn_intake else f"Intake #{self.yarn_intake_id}"
         return f"Outcome #{self.yarn_outcome_id} -> {intake_str} ({self.bags} bags)"
+
+
+class YarnOutcomeBGradeItem(models.Model):
+    """
+    Records B-grade yarn cones dispatched as part of a YarnOutcome dispatch.
+    Tracks cones and weight deducted from a specific BGradeYarn batch.
+    """
+    yarn_outcome = models.ForeignKey(
+        YarnOutcome,
+        on_delete=models.CASCADE,
+        related_name="b_grade_items",
+        help_text="Parent yarn outcome dispatch"
+    )
+    b_grade_yarn = models.ForeignKey(
+        "factory.BGradeYarn",
+        on_delete=models.PROTECT,
+        related_name="outcome_items",
+        help_text="Specific B-grade yarn batch dispatched"
+    )
+    cones = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of B-grade cones dispatched from this batch"
+    )
+    weight_kg = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="Weight of dispatched cones in KG"
+    )
+    weight_lb = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="Weight of dispatched cones in LB"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["id"]
+        verbose_name = "Yarn Outcome B-Grade Item"
+        verbose_name_plural = "Yarn Outcome B-Grade Items"
+
+    def calculate_weights(self):
+        if self.b_grade_yarn_id and self.cones > 0:
+            bg = self.b_grade_yarn
+            # If batch has cones and weight, calculate proportionally
+            if bg.cones > 0 and bg.weight_kg > 0:
+                avg_weight_per_cone = Decimal(str(bg.weight_kg)) / Decimal(str(bg.cones))
+                self.weight_kg = (Decimal(str(self.cones)) * avg_weight_per_cone).quantize(Decimal("0.000001"))
+            elif bg.weight_kg > 0 and self.cones == bg.cones:
+                self.weight_kg = Decimal(str(bg.weight_kg))
+        self.weight_lb = (Decimal(str(self.weight_kg or 0)) * LB_PER_KG).quantize(Decimal("0.000001"))
+
+    def save(self, *args, **kwargs):
+        if not self.weight_kg:
+            self.calculate_weights()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Outcome #{self.yarn_outcome_id} -> B-Grade #{self.b_grade_yarn_id} ({self.cones} cones)"
+
 
 

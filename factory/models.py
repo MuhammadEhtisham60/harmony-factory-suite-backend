@@ -12,7 +12,7 @@ from factory.yarn.yarn_name.models import YarnName
 from factory.yarn.yarn_type.models import YarnType
 from factory.yarn.yarn_count.models import YarnCount
 from factory.yarn.yarn_stock.models import YarnStock
-from factory.yarn.yarn_intake.models import YarnIntake, YarnOutcome, YarnOutcomeItem
+from factory.yarn.yarn_intake.models import YarnIntake, YarnOutcome, YarnOutcomeItem, YarnOutcomeBGradeItem
 from factory.yarn.sizing.models import Sizing, SizingOutcome, SizingBeamAssignment
 from factory.yarn.warping.models import Warping
 from factory.yarn.b_grade_yarn.models import BGradeYarn
