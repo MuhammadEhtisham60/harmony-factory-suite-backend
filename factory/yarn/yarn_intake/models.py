@@ -765,7 +765,24 @@ class YarnOutcome(models.Model):
 
         stock = self.stock
         intake_ids = list(self.items.values_list("yarn_intake_id", flat=True)) if self.pk else []
+        bg_items_to_restore = list(self.b_grade_items.all()) if self.pk else []
         super().delete(*args, **kwargs)
+
+        if bg_items_to_restore:
+            from factory.yarn.b_grade_yarn.models import BGradeYarn
+            for item in bg_items_to_restore:
+                unreturned_cones = max(0, item.cones - (item.returned_cones or 0))
+                unreturned_kg = max(Decimal("0.000000"), item.weight_kg - (item.returned_weight_kg or Decimal("0.000000")))
+                unreturned_lb = max(Decimal("0.000000"), item.weight_lb - (item.returned_weight_lb or Decimal("0.000000")))
+                if unreturned_cones > 0 or unreturned_kg > Decimal("0.000000"):
+                    try:
+                        bg_obj = BGradeYarn.objects.select_for_update().get(pk=item.b_grade_yarn_id)
+                        bg_obj.cones += unreturned_cones
+                        bg_obj.weight_kg += unreturned_kg
+                        bg_obj.weight_lb += unreturned_lb
+                        bg_obj.save(update_fields=["cones", "weight_kg", "weight_lb", "updated_at"])
+                    except BGradeYarn.DoesNotExist:
+                        pass
 
         if merged_sos:
             from factory.yarn.sizing.services import sync_yarn_outcome_status
@@ -952,6 +969,22 @@ class YarnOutcomeBGradeItem(models.Model):
         decimal_places=6,
         default=Decimal("0.000000"),
         help_text="Weight of dispatched cones in LB"
+    )
+    returned_cones = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of B-grade cones returned to stock from warping/sizing"
+    )
+    returned_weight_kg = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="Weight of returned cones in KG"
+    )
+    returned_weight_lb = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        default=Decimal("0.000000"),
+        help_text="Weight of returned cones in LB"
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -22,8 +22,10 @@ class BGradeYarnDispatchRecordSerializer(serializers.Serializer):
     destinationName = serializers.SerializerMethodField()
     outcomeDate = serializers.DateField(source="yarn_outcome.outcome_date", read_only=True)
     cones = serializers.IntegerField(read_only=True)
+    returnedCones = serializers.IntegerField(source="returned_cones", read_only=True)
     weightKg = serializers.DecimalField(source="weight_kg", max_digits=15, decimal_places=4, read_only=True)
     weightLb = serializers.DecimalField(source="weight_lb", max_digits=15, decimal_places=4, read_only=True)
+    returnedWeightKg = serializers.DecimalField(source="returned_weight_kg", max_digits=15, decimal_places=4, read_only=True)
     createdAt = serializers.DateTimeField(source="created_at", read_only=True)
 
     def get_setNo(self, obj):
@@ -290,6 +292,8 @@ class BGradeYarnQualityWiseSerializer(serializers.Serializer):
     # Aggregated balances
     totalCones = serializers.IntegerField(read_only=True)
     totalDispatchedCones = serializers.IntegerField(read_only=True, default=0)
+    totalReturnedCones = serializers.IntegerField(read_only=True, default=0)
+    grossDispatchedCones = serializers.IntegerField(read_only=True, default=0)
     totalWeightKg = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
     totalWeightLb = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
 

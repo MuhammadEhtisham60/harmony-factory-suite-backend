@@ -131,6 +131,26 @@ class SizingOutcome(models.Model):
         help_text="Total cones on sizing"
     )
 
+    b_grade_cones = models.PositiveIntegerField(
+        default=0,
+        help_text="Total B-grade cones on sizing or warping outcome set"
+    )
+
+    consumed_b_grade_cones = models.PositiveIntegerField(
+        default=0,
+        help_text="Consumed / Lagat B-grade cones on sizing or warping set"
+    )
+
+    return_b_grade_cones = models.PositiveIntegerField(
+        default=0,
+        help_text="Returned B-grade cones back to yarn intake/stock"
+    )
+
+    remaining_b_grade_cones = models.PositiveIntegerField(
+        default=0,
+        help_text="Remaining B-grade cones kept at warping/sizing mill"
+    )
+
     remaining_bags_on_sizing_stock = models.PositiveIntegerField(
         default=0,
         help_text="Remaining bags on sizing stock"
@@ -395,6 +415,8 @@ class SizingOutcome(models.Model):
                     self.sizing_name = yo.sizing.sizing_name
                 if not self.total_bags_on_sizing:
                     self.total_bags_on_sizing = getattr(yo, "total_set_bags", yo.outcome_bags)
+                if not self.b_grade_cones and getattr(yo, "b_grade_cones", 0):
+                    self.b_grade_cones = yo.b_grade_cones
                 if not self.merged_sizing_bags and getattr(yo, "merged_sizing_bags", 0):
                     self.merged_sizing_bags = yo.merged_sizing_bags
                 if not self.merged_sizing_cones and getattr(yo, "merged_sizing_cones", 0):
@@ -404,6 +426,8 @@ class SizingOutcome(models.Model):
                     self.merged_from_set_nos = ", ".join(dict.fromkeys(set_nos))
         if not self.total_cones and self.total_bags_on_sizing and self.bag_packing_cone:
             self.total_cones = (self.total_bags_on_sizing * self.bag_packing_cone) + (self.merged_sizing_cones or 0)
+        if self.b_grade_cones is not None:
+            self.return_b_grade_cones = max(0, (self.b_grade_cones or 0) - (self.consumed_b_grade_cones or 0) - (self.remaining_b_grade_cones or 0))
         if self.rate_per_kg is not None and self.net_weight_kg is not None:
             self.total_rate = self.rate_per_kg * self.net_weight_kg
 
@@ -432,16 +456,26 @@ class SizingOutcome(models.Model):
 
         super().save(*args, **kwargs)
         if self.yarn_outcome_id:
-            from factory.yarn.sizing.services import sync_sizing_outcome_to_intake, sync_yarn_outcome_status
+            from factory.yarn.sizing.services import (
+                sync_sizing_outcome_to_intake,
+                sync_sizing_outcome_to_b_grade_stock,
+                sync_yarn_outcome_status,
+            )
             sync_sizing_outcome_to_intake(self)
+            sync_sizing_outcome_to_b_grade_stock(self)
             sync_yarn_outcome_status(self.yarn_outcome)
 
     def delete(self, *args, **kwargs):
         yo = self.yarn_outcome
         super().delete(*args, **kwargs)
         if yo:
-            from factory.yarn.sizing.services import sync_sizing_outcome_to_intake, sync_yarn_outcome_status
+            from factory.yarn.sizing.services import (
+                sync_sizing_outcome_to_intake,
+                sync_sizing_outcome_to_b_grade_stock,
+                sync_yarn_outcome_status,
+            )
             sync_sizing_outcome_to_intake(yo)
+            sync_sizing_outcome_to_b_grade_stock(yo)
             sync_yarn_outcome_status(yo)
 
     @property

@@ -32,6 +32,10 @@ class YarnOutcomeMinSerializer(serializers.ModelSerializer):
     merged_sizing_bags = serializers.IntegerField(read_only=True)
     mergedSizingCones = serializers.IntegerField(source="merged_sizing_cones", read_only=True)
     merged_sizing_cones = serializers.IntegerField(read_only=True)
+    bGradeCones = serializers.IntegerField(source="b_grade_cones", read_only=True)
+    b_grade_cones = serializers.IntegerField(read_only=True)
+    bGradeWeightKg = serializers.DecimalField(source="b_grade_weight_kg", max_digits=15, decimal_places=6, read_only=True)
+    b_grade_weight_kg = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
     status = serializers.CharField(read_only=True)
 
     class Meta:
@@ -46,6 +50,10 @@ class YarnOutcomeMinSerializer(serializers.ModelSerializer):
             "merged_sizing_bags",
             "mergedSizingCones",
             "merged_sizing_cones",
+            "bGradeCones",
+            "b_grade_cones",
+            "bGradeWeightKg",
+            "b_grade_weight_kg",
             "stockId",
             "stock_id",
             "yarnName",
@@ -675,6 +683,16 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
     totalBagsOnSizing = serializers.IntegerField(source="total_bags_on_sizing", required=False, default=0)
     bagPackingCone = serializers.IntegerField(source="bag_packing_cone", required=False, default=0)
     totalCones = serializers.IntegerField(source="total_cones", required=False, default=0)
+    bGradeCones = serializers.IntegerField(source="b_grade_cones", required=False, default=0)
+    b_grade_cones = serializers.IntegerField(required=False, default=0)
+    consumedBGradeCones = serializers.IntegerField(source="consumed_b_grade_cones", required=False, default=0)
+    consumed_b_grade_cones = serializers.IntegerField(required=False, default=0)
+    returnBGradeCones = serializers.IntegerField(source="return_b_grade_cones", required=False, default=0)
+    return_b_grade_cones = serializers.IntegerField(required=False, default=0)
+    remainingBGradeCones = serializers.IntegerField(source="remaining_b_grade_cones", required=False, default=0)
+    remaining_b_grade_cones = serializers.IntegerField(required=False, default=0)
+    bGradeWeightKg = serializers.SerializerMethodField()
+    b_grade_weight_kg = serializers.SerializerMethodField()
     remainingBagsOnSizingStock = serializers.IntegerField(source="remaining_bags_on_sizing_stock", required=False, default=0)
     remainingConesOnSizingStock = serializers.IntegerField(source="remaining_cones_on_sizing_stock", required=False, default=0)
     mergedSizingBags = serializers.IntegerField(source="merged_sizing_bags", required=False, default=0)
@@ -730,6 +748,14 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
 
     def get_yarn_type(self, obj):
         return self.get_yarnType(obj)
+
+    def get_bGradeWeightKg(self, obj):
+        if obj.yarn_outcome and obj.yarn_outcome.b_grade_weight_kg is not None:
+            return str(obj.yarn_outcome.b_grade_weight_kg)
+        return "0.000000"
+
+    def get_b_grade_weight_kg(self, obj):
+        return self.get_bGradeWeightKg(obj)
 
     returnBags = serializers.DecimalField(source="return_bags", max_digits=15, decimal_places=6, required=False, default=Decimal("0.000000"))
     return_bags = serializers.DecimalField(max_digits=15, decimal_places=6, required=False, default=Decimal("0.000000"))
@@ -883,6 +909,16 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "totalBagsOnSizing",
             "bagPackingCone",
             "totalCones",
+            "bGradeCones",
+            "b_grade_cones",
+            "consumedBGradeCones",
+            "consumed_b_grade_cones",
+            "returnBGradeCones",
+            "return_b_grade_cones",
+            "remainingBGradeCones",
+            "remaining_b_grade_cones",
+            "bGradeWeightKg",
+            "b_grade_weight_kg",
             "remainingBagsOnSizingStock",
             "remainingConesOnSizingStock",
             "mergedSizingBags",
@@ -951,6 +987,8 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "id",
             "yarnOutcomeDetail",
             "yarnOutcomeStatus",
+            "bGradeWeightKg",
+            "b_grade_weight_kg",
             "stockId",
             "stock_id",
             "yarnName",
@@ -1010,6 +1048,10 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "total_bags_on_sizing": "totalBagsOnSizing",
             "bag_packing_cone": "bagPackingCone",
             "total_cones": "totalCones",
+            "b_grade_cones": "bGradeCones",
+            "consumed_b_grade_cones": "consumedBGradeCones",
+            "return_b_grade_cones": "returnBGradeCones",
+            "remaining_b_grade_cones": "remainingBGradeCones",
             "remaining_bags_on_sizing_stock": "remainingBagsOnSizingStock",
             "remaining_cones_on_sizing_stock": "remainingConesOnSizingStock",
             "merged_sizing_bags": "mergedSizingBags",
@@ -1246,6 +1288,12 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
         outcome_date = validated_data.pop("outcome_date")
         remarks = validated_data.pop("remarks", "")
 
+        if yarn_outcome and "b_grade_cones" in validated_data:
+            bg_val = validated_data.get("b_grade_cones")
+            if bg_val is not None and getattr(yarn_outcome, "b_grade_cones", None) != bg_val:
+                yarn_outcome.b_grade_cones = bg_val
+                yarn_outcome.save(update_fields=["b_grade_cones", "updated_at"])
+
         return create_sizing_outcome(
             yarn_outcome=yarn_outcome,
             outcome_date=outcome_date,
@@ -1275,6 +1323,11 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             validated_data["updated_by"] = request.user
         updated = super().update(instance, validated_data)
         if updated.yarn_outcome:
+            if "b_grade_cones" in validated_data:
+                bg_val = validated_data.get("b_grade_cones")
+                if bg_val is not None and getattr(updated.yarn_outcome, "b_grade_cones", None) != bg_val:
+                    updated.yarn_outcome.b_grade_cones = bg_val
+                    updated.yarn_outcome.save(update_fields=["b_grade_cones", "updated_at"])
             from .services import sync_yarn_outcome_status, sync_sizing_outcome_to_intake
             sync_yarn_outcome_status(updated.yarn_outcome)
             sync_sizing_outcome_to_intake(updated)

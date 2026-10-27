@@ -178,8 +178,8 @@ class BGradeYarnViewSet(ModelViewSet):
                 .distinct()
             )
 
-            # Total dispatched cones for this quality pool
-            dispatched_cones = (
+            # Total dispatched cones for this quality pool (net dispatched: dispatched - returned)
+            disp_agg = (
                 YarnOutcomeBGradeItem.objects
                 .filter(
                     b_grade_yarn__yarn_name_id=row["yarn_name_id"],
@@ -187,8 +187,14 @@ class BGradeYarnViewSet(ModelViewSet):
                     b_grade_yarn__yarn_count_id=row["yarn_count_id"],
                     b_grade_yarn__production_type=row["production_type"],
                 )
-                .aggregate(total=Sum("cones"))["total"] or 0
+                .aggregate(
+                    total=Sum("cones"),
+                    returned=Sum("returned_cones"),
+                )
             )
+            tot_disp = disp_agg["total"] or 0
+            tot_ret = disp_agg["returned"] or 0
+            dispatched_cones = max(0, tot_disp - tot_ret)
 
             # Synthesize quality key ID
             quality_key = f"{row['yarn_name_id']}-{row['yarn_type_id']}-{row['yarn_count_id']}-{row['production_type'] or 'default'}"
@@ -204,6 +210,8 @@ class BGradeYarnViewSet(ModelViewSet):
                 "productionType": row["production_type"] or "Self",
                 "totalCones": cones,
                 "totalDispatchedCones": dispatched_cones,
+                "totalReturnedCones": tot_ret,
+                "grossDispatchedCones": tot_disp,
                 "totalWeightKg": str(w_kg.quantize(Decimal("0.0001"))),
                 "totalWeightLb": str(w_lb.quantize(Decimal("0.0001"))),
                 "entriesCount": row["entries_count"],

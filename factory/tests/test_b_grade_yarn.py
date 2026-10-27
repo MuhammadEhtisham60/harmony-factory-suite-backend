@@ -269,4 +269,75 @@ class BGradeYarnTests(TestCase):
         bg_batch.refresh_from_db()
         self.assertEqual(bg_batch.cones, 25)  # 40 - 15 = 25
 
+    def test_return_b_grade_cones_adds_back_to_respective_b_grade_stock(self):
+        """Test returning B-grade cones adds back into the respective BGradeYarn stock entry."""
+        from factory.yarn.warping.models import Warping
+        from factory.yarn.sizing.models import SizingOutcome
+        from factory.yarn.yarn_intake.models import YarnOutcome, YarnOutcomeBGradeItem
+        from django.utils import timezone
+
+        warping = Warping.objects.create(warping_name="Special Warping", status="Active")
+        bg_batch = BGradeYarn.objects.create(
+            yarn_name=self.yarn_name,
+            yarn_type=self.yarn_type,
+            yarn_count=self.yarn_count,
+            production_type="Self",
+            cones=50,
+            weight_kg=Decimal("25.000000"),
+            lot_number="WARP-RET-1",
+        )
+
+        # 1. Dispatch 10 B-grade cones to Warping
+        res = self.client.post("/api/v1/yarn-outcomes/", data={
+            "outcomeType": "Warping",
+            "warping": warping.id,
+            "outcomeDate": str(timezone.now().date()),
+            "bGradeItems": [{"bGradeYarn": bg_batch.id, "cones": 10}],
+        }, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        outcome_id = res.data["id"] if "id" in res.data else res.data["data"]["id"]
+        yo = YarnOutcome.objects.get(pk=outcome_id)
+
+        bg_batch.refresh_from_db()
+        self.assertEqual(bg_batch.cones, 40)  # 50 - 10 = 40
+        self.assertEqual(bg_batch.weight_kg, Decimal("20.000000"))  # 25 - 5 = 20 kg
+
+        # 2. Record Warping Outcome: 10 dispatched, 9 consumed, 0 remaining -> 1 returned
+        so = SizingOutcome.objects.create(
+            yarn_outcome=yo,
+            outcome_date=timezone.now().date(),
+            total_bags_on_sizing=0,
+            bag_packing_cone=0,
+            total_cones=0,
+            b_grade_cones=10,
+            consumed_b_grade_cones=9,
+            remaining_b_grade_cones=0,
+            return_b_grade_cones=1,
+            return_bags=Decimal("0"),
+            return_cones=Decimal("0"),
+        )
+
+        bg_batch.refresh_from_db()
+        self.assertEqual(bg_batch.cones, 41)  # 40 + 1 returned = 41
+        self.assertEqual(bg_batch.weight_kg, Decimal("20.500000"))  # 20 + 0.5 kg = 20.5 kg
+
+        bg_item = yo.b_grade_items.first()
+        self.assertEqual(bg_item.returned_cones, 1)
+
+        # 3. Update outcome to 2 returned cones (8 consumed)
+        so.consumed_b_grade_cones = 8
+        so.save()
+
+        bg_batch.refresh_from_db()
+        self.assertEqual(bg_batch.cones, 42)  # 40 + 2 returned = 42
+        self.assertEqual(bg_batch.weight_kg, Decimal("21.000000"))
+
+        # 4. Check quality-wise endpoint
+        res_qw = self.client.get("/api/v1/b-grade-yarn/quality-wise/")
+        self.assertEqual(res_qw.status_code, status.HTTP_200_OK)
+        qual_res = next(r for r in res_qw.data["results"] if r["yarnCount"] == "30s / 1")
+        self.assertEqual(qual_res["totalCones"], 42)
+        self.assertEqual(qual_res["totalDispatchedCones"], 8)  # 10 - 2 = 8 net dispatched
+        self.assertEqual(qual_res["totalReturnedCones"], 2)
+
 

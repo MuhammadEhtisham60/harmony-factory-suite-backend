@@ -513,6 +513,126 @@ def sync_sizing_outcome_to_intake(outcome_or_yarn_outcome):
         if stock:
             recalculate_yarn_stock(stock)
 
+    sync_sizing_outcome_to_b_grade_stock(yarn_outcome)
+
+
+def sync_sizing_outcome_to_b_grade_stock(outcome_or_yarn_outcome):
+    """
+    Synchronizes returned B-grade cones from Warping/Sizing outcome(s)
+    back into the respective B-Grade Yarn stock batch entry (BGradeYarn).
+    Calculates exact cone and weight deltas so that B-grade stock is updated
+    idempotently and accurately.
+    """
+    if not outcome_or_yarn_outcome:
+        return
+
+    from factory.yarn.yarn_intake.models import YarnOutcome, YarnOutcomeBGradeItem
+    from factory.yarn.b_grade_yarn.models import BGradeYarn, LB_PER_KG
+    from factory.yarn.sizing.models import SizingOutcome
+
+    if hasattr(outcome_or_yarn_outcome, "yarn_outcome") and outcome_or_yarn_outcome.yarn_outcome:
+        yarn_outcome = outcome_or_yarn_outcome.yarn_outcome
+    elif isinstance(outcome_or_yarn_outcome, YarnOutcome):
+        yarn_outcome = outcome_or_yarn_outcome
+    elif isinstance(outcome_or_yarn_outcome, (int, str)):
+        yarn_outcome = YarnOutcome.objects.filter(id=outcome_or_yarn_outcome).first()
+    else:
+        yarn_outcome = None
+
+    if not yarn_outcome:
+        return
+
+    with transaction.atomic():
+        # Sum all returned B-grade cones across all SizingOutcomes linked to this YarnOutcome
+        total_returned_bg_cones = (
+            SizingOutcome.objects.filter(yarn_outcome=yarn_outcome)
+            .aggregate(total=Sum("return_b_grade_cones"))["total"] or 0
+        )
+
+        remaining_to_return = total_returned_bg_cones
+        bg_items = list(yarn_outcome.b_grade_items.select_for_update().all())
+
+        if bg_items:
+            for idx, item in enumerate(bg_items):
+                # Allocate returned cones up to the item's dispatched cones
+                if idx == len(bg_items) - 1:
+                    item_target_returned = remaining_to_return
+                else:
+                    item_target_returned = min(item.cones, remaining_to_return)
+                remaining_to_return = max(0, remaining_to_return - item_target_returned)
+
+                curr_returned = item.returned_cones or 0
+                delta_cones = item_target_returned - curr_returned
+
+                if delta_cones != 0 or item.returned_cones != item_target_returned:
+                    if item.cones > 0 and item.weight_kg > 0:
+                        unit_weight_kg = Decimal(str(item.weight_kg)) / Decimal(str(item.cones))
+                    else:
+                        unit_weight_kg = Decimal("0.000000")
+
+                    delta_weight_kg = (Decimal(str(delta_cones)) * unit_weight_kg).quantize(Decimal("0.000001"))
+                    delta_weight_lb = (delta_weight_kg * LB_PER_KG).quantize(Decimal("0.000001"))
+
+                    # Lock and update the respective BGradeYarn batch
+                    try:
+                        locked_bg = BGradeYarn.objects.select_for_update().get(pk=item.b_grade_yarn_id)
+                        locked_bg.cones = max(0, locked_bg.cones + delta_cones)
+                        locked_bg.weight_kg = max(Decimal("0.000000"), locked_bg.weight_kg + delta_weight_kg)
+                        locked_bg.weight_lb = (locked_bg.weight_kg * LB_PER_KG).quantize(Decimal("0.000001"))
+                        locked_bg.save(update_fields=["cones", "weight_kg", "weight_lb", "updated_at"])
+                    except BGradeYarn.DoesNotExist:
+                        pass
+
+                    item.returned_cones = item_target_returned
+                    item.returned_weight_kg = (Decimal(str(item_target_returned)) * unit_weight_kg).quantize(Decimal("0.000001"))
+                    item.returned_weight_lb = (item.returned_weight_kg * LB_PER_KG).quantize(Decimal("0.000001"))
+                    item.save(update_fields=["returned_cones", "returned_weight_kg", "returned_weight_lb", "updated_at"])
+
+        elif total_returned_bg_cones > 0:
+            # Fallback if outcome had no b_grade_items but had B-grade cones returned
+            yarn_name = getattr(yarn_outcome, "yarn_name", None)
+            yarn_type = getattr(yarn_outcome, "yarn_type", None)
+            yarn_count = getattr(yarn_outcome, "yarn_count", None)
+            if not yarn_name and yarn_outcome.items.exists():
+                first_intake = yarn_outcome.items.first().yarn_intake
+                yarn_name = first_intake.yarn_name
+                yarn_type = first_intake.yarn_type
+                yarn_count = first_intake.yarn_count
+
+            if yarn_name and yarn_type and yarn_count:
+                bg_yarn = BGradeYarn.objects.filter(
+                    yarn_name=yarn_name,
+                    yarn_type=yarn_type,
+                    yarn_count=yarn_count,
+                ).first()
+                if not bg_yarn:
+                    bg_yarn = BGradeYarn.objects.create(
+                        yarn_name=yarn_name,
+                        yarn_type=yarn_type,
+                        yarn_count=yarn_count,
+                        cones=0,
+                        weight_kg=Decimal("0.000000"),
+                        weight_lb=Decimal("0.000000"),
+                        remarks=f"Auto-created from Warping/Sizing Return for Outcome #{yarn_outcome.id}",
+                    )
+
+                item = YarnOutcomeBGradeItem.objects.create(
+                    yarn_outcome=yarn_outcome,
+                    b_grade_yarn=bg_yarn,
+                    cones=total_returned_bg_cones,
+                    returned_cones=total_returned_bg_cones,
+                )
+                item.calculate_weights()
+                item.returned_weight_kg = item.weight_kg
+                item.returned_weight_lb = item.weight_lb
+                item.save(update_fields=["returned_cones", "returned_weight_kg", "returned_weight_lb", "updated_at"])
+
+                locked_bg = BGradeYarn.objects.select_for_update().get(pk=bg_yarn.pk)
+                locked_bg.cones += total_returned_bg_cones
+                locked_bg.weight_kg += item.returned_weight_kg
+                locked_bg.weight_lb += item.returned_weight_lb
+                locked_bg.save(update_fields=["cones", "weight_kg", "weight_lb", "updated_at"])
+
 
 def create_sizing_outcome(yarn_outcome=None, outcome_date=None, remarks="", beam_ids=None, user=None, request=None, **extra_fields):
     """

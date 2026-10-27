@@ -47,6 +47,20 @@ class YarnOutcomeBGradeItemSerializer(serializers.ModelSerializer):
     weightLb = serializers.DecimalField(
         source="weight_lb", max_digits=15, decimal_places=6, read_only=True
     )
+    returnedCones = serializers.IntegerField(source="returned_cones", read_only=True)
+    returned_cones = serializers.IntegerField(read_only=True)
+    returnedWeightKg = serializers.DecimalField(
+        source="returned_weight_kg", max_digits=15, decimal_places=6, read_only=True
+    )
+    returned_weight_kg = serializers.DecimalField(
+        max_digits=15, decimal_places=6, read_only=True
+    )
+    returnedWeightLb = serializers.DecimalField(
+        source="returned_weight_lb", max_digits=15, decimal_places=6, read_only=True
+    )
+    returned_weight_lb = serializers.DecimalField(
+        max_digits=15, decimal_places=6, read_only=True
+    )
     bGradeYarnDetail = serializers.SerializerMethodField()
 
     class Meta:
@@ -58,9 +72,26 @@ class YarnOutcomeBGradeItemSerializer(serializers.ModelSerializer):
             "cones",
             "weightKg",
             "weightLb",
+            "returnedCones",
+            "returned_cones",
+            "returnedWeightKg",
+            "returned_weight_kg",
+            "returnedWeightLb",
+            "returned_weight_lb",
             "bGradeYarnDetail",
         ]
-        read_only_fields = ["id", "weightKg", "weightLb", "bGradeYarnDetail"]
+        read_only_fields = [
+            "id",
+            "weightKg",
+            "weightLb",
+            "returnedCones",
+            "returned_cones",
+            "returnedWeightKg",
+            "returned_weight_kg",
+            "returnedWeightLb",
+            "returned_weight_lb",
+            "bGradeYarnDetail",
+        ]
 
     def get_bGradeYarnDetail(self, obj):
         if obj.b_grade_yarn:
@@ -1259,9 +1290,12 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
                 for old_bg in instance.b_grade_items.all():
                     try:
                         locked_bg = BGradeYarn.objects.select_for_update().get(pk=old_bg.b_grade_yarn_id)
-                        locked_bg.cones += old_bg.cones
-                        locked_bg.weight_kg += old_bg.weight_kg
-                        locked_bg.weight_lb += old_bg.weight_lb
+                        unreturned_cones = max(0, old_bg.cones - (old_bg.returned_cones or 0))
+                        unreturned_kg = max(Decimal("0.000000"), old_bg.weight_kg - (old_bg.returned_weight_kg or Decimal("0.000000")))
+                        unreturned_lb = max(Decimal("0.000000"), old_bg.weight_lb - (old_bg.returned_weight_lb or Decimal("0.000000")))
+                        locked_bg.cones += unreturned_cones
+                        locked_bg.weight_kg += unreturned_kg
+                        locked_bg.weight_lb += unreturned_lb
                         locked_bg.save(update_fields=["cones", "weight_kg", "weight_lb", "updated_at"])
                     except BGradeYarn.DoesNotExist:
                         pass
