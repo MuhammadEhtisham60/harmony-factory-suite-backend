@@ -18,3 +18,4 @@ from factory.yarn.warping.models import Warping
 from factory.yarn.b_grade_yarn.models import BGradeYarn
 from factory.cloth.models import ClothName, ClothPatch, ClothStock, CleanClothStock, DefectedClothStock
 from factory.bank_account.models import BankAccount, BankTransaction
+from factory.sales.customer_ledger.models import ClothSale, ClothCustomerPayment
