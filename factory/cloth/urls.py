@@ -13,6 +13,7 @@ from .views import (
     CleanClothStockViewSet,
     DefectedClothStockViewSet,
 )
+from .ledger_views import InventoryLedgerViewSet
 
 router = DefaultRouter()
 router.register(r"cloth-names", ClothNameViewSet, basename="cloth-name")
@@ -21,6 +22,7 @@ router.register(r"raw-stock", RawStockViewSet, basename="raw-stock")
 router.register(r"cloth-stock", ClothStockViewSet, basename="cloth-stock")
 router.register(r"clean-cloth-stock", CleanClothStockViewSet, basename="clean-cloth-stock")
 router.register(r"defected-cloth-stock", DefectedClothStockViewSet, basename="defected-cloth-stock")
+router.register(r"inventory-ledger", InventoryLedgerViewSet, basename="inventory-ledger")
 
 urlpatterns = [
     path("", include(router.urls)),

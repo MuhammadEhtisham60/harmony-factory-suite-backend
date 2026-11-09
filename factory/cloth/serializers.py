@@ -19,6 +19,7 @@ from .models import (
     ClothStock,
     CleanClothStock,
     DefectedClothStock,
+    ClothStockMovement,
 )
 from .services import (
     create_cloth_patch,
@@ -27,6 +28,8 @@ from .services import (
     create_defected_cloth_stock,
     update_defected_cloth_stock,
     validate_patch_allocation,
+    create_cloth_stock_movement,
+    delete_cloth_stock_movement,
 )
 
 
@@ -1039,6 +1042,161 @@ class DefectedClothStockSerializer(serializers.ModelSerializer):
             stock_date=validated_data.get("stock_date"),
             defect_description=validated_data.get("defect_description"),
             remarks=validated_data.get("remarks"),
+            user=user,
+            request=self.context.get("request"),
+        )
+
+
+
+class ClothStockMovementSerializer(serializers.ModelSerializer):
+    """
+    Serializer for inventory movement entries with dual camelCase/snake_case support.
+    """
+    id = serializers.IntegerField(read_only=True)
+    clothStockId = serializers.PrimaryKeyRelatedField(
+        source="cloth_stock",
+        queryset=ClothStock.objects.all(),
+        required=False
+    )
+    cloth_stock_id = serializers.IntegerField(source="cloth_stock.id", read_only=True)
+    clothName = serializers.CharField(source="cloth_stock.cloth_name.name", read_only=True)
+    cloth_name = serializers.CharField(source="cloth_stock.cloth_name.name", read_only=True)
+    movementType = serializers.ChoiceField(
+        source="movement_type",
+        choices=ClothStockMovement.MovementType.choices,
+        required=False
+    )
+    movement_type = serializers.CharField(read_only=True)
+    subType = serializers.CharField(source="sub_type", required=False, allow_blank=True)
+    sub_type = serializers.CharField(read_only=True)
+    transactionDate = serializers.DateField(source="transaction_date", required=False)
+    transaction_date = serializers.DateField(read_only=True)
+    quantity = serializers.DecimalField(max_digits=15, decimal_places=6)
+    bundleCount = serializers.IntegerField(source="bundle_count", default=1, required=False)
+    bundle_count = serializers.IntegerField(read_only=True)
+    referenceNumber = serializers.CharField(source="reference_number", required=False, allow_blank=True, default="")
+    reference_number = serializers.CharField(read_only=True)
+    partyName = serializers.CharField(source="party_name", required=False, allow_blank=True, default="")
+    party_name = serializers.CharField(read_only=True)
+    ratePerMeter = serializers.DecimalField(source="rate_per_meter", max_digits=15, decimal_places=4, required=False, allow_null=True)
+    rate_per_meter = serializers.DecimalField(max_digits=15, decimal_places=4, read_only=True)
+    totalAmount = serializers.DecimalField(source="total_amount", max_digits=18, decimal_places=2, required=False, allow_null=True)
+    total_amount = serializers.DecimalField(max_digits=18, decimal_places=2, read_only=True)
+    cleanClothStockId = serializers.IntegerField(source="clean_cloth_stock_id", read_only=True)
+    clean_cloth_stock_id = serializers.IntegerField(source="clean_cloth_stock_id", read_only=True)
+    isProduction = serializers.SerializerMethodField()
+    is_production = serializers.SerializerMethodField()
+    remarks = serializers.CharField(required=False, allow_blank=True, default="")
+    createdAt = serializers.DateTimeField(source="created_at", read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    createdBy = serializers.SerializerMethodField()
+    created_by = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ClothStockMovement
+        fields = [
+            "id",
+            "clothStockId",
+            "cloth_stock_id",
+            "clothName",
+            "cloth_name",
+            "movementType",
+            "movement_type",
+            "subType",
+            "sub_type",
+            "transactionDate",
+            "transaction_date",
+            "quantity",
+            "bundleCount",
+            "bundle_count",
+            "referenceNumber",
+            "reference_number",
+            "partyName",
+            "party_name",
+            "ratePerMeter",
+            "rate_per_meter",
+            "totalAmount",
+            "total_amount",
+            "cleanClothStockId",
+            "clean_cloth_stock_id",
+            "isProduction",
+            "is_production",
+            "remarks",
+            "createdAt",
+            "created_at",
+            "createdBy",
+            "created_by",
+        ]
+
+    def get_isProduction(self, obj):
+        return bool(obj.clean_cloth_stock_id)
+
+    def get_is_production(self, obj):
+        return bool(obj.clean_cloth_stock_id)
+
+    def get_createdBy(self, obj):
+        if obj.created_by:
+            return obj.created_by.get_full_name() or obj.created_by.username
+        return None
+
+    def get_created_by(self, obj):
+        if obj.created_by:
+            return obj.created_by.get_full_name() or obj.created_by.username
+        return None
+
+    def validate(self, attrs):
+        # Resolve cloth_stock
+        stock = attrs.get("cloth_stock")
+        if not stock:
+            raw_id = self.initial_data.get("clothStockId") or self.initial_data.get("cloth_stock") or self.initial_data.get("cloth_stock_id")
+            if not raw_id:
+                raise serializers.ValidationError({"clothStockId": ["clothStockId is required."]})
+            try:
+                stock = ClothStock.objects.get(id=raw_id)
+                attrs["cloth_stock"] = stock
+            except ClothStock.DoesNotExist:
+                raise serializers.ValidationError({"clothStockId": [f"ClothStock #{raw_id} does not exist."]})
+
+        # Resolve movement_type
+        m_type = attrs.get("movement_type")
+        if not m_type:
+            raw_type = self.initial_data.get("movementType") or self.initial_data.get("movement_type")
+            if raw_type in [ClothStockMovement.MovementType.INCOMING, ClothStockMovement.MovementType.OUTGOING]:
+                attrs["movement_type"] = raw_type
+            else:
+                raise serializers.ValidationError({"movementType": ["Valid movementType ('INCOMING' or 'OUTGOING') is required."]})
+
+        # Resolve transaction_date
+        t_date = attrs.get("transaction_date")
+        if not t_date:
+            raw_date = self.initial_data.get("transactionDate") or self.initial_data.get("transaction_date")
+            if raw_date:
+                from django.utils.dateparse import parse_date
+                parsed = parse_date(str(raw_date))
+                if parsed:
+                    attrs["transaction_date"] = parsed
+                else:
+                    raise serializers.ValidationError({"transactionDate": ["Enter a valid date."]})
+            else:
+                from django.utils import timezone
+                attrs["transaction_date"] = timezone.localdate()
+
+        return attrs
+
+    def create(self, validated_data):
+        user = self.context["request"].user if "request" in self.context and self.context["request"].user.is_authenticated else None
+        return create_cloth_stock_movement(
+            cloth_stock_or_id=validated_data["cloth_stock"],
+            movement_type=validated_data["movement_type"],
+            quantity=validated_data["quantity"],
+            transaction_date=validated_data["transaction_date"],
+            sub_type=validated_data.get("sub_type"),
+            bundle_count=validated_data.get("bundle_count", 1),
+            reference_number=validated_data.get("reference_number", ""),
+            party_name=validated_data.get("party_name", ""),
+            rate_per_meter=validated_data.get("rate_per_meter"),
+            total_amount=validated_data.get("total_amount"),
+            remarks=validated_data.get("remarks", ""),
             user=user,
             request=self.context.get("request"),
         )
