@@ -19,3 +19,10 @@ from factory.yarn.b_grade_yarn.models import BGradeYarn
 from factory.cloth.models import ClothName, ClothPatch, ClothStock, CleanClothStock, DefectedClothStock
 from factory.bank_account.models import BankAccount, BankTransaction
 from factory.sales.customer_ledger.models import ClothSale, ClothCustomerPayment
+from factory.inventory.category.models import InventoryCategory
+from factory.inventory.unit.models import InventoryUnit
+from factory.inventory.item.models import InventoryItem
+from factory.inventory.purchase.models import InventoryPurchase, InventoryPurchaseItem
+from factory.inventory.transaction.models import InventoryTransaction
+from factory.inventory.ledger.models import InventoryLedger
+
