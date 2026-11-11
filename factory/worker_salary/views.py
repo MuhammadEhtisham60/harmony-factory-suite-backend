@@ -81,23 +81,30 @@ class WorkerViewSet(ModelViewSet):
     def perform_create(self, serializer):
         worker = serializer.save(created_by=self.request.user)
         log_activity(
-            user=self.request.user,
-            action="CREATE",
-            model_name="Worker",
-            object_id=str(worker.id),
-            object_repr=str(worker),
-            details={"name": worker.name, "daily_wage_rate": str(worker.daily_wage_rate)},
+            self.request,
+            action="Created Worker",
+            description=f"Created worker {worker.name} ({worker.worker_code}) - {worker.loom_type}",
+            module="HR & Workforce",
         )
 
     def perform_update(self, serializer):
         worker = serializer.save()
         log_activity(
-            user=self.request.user,
-            action="UPDATE",
-            model_name="Worker",
-            object_id=str(worker.id),
-            object_repr=str(worker),
-            details={"name": worker.name, "daily_wage_rate": str(worker.daily_wage_rate)},
+            self.request,
+            action="Updated Worker",
+            description=f"Updated worker {worker.name} ({worker.worker_code}) - {worker.loom_type}",
+            module="HR & Workforce",
+        )
+
+    def perform_destroy(self, instance):
+        worker_name = instance.name
+        worker_code = instance.worker_code
+        instance.delete()
+        log_activity(
+            self.request,
+            action="Deleted Worker",
+            description=f"Deleted worker {worker_name} ({worker_code})",
+            module="HR & Workforce",
         )
 
     @action(detail=True, methods=["post"], url_path="recalculate-ledger")
@@ -169,6 +176,8 @@ class WorkerAttendanceViewSet(ModelViewSet):
         date = request.data.get("date") or str(timezone.localdate())
         status_val = request.data.get("status", "Present")
         rate = request.data.get("daily_wage_rate")
+        m_rate = request.data.get("per_meter_rate")
+        meters = request.data.get("meters_produced")
         notes = request.data.get("notes", "")
 
         try:
@@ -182,6 +191,8 @@ class WorkerAttendanceViewSet(ModelViewSet):
                 date=date,
                 status=status_val,
                 daily_wage_rate=rate,
+                per_meter_rate=m_rate,
+                meters_produced=meters,
                 notes=notes,
                 user=request.user,
             )
@@ -203,6 +214,7 @@ class WorkerAttendanceViewSet(ModelViewSet):
         for item in attendances:
             worker_id = item.get("worker_id") or item.get("worker")
             status_val = item.get("status", "Present")
+            meters = item.get("meters_produced")
             notes = item.get("notes", "")
             try:
                 worker = Worker.objects.get(pk=worker_id)
@@ -210,6 +222,7 @@ class WorkerAttendanceViewSet(ModelViewSet):
                     worker=worker,
                     date=date,
                     status=status_val,
+                    meters_produced=meters,
                     notes=notes,
                     user=request.user,
                 )
@@ -230,7 +243,7 @@ class WorkerAttendanceViewSet(ModelViewSet):
 
 class PowerLoomSalaryPeriodViewSet(ModelViewSet):
     """
-    Power Loom Worker Salary Calculation and Flexible Payment Cycle.
+    Power Loom & Manual Loom Worker Salary Calculation and Flexible Payment Cycle.
     """
     queryset = PowerLoomSalaryPeriod.objects.select_related("worker", "created_by").prefetch_related("payments").all()
     serializer_class = PowerLoomSalaryPeriodSerializer
@@ -265,13 +278,15 @@ class PowerLoomSalaryPeriodViewSet(ModelViewSet):
         try:
             preview_data = calculate_salary_preview(
                 worker=worker,
-                start_date=data["start_date"],
-                end_date=data["end_date"],
+                start_date=data.get("start_date"),
+                end_date=data.get("end_date"),
                 payment_cycle=data.get("payment_cycle", "15 Days"),
                 overtime_amount=data.get("overtime_amount", Decimal("0.00")),
                 other_earnings=data.get("other_earnings", Decimal("0.00")),
                 other_deductions=data.get("other_deductions", Decimal("0.00")),
                 advance_payments=data.get("advance_payments"),
+                total_working_days=data.get("total_working_days"),
+                total_meters_produced=data.get("total_meters_produced"),
             )
             return Response(preview_data, status=status.HTTP_200_OK)
         except Exception as e:
@@ -291,13 +306,15 @@ class PowerLoomSalaryPeriodViewSet(ModelViewSet):
         try:
             salary_period = finalize_salary_period(
                 worker=worker,
-                start_date=data["start_date"],
-                end_date=data["end_date"],
+                start_date=data.get("start_date"),
+                end_date=data.get("end_date"),
                 payment_cycle=data.get("payment_cycle", "15 Days"),
                 overtime_amount=data.get("overtime_amount", Decimal("0.00")),
                 other_earnings=data.get("other_earnings", Decimal("0.00")),
                 other_deductions=data.get("other_deductions", Decimal("0.00")),
-                advance_payments=data.get("advance_payments") or Decimal("0.00"),
+                advance_payments=data.get("advance_payments"),
+                total_working_days=data.get("total_working_days"),
+                total_meters_produced=data.get("total_meters_produced"),
                 notes=request.data.get("notes", ""),
                 user=request.user,
             )
@@ -530,3 +547,4 @@ class WorkerSalaryLedgerViewSet(ReadOnlyModelViewSet):
             "total_entries": total_entries,
             "distinct_workers": distinct_workers,
         })
+

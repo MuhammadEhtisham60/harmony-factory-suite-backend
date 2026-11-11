@@ -105,3 +105,4 @@ class WorkerSalaryLedgerFilter(django_filters.FilterSet):
             | Q(reference_id__icontains=value)
             | Q(description__icontains=value)
         )
+

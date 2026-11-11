@@ -18,23 +18,32 @@ from .models import (
 )
 
 
+from datetime import date as dt_date
+
+def _is_future_date(target_date) -> bool:
+    if isinstance(target_date, str):
+        target_date = dt_date.fromisoformat(target_date)
+    today_local = timezone.localdate()
+    today_sys = dt_date.today()
+    max_today = max(today_local, today_sys)
+    return target_date > max_today
+
+
 @transaction.atomic
 def record_daily_attendance(
     worker: Worker,
     date,
     status: str,
     daily_wage_rate=None,
+    per_meter_rate=None,
+    meters_produced=None,
     notes: str = "",
     user=None,
 ) -> WorkerAttendance:
     """
-    Records or updates daily attendance for a worker.
-    - Validates date is not in future.
-    - Ensures past finalized/settled attendance is not overwritten without warning.
-    - Automatically creates/updates daily wage earned ledger entry.
-    - Recalculates worker running balance.
+    Records or updates daily attendance / daily fabric production for a worker.
     """
-    if str(date) > str(timezone.localdate()):
+    if _is_future_date(date):
         raise ValidationError("Future dates cannot be recorded as working days.")
 
     existing_att = WorkerAttendance.objects.filter(worker=worker, date=date).first()
@@ -46,10 +55,14 @@ def record_daily_attendance(
         )
 
     rate = Decimal(str(daily_wage_rate)) if daily_wage_rate is not None else worker.daily_wage_rate
+    m_rate = Decimal(str(per_meter_rate)) if per_meter_rate is not None else worker.per_meter_rate
+    meters = Decimal(str(meters_produced or "0.00"))
 
     if existing_att:
         existing_att.status = status
         existing_att.daily_wage_rate = rate
+        existing_att.per_meter_rate = m_rate
+        existing_att.meters_produced = meters
         existing_att.notes = notes
         existing_att.save()
         attendance = existing_att
@@ -59,6 +72,8 @@ def record_daily_attendance(
             date=date,
             status=status,
             daily_wage_rate=rate,
+            per_meter_rate=m_rate,
+            meters_produced=meters,
             notes=notes,
             created_by=user,
         )
@@ -69,66 +84,88 @@ def record_daily_attendance(
         attendance_record=attendance,
     ).first()
 
+    is_manual = worker.loom_type == Worker.LoomTypeChoices.MANUAL_LOOM
     multiplier = attendance.wage_multiplier
-    earned = (rate * multiplier).quantize(Decimal("0.01"))
+    earned = attendance.earned_amount
+
+    desc = (
+        f"Manual Loom Production: {meters}m @ Rs. {m_rate:,.2f}/m ({status})"
+        if is_manual
+        else f"Daily attendance: {status} ({multiplier * 100}% of Rs. {rate:,.2f})"
+    )
+    entry_type = (
+        WorkerSalaryLedger.EntryTypeChoices.FABRIC_PRODUCTION
+        if is_manual
+        else WorkerSalaryLedger.EntryTypeChoices.DAILY_WAGE
+    )
 
     if not ledger_entry:
         ledger_entry = WorkerSalaryLedger(
             worker=worker,
             worker_name=worker.name,
             date=date,
-            entry_type=WorkerSalaryLedger.EntryTypeChoices.DAILY_WAGE,
+            entry_type=entry_type,
             daily_wage_rate=rate,
+            per_meter_rate=m_rate,
+            meters_produced=meters,
             attendance_status=status,
             daily_earned_amount=earned,
             reference_id=f"ATT-{attendance.id}",
-            description=f"Daily attendance: {status} ({multiplier * 100}% of Rs. {rate:,.2f})",
+            description=desc,
             attendance_record=attendance,
             created_by=user,
         )
     else:
+        ledger_entry.entry_type = entry_type
         ledger_entry.daily_wage_rate = rate
+        ledger_entry.per_meter_rate = m_rate
+        ledger_entry.meters_produced = meters
         ledger_entry.attendance_status = status
         ledger_entry.daily_earned_amount = earned
-        ledger_entry.description = f"Daily attendance: {status} ({multiplier * 100}% of Rs. {rate:,.2f})"
+        ledger_entry.description = desc
 
     ledger_entry.save()
 
-    # Recalculate worker ledger running balance
     recalculate_worker_ledger(worker)
-
     return attendance
 
 
 def calculate_salary_preview(
     worker: Worker,
-    start_date,
-    end_date,
+    start_date=None,
+    end_date=None,
     payment_cycle: str = "15 Days",
     overtime_amount=Decimal("0.00"),
     other_earnings=Decimal("0.00"),
     other_deductions=Decimal("0.00"),
     advance_payments=None,
+    total_working_days=None,
+    total_meters_produced=None,
 ):
     """
     Computes real-time salary calculation preview without saving to DB.
+    Supports both Power Loom (Daily Wage * Working Days) and Manual Loom (Per Meter Rate * Meters Produced).
     """
+    today = timezone.localdate()
+    start_date = start_date or today
+    end_date = end_date or today
+
     overtime_amount = Decimal(str(overtime_amount or "0.00"))
     other_earnings = Decimal(str(other_earnings or "0.00"))
     other_deductions = Decimal(str(other_deductions or "0.00"))
 
-    # Fetch attendance in date range
     attendances = WorkerAttendance.objects.filter(
         worker=worker,
         date__gte=start_date,
         date__lte=end_date,
+        is_salary_processed=False,
     ).order_by("date")
 
     present_count = Decimal("0.00")
     half_day_count = Decimal("0.00")
     absent_count = Decimal("0.00")
     leave_count = Decimal("0.00")
-    total_earned_daily = Decimal("0.00")
+    logged_meters = Decimal("0.00")
 
     for att in attendances:
         if att.status == WorkerAttendance.AttendanceStatusChoices.PRESENT:
@@ -139,18 +176,29 @@ def calculate_salary_preview(
             absent_count += Decimal("1.00")
         elif att.status == WorkerAttendance.AttendanceStatusChoices.LEAVE:
             leave_count += Decimal("1.00")
-        total_earned_daily += att.earned_amount
+        logged_meters += att.meters_produced
 
-    total_working_days = present_count + (half_day_count * Decimal("0.50"))
+    logged_working_days = present_count + (half_day_count * Decimal("0.50"))
 
-    # If no attendances logged yet, fallback to date span days
-    if not attendances.exists():
-        total_earned_daily = (worker.daily_wage_rate * total_working_days).quantize(Decimal("0.01"))
+    if total_working_days is not None and str(total_working_days) != "":
+        days_total = Decimal(str(total_working_days))
+        present_count = days_total
+    else:
+        days_total = logged_working_days
 
-    base_earned = (worker.daily_wage_rate * total_working_days).quantize(Decimal("0.01"))
+    is_manual = worker.loom_type == Worker.LoomTypeChoices.MANUAL_LOOM
+    if total_meters_produced is not None and str(total_meters_produced) != "":
+        meters_total = Decimal(str(total_meters_produced))
+    else:
+        meters_total = logged_meters
+
+    if is_manual:
+        base_earned = (worker.per_meter_rate * meters_total).quantize(Decimal("0.01"))
+    else:
+        base_earned = (worker.daily_wage_rate * days_total).quantize(Decimal("0.01"))
+
     total_earned_salary = (base_earned + overtime_amount + other_earnings).quantize(Decimal("0.01"))
 
-    # Unsettled advances in or before this range
     unsettled_advances = WorkerAdvance.objects.filter(
         worker=worker,
         status__in=[WorkerAdvance.StatusChoices.ACTIVE, WorkerAdvance.StatusChoices.PARTIALLY_DEDUCTED],
@@ -161,7 +209,6 @@ def calculate_salary_preview(
     )
 
     if advance_payments is None:
-        # Default: deduct up to total earned salary or total unsettled
         advances_to_deduct = min(total_unsettled_advances, total_earned_salary)
     else:
         advances_to_deduct = Decimal(str(advance_payments))
@@ -174,7 +221,12 @@ def calculate_salary_preview(
         "worker_id": worker.id,
         "worker_code": worker.worker_code,
         "worker_name": worker.name,
+        "loom_type": worker.loom_type,
         "daily_wage_rate": str(worker.daily_wage_rate),
+        "per_meter_rate": str(worker.per_meter_rate),
+        "total_meters_produced": float(meters_total),
+        "logged_meters": float(logged_meters),
+        "logged_working_days": float(logged_working_days),
         "start_date": str(start_date),
         "end_date": str(end_date),
         "payment_cycle": payment_cycle,
@@ -182,7 +234,7 @@ def calculate_salary_preview(
         "half_days": float(half_day_count),
         "absent_days": float(absent_count),
         "leave_days": float(leave_count),
-        "total_working_days": float(total_working_days),
+        "total_working_days": float(days_total),
         "base_earned_salary": str(base_earned),
         "overtime_amount": str(overtime_amount),
         "other_earnings": str(other_earnings),
@@ -198,33 +250,24 @@ def calculate_salary_preview(
 @transaction.atomic
 def finalize_salary_period(
     worker: Worker,
-    start_date,
-    end_date,
+    start_date=None,
+    end_date=None,
     payment_cycle: str = "15 Days",
     overtime_amount=Decimal("0.00"),
     other_earnings=Decimal("0.00"),
     other_deductions=Decimal("0.00"),
-    advance_payments=Decimal("0.00"),
+    advance_payments=None,
+    total_working_days=None,
+    total_meters_produced=None,
     notes: str = "",
     user=None,
 ) -> PowerLoomSalaryPeriod:
     """
-    Creates and finalizes a salary period calculation.
-    - Prevents overlapping finalized salary periods for this worker.
-    - Locks attendances in range with is_salary_processed = True.
-    - Settle/deducts active advances.
-    - Creates salary period record with payment_status = 'Unpaid'.
+    Creates and finalizes a salary period calculation for Power Loom or Manual Loom.
     """
-    # Overlap check
-    overlap = PowerLoomSalaryPeriod.objects.filter(
-        worker=worker,
-        start_date__lte=end_date,
-        end_date__gte=start_date,
-    ).exists()
-    if overlap:
-        raise ValidationError(
-            f"A salary period already exists for worker {worker.name} overlapping {start_date} to {end_date}."
-        )
+    today = timezone.localdate()
+    start_date = start_date or today
+    end_date = end_date or today
 
     preview = calculate_salary_preview(
         worker=worker,
@@ -235,12 +278,17 @@ def finalize_salary_period(
         other_earnings=other_earnings,
         other_deductions=other_deductions,
         advance_payments=advance_payments,
+        total_working_days=total_working_days,
+        total_meters_produced=total_meters_produced,
     )
 
     salary_period = PowerLoomSalaryPeriod.objects.create(
         worker=worker,
         worker_name=worker.name,
+        loom_type=worker.loom_type,
         daily_wage_rate=worker.daily_wage_rate,
+        per_meter_rate=worker.per_meter_rate,
+        total_meters_produced=Decimal(str(preview["total_meters_produced"])),
         start_date=start_date,
         end_date=end_date,
         payment_cycle=payment_cycle,
@@ -261,6 +309,44 @@ def finalize_salary_period(
         notes=notes,
         created_by=user,
     )
+
+    # Record earned salary in WorkerSalaryLedger for Manual Loom or Power Loom
+    if worker.loom_type == Worker.LoomTypeChoices.MANUAL_LOOM:
+        unlogged_meters = Decimal(str(preview["total_meters_produced"])) - Decimal(str(preview["logged_meters"]))
+        if unlogged_meters > Decimal("0.00"):
+            unlogged_earned = (worker.per_meter_rate * unlogged_meters).quantize(Decimal("0.01"))
+            WorkerSalaryLedger.objects.create(
+                worker=worker,
+                worker_name=worker.name,
+                date=end_date,
+                entry_type=WorkerSalaryLedger.EntryTypeChoices.FABRIC_PRODUCTION,
+                per_meter_rate=worker.per_meter_rate,
+                meters_produced=unlogged_meters,
+                daily_earned_amount=unlogged_earned,
+                payment_cycle=payment_cycle,
+                reference_id=salary_period.calculation_number,
+                description=f"Fabric Production: {unlogged_meters}m @ Rs. {worker.per_meter_rate:,.2f}/m ({salary_period.calculation_number})",
+                salary_period=salary_period,
+                created_by=user,
+            )
+    else:
+        unlogged_days = Decimal(str(preview["total_working_days"])) - Decimal(str(preview["logged_working_days"]))
+        if unlogged_days > Decimal("0.00"):
+            unlogged_earned = (worker.daily_wage_rate * unlogged_days).quantize(Decimal("0.01"))
+            WorkerSalaryLedger.objects.create(
+                worker=worker,
+                worker_name=worker.name,
+                date=end_date,
+                entry_type=WorkerSalaryLedger.EntryTypeChoices.DAILY_WAGE,
+                daily_wage_rate=worker.daily_wage_rate,
+                attendance_status=f"{unlogged_days} Working Days",
+                daily_earned_amount=unlogged_earned,
+                payment_cycle=payment_cycle,
+                reference_id=salary_period.calculation_number,
+                description=f"Power Loom Salary: {unlogged_days} days @ Rs. {worker.daily_wage_rate:,.2f}/day ({salary_period.calculation_number})",
+                salary_period=salary_period,
+                created_by=user,
+            )
 
     # Lock attendance in this range
     attendances = WorkerAttendance.objects.filter(

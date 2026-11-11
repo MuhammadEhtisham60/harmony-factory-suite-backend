@@ -30,6 +30,7 @@ class WorkerSerializer(serializers.ModelSerializer):
             "photo",
             "loom_type",
             "daily_wage_rate",
+            "per_meter_rate",
             "preferred_payment_cycle",
             "designation",
             "status",
@@ -72,6 +73,8 @@ class WorkerAttendanceSerializer(serializers.ModelSerializer):
             "date",
             "status",
             "daily_wage_rate",
+            "per_meter_rate",
+            "meters_produced",
             "wage_multiplier",
             "earned_amount",
             "is_salary_processed",
@@ -95,17 +98,24 @@ class BulkAttendanceCreateSerializer(serializers.Serializer):
     date = serializers.DateField()
     attendances = serializers.ListField(
         child=serializers.DictField(),
-        help_text="List of {worker_id, status, notes}",
+        help_text="List of {worker_id, status, meters_produced, notes}",
     )
 
 
 class SalaryCalculationPreviewRequestSerializer(serializers.Serializer):
     worker = serializers.IntegerField()
-    start_date = serializers.DateField()
-    end_date = serializers.DateField()
+    start_date = serializers.DateField(required=False, allow_null=True)
+    end_date = serializers.DateField(required=False, allow_null=True)
     payment_cycle = serializers.ChoiceField(
         choices=PowerLoomSalaryPeriod.PaymentCycleChoices.choices,
         default=PowerLoomSalaryPeriod.PaymentCycleChoices.BI_WEEKLY,
+        required=False,
+    )
+    total_working_days = serializers.DecimalField(
+        max_digits=6, decimal_places=2, required=False, allow_null=True
+    )
+    total_meters_produced = serializers.DecimalField(
+        max_digits=12, decimal_places=2, required=False, allow_null=True
     )
     overtime_amount = serializers.DecimalField(
         max_digits=12, decimal_places=2, default=Decimal("0.00"), required=False
@@ -211,7 +221,10 @@ class PowerLoomSalaryPeriodSerializer(serializers.ModelSerializer):
             "worker",
             "worker_name",
             "worker_code",
+            "loom_type",
             "daily_wage_rate",
+            "per_meter_rate",
+            "total_meters_produced",
             "start_date",
             "end_date",
             "payment_cycle",
@@ -252,6 +265,7 @@ class PowerLoomSalaryPeriodSerializer(serializers.ModelSerializer):
 class WorkerSalaryLedgerSerializer(serializers.ModelSerializer):
     worker_name = serializers.CharField(source="worker.name", read_only=True)
     worker_code = serializers.CharField(source="worker.worker_code", read_only=True)
+    loom_type = serializers.CharField(source="worker.loom_type", read_only=True)
 
     class Meta:
         model = WorkerSalaryLedger
@@ -261,9 +275,12 @@ class WorkerSalaryLedgerSerializer(serializers.ModelSerializer):
             "worker",
             "worker_name",
             "worker_code",
+            "loom_type",
             "date",
             "entry_type",
             "daily_wage_rate",
+            "per_meter_rate",
+            "meters_produced",
             "attendance_status",
             "daily_earned_amount",
             "advance_amount",
@@ -281,3 +298,4 @@ class WorkerSalaryLedgerSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = fields
+

@@ -17,10 +17,7 @@ class Worker(models.Model):
     """
     class LoomTypeChoices(models.TextChoices):
         POWER_LOOM = "Power Loom", "Power Loom"
-        AUTO_LOOM = "Auto Loom", "Auto Loom"
-        SULZER_LOOM = "Sulzer Loom", "Sulzer Loom"
-        AIRJET_LOOM = "Airjet Loom", "Airjet Loom"
-        OTHER = "Other", "Other"
+        MANUAL_LOOM = "Manual Loom", "Manual Loom"
 
     class PaymentCycleChoices(models.TextChoices):
         WEEKLY = "Weekly", "Weekly (Every 7 Days)"
@@ -46,12 +43,19 @@ class Worker(models.Model):
         max_digits=12,
         decimal_places=2,
         default=Decimal("0.00"),
-        help_text="Standard daily wage rate for this worker",
+        help_text="Standard daily wage rate for Power Loom workers",
+    )
+    per_meter_rate = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="Per meter fabric rate for Manual Loom workers",
     )
     preferred_payment_cycle = models.CharField(
         max_length=30,
         choices=PaymentCycleChoices.choices,
         default=PaymentCycleChoices.BI_WEEKLY,
+        blank=True,
     )
     designation = models.CharField(max_length=100, default="Power Loom Weaver")
     status = models.CharField(
@@ -128,7 +132,20 @@ class WorkerAttendance(models.Model):
     daily_wage_rate = models.DecimalField(
         max_digits=12,
         decimal_places=2,
+        default=Decimal("0.00"),
         help_text="Daily wage rate effective on this date",
+    )
+    per_meter_rate = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="Per meter rate effective on this date (for Manual Loom)",
+    )
+    meters_produced = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="Meters of fabric produced on this date (for Manual Loom)",
     )
     wage_multiplier = models.DecimalField(
         max_digits=4,
@@ -140,7 +157,7 @@ class WorkerAttendance(models.Model):
         max_digits=12,
         decimal_places=2,
         default=Decimal("0.00"),
-        help_text="daily_wage_rate * wage_multiplier",
+        help_text="daily_wage_rate * wage_multiplier (Power Loom) or per_meter_rate * meters_produced (Manual Loom)",
     )
     is_salary_processed = models.BooleanField(
         default=False,
@@ -175,13 +192,18 @@ class WorkerAttendance(models.Model):
         ]
 
     def clean(self):
-        if self.date and self.date > timezone.localdate():
-            raise ValidationError({"date": "Future dates cannot be recorded as working days."})
+        from datetime import date as dt_date
+        if self.date:
+            max_today = max(timezone.localdate(), dt_date.today())
+            if self.date > max_today:
+                raise ValidationError({"date": "Future dates cannot be recorded as working days."})
 
     def save(self, *args, **kwargs):
         self.clean()
         if not self.daily_wage_rate:
-            self.daily_wage_rate = self.worker.daily_wage_rate
+            self.daily_wage_rate = self.worker.daily_wage_rate or Decimal("0.00")
+        if not self.per_meter_rate:
+            self.per_meter_rate = self.worker.per_meter_rate or Decimal("0.00")
 
         # Multiplier rules: Present=1.0, Half Day=0.5, Absent=0.0, Leave=0.0
         if self.status == self.AttendanceStatusChoices.PRESENT:
@@ -195,7 +217,10 @@ class WorkerAttendance(models.Model):
         else:
             self.wage_multiplier = Decimal("1.00")
 
-        self.earned_amount = (self.daily_wage_rate * self.wage_multiplier).quantize(Decimal("0.01"))
+        if self.worker and self.worker.loom_type == Worker.LoomTypeChoices.MANUAL_LOOM:
+            self.earned_amount = (self.per_meter_rate * self.meters_produced).quantize(Decimal("0.01"))
+        else:
+            self.earned_amount = (self.daily_wage_rate * self.wage_multiplier).quantize(Decimal("0.01"))
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -204,13 +229,13 @@ class WorkerAttendance(models.Model):
 
 class PowerLoomSalaryPeriod(models.Model):
     """
-    Formal salary calculation cycle for a Power Loom worker.
-    Supports Weekly, 15 Days, Monthly, or Custom Date Range.
+    Formal salary calculation cycle for a Power Loom or Manual Loom worker.
+    Supports Weekly (7 Days), 15 Days, Monthly (30 Days), or Custom Date Range.
     """
     class PaymentCycleChoices(models.TextChoices):
         WEEKLY = "Weekly", "Weekly (Every 7 Days)"
         BI_WEEKLY = "15 Days", "Every 15 Days"
-        MONTHLY = "Monthly", "Monthly (Every Month)"
+        MONTHLY = "Monthly", "Monthly (Every 30 Days)"
         CUSTOM = "Custom", "Custom Date Range"
 
     class PaymentStatusChoices(models.TextChoices):
@@ -225,10 +250,24 @@ class PowerLoomSalaryPeriod(models.Model):
         related_name="salary_periods",
     )
     worker_name = models.CharField(max_length=255)
+    loom_type = models.CharField(max_length=50, default="Power Loom")
     daily_wage_rate = models.DecimalField(
         max_digits=12,
         decimal_places=2,
-        help_text="Historical daily wage rate snapshot for this calculation",
+        default=Decimal("0.00"),
+        help_text="Historical daily wage rate snapshot for Power Loom",
+    )
+    per_meter_rate = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="Historical per meter rate snapshot for Manual Loom",
+    )
+    total_meters_produced = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="Total fabric meters produced in this period (for Manual Loom)",
     )
     start_date = models.DateField()
     end_date = models.DateField()
@@ -255,7 +294,7 @@ class PowerLoomSalaryPeriod(models.Model):
         max_digits=15,
         decimal_places=2,
         default=Decimal("0.00"),
-        help_text="Daily Wage Rate * Total Working Days",
+        help_text="Daily Wage Rate * Working Days (Power Loom) or Per Meter Rate * Total Meters (Manual Loom)",
     )
     overtime_amount = models.DecimalField(
         max_digits=12,
@@ -271,7 +310,7 @@ class PowerLoomSalaryPeriod(models.Model):
         max_digits=15,
         decimal_places=2,
         default=Decimal("0.00"),
-        help_text="(Daily Wage Rate * Total Working Days) + Overtime + Other Earnings",
+        help_text="Base Earned + Overtime + Other Earnings",
     )
 
     # Deductions & Settlements
@@ -325,7 +364,11 @@ class PowerLoomSalaryPeriod(models.Model):
         """
         Recalculates totals and updates payment_status.
         """
-        self.base_earned_salary = (self.daily_wage_rate * self.total_working_days).quantize(Decimal("0.01"))
+        if self.loom_type == Worker.LoomTypeChoices.MANUAL_LOOM:
+            self.base_earned_salary = (self.per_meter_rate * self.total_meters_produced).quantize(Decimal("0.01"))
+        else:
+            self.base_earned_salary = (self.daily_wage_rate * self.total_working_days).quantize(Decimal("0.01"))
+
         self.total_earned_salary = (
             self.base_earned_salary + self.overtime_amount + self.other_earnings
         ).quantize(Decimal("0.01"))
@@ -348,8 +391,12 @@ class PowerLoomSalaryPeriod(models.Model):
             self.calculation_number = f"SAL-{new_id:04d}"
         if not self.worker_name and self.worker:
             self.worker_name = self.worker.name
+        if not self.loom_type and self.worker:
+            self.loom_type = self.worker.loom_type
         if not self.daily_wage_rate and self.worker:
             self.daily_wage_rate = self.worker.daily_wage_rate
+        if not self.per_meter_rate and self.worker:
+            self.per_meter_rate = self.worker.per_meter_rate
 
         self.update_financials()
         super().save(*args, **kwargs)
@@ -539,6 +586,7 @@ class WorkerSalaryLedger(models.Model):
     """
     class EntryTypeChoices(models.TextChoices):
         DAILY_WAGE = "Daily Wage", "Daily Wage Earned"
+        FABRIC_PRODUCTION = "Fabric Production", "Fabric Production Earned"
         OVERTIME_OTHER = "Overtime/Other", "Overtime / Other Earnings"
         ADVANCE = "Advance", "Advance Given"
         PAYMENT = "Payment", "Salary Payment"
@@ -557,6 +605,16 @@ class WorkerSalaryLedger(models.Model):
         choices=EntryTypeChoices.choices,
     )
     daily_wage_rate = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
+    per_meter_rate = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
+    meters_produced = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         default=Decimal("0.00"),

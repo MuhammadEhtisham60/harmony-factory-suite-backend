@@ -53,3 +53,4 @@ class WorkerSalaryLedgerAdmin(admin.ModelAdmin):
     list_display = ["entry_number", "worker_name", "date", "entry_type", "daily_earned_amount", "advance_amount", "payment_amount", "running_balance"]
     search_fields = ["entry_number", "worker_name", "reference_id"]
     list_filter = ["entry_type", "payment_cycle", "payment_status"]
+

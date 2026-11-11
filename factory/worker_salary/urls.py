@@ -25,3 +25,4 @@ router.register(r"worker-salary-ledger", WorkerSalaryLedgerViewSet, basename="wo
 urlpatterns = [
     path("", include(router.urls)),
 ]
+
