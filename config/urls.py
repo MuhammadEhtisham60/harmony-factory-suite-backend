@@ -44,6 +44,8 @@ urlpatterns = [
     path('api/v1/', include('factory.yarn.supplier_ledger.urls')),
     path('api/v1/', include('factory.yarn.b_grade_yarn.urls')),
     path('api/v1/', include('factory.bank_account.urls')),
+    path('api/v1/factory/', include('factory.worker_salary.urls')),
+    path('api/v1/', include('factory.worker_salary.urls')),
 ]
 
 if settings.DEBUG:

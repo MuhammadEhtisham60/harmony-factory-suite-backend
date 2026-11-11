@@ -25,4 +25,12 @@ from factory.inventory.item.models import InventoryItem
 from factory.inventory.purchase.models import InventoryPurchase, InventoryPurchaseItem
 from factory.inventory.transaction.models import InventoryTransaction
 from factory.inventory.ledger.models import InventoryLedger, InventoryPayment
+from factory.worker_salary.models import (
+    Worker,
+    WorkerAttendance,
+    PowerLoomSalaryPeriod,
+    WorkerAdvance,
+    WorkerSalaryPayment,
+    WorkerSalaryLedger,
+)
 
