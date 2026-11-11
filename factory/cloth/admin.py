@@ -9,7 +9,6 @@ from .models import (
     ClothStock,
     CleanClothStock,
     DefectedClothStock,
-    ClothStockMovement,
 )
 
 
@@ -66,11 +65,4 @@ class DefectedClothStockAdmin(admin.ModelAdmin):
     list_filter = ["defect_type", "cloth_stock", "stock_date"]
 
 
-@admin.register(ClothStockMovement)
-class ClothStockMovementAdmin(admin.ModelAdmin):
-    list_display = [
-        'id', 'transaction_date', 'cloth_stock', 'movement_type', 'sub_type',
-        'quantity', 'bundle_count', 'reference_number', 'party_name', 'created_at'
-    ]
-    list_filter = ['movement_type', 'sub_type', 'transaction_date', 'cloth_stock']
-    search_fields = ['reference_number', 'party_name', 'cloth_stock__cloth_name__name']
+
