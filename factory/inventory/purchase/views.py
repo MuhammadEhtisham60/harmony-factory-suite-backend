@@ -21,7 +21,7 @@ from audit_logs.utils import log_activity
 from .models import InventoryPurchase
 from .serializers import InventoryPurchaseSerializer
 from .filters import InventoryPurchaseFilter
-from factory.inventory.services import confirm_purchase
+from factory.inventory.services import confirm_purchase, record_purchase_payment
 
 
 class InventoryPurchaseViewSet(ModelViewSet):
@@ -147,5 +147,41 @@ class InventoryPurchaseViewSet(ModelViewSet):
         return Response({
             "success": True,
             "message": "Purchase confirmed successfully.",
+            "data": serializer.data,
+        })
+
+    @action(detail=True, methods=["post"], url_path="pay")
+    def pay(self, request, pk=None):
+        """
+        Record a payment and/or update payment status ('Pending', 'Partially Paid', 'Paid')
+        for an InventoryPurchase, syncing associated ledger entries.
+        """
+        purchase = self.get_object()
+        try:
+            updated_po, _ = record_purchase_payment(
+                purchase=purchase,
+                data=request.data,
+                user=request.user,
+            )
+        except Exception as exc:
+            return Response(
+                {"success": False, "message": str(exc)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        log_activity(
+            request=request,
+            action="Record Inventory Purchase Payment",
+            description=(
+                f"Updated payment for purchase '{updated_po.purchase_number}' "
+                f"(Status: {updated_po.payment_status}, Paid: Rs. {updated_po.amount_paid})."
+            ),
+            module="Inventory – Purchases",
+            status="Success",
+        )
+        serializer = self.get_serializer(updated_po)
+        return Response({
+            "success": True,
+            "message": "Purchase payment updated successfully.",
             "data": serializer.data,
         })

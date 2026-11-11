@@ -10,7 +10,7 @@ from factory.inventory.unit.views import InventoryUnitViewSet
 from factory.inventory.item.views import InventoryItemViewSet
 from factory.inventory.purchase.views import InventoryPurchaseViewSet
 from factory.inventory.transaction.views import InventoryTransactionViewSet
-from factory.inventory.ledger.views import InventoryLedgerListView
+from factory.inventory.ledger.views import InventoryLedgerListView, InventoryLedgerPaymentView
 
 router = DefaultRouter()
 router.register(r"categories", InventoryCategoryViewSet, basename="inventory-category")
@@ -21,6 +21,8 @@ router.register(r"transactions", InventoryTransactionViewSet, basename="inventor
 
 urlpatterns = [
     path("ledger/", InventoryLedgerListView.as_view(), name="inventory-ledger-list"),
+    path("ledger/pay/", InventoryLedgerPaymentView.as_view(), name="inventory-ledger-pay"),
+    path("ledger/<int:pk>/pay/", InventoryLedgerPaymentView.as_view(), name="inventory-ledger-detail-pay"),
     path("stats/", InventoryItemViewSet.as_view({"get": "stats"}), name="inventory-global-stats"),
     path("", include(router.urls)),
 ]

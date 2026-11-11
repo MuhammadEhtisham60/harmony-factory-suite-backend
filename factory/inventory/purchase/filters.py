@@ -8,6 +8,9 @@ from .models import InventoryPurchase
 
 class InventoryPurchaseFilter(django_filters.FilterSet):
     status = django_filters.ChoiceFilter(choices=InventoryPurchase.StatusChoices.choices)
+    payment_status = django_filters.ChoiceFilter(
+        choices=InventoryPurchase.PaymentStatusChoices.choices
+    )
     supplier = django_filters.NumberFilter(field_name="supplier_id")
     date_from = django_filters.DateFilter(field_name="purchase_date", lookup_expr="gte")
     date_to = django_filters.DateFilter(field_name="purchase_date", lookup_expr="lte")
@@ -17,4 +20,4 @@ class InventoryPurchaseFilter(django_filters.FilterSet):
 
     class Meta:
         model = InventoryPurchase
-        fields = ["status", "supplier"]
+        fields = ["status", "payment_status", "supplier"]

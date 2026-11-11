@@ -2,6 +2,7 @@
 Views for the InventoryCategory submodule.
 """
 
+from django.db.models import ProtectedError
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -94,7 +95,29 @@ class InventoryCategoryViewSet(ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         name = instance.name
-        instance.delete()
+
+        if instance.items.exists():
+            return Response(
+                {
+                    "success": False,
+                    "message": f"Cannot delete category '{name}' because it contains {instance.items.count()} inventory item(s). Reassign or delete those items first.",
+                    "errors": {"detail": "Category has active inventory items."},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            instance.delete()
+        except ProtectedError as e:
+            return Response(
+                {
+                    "success": False,
+                    "message": f"Cannot delete category '{name}' because it is protected.",
+                    "errors": {"detail": str(e)},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         log_activity(
             request=request,
             action="Delete Inventory Category",

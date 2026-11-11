@@ -80,6 +80,15 @@ class InventoryPurchaseSerializer(serializers.ModelSerializer):
     totalAmount = serializers.DecimalField(
         source="total_amount", max_digits=15, decimal_places=2, required=False
     )
+    amountPaid = serializers.DecimalField(
+        source="amount_paid", max_digits=15, decimal_places=2, required=False
+    )
+    amountDue = serializers.DecimalField(
+        source="amount_due", max_digits=15, decimal_places=2, read_only=True
+    )
+    paymentStatus = serializers.CharField(
+        source="payment_status", required=False, allow_blank=True
+    )
     createdBy = serializers.SerializerMethodField()
     createdAt = serializers.DateTimeField(source="created_at", read_only=True)
     updatedAt = serializers.DateTimeField(source="updated_at", read_only=True)
@@ -96,6 +105,9 @@ class InventoryPurchaseSerializer(serializers.ModelSerializer):
             "referenceNumber",
             "notes",
             "totalAmount",
+            "amountPaid",
+            "amountDue",
+            "paymentStatus",
             "status",
             "items",
             "createdBy",
@@ -103,7 +115,7 @@ class InventoryPurchaseSerializer(serializers.ModelSerializer):
             "updatedAt",
         ]
         read_only_fields = [
-            "id", "purchaseNumber", "createdAt", "updatedAt", "createdBy", "status"
+            "id", "purchaseNumber", "amountDue", "createdAt", "updatedAt", "createdBy", "status"
         ]
 
     def to_internal_value(self, data):
@@ -114,6 +126,8 @@ class InventoryPurchaseSerializer(serializers.ModelSerializer):
             "purchase_date": "purchaseDate",
             "reference_number": "referenceNumber",
             "total_amount": "totalAmount",
+            "amount_paid": "amountPaid",
+            "payment_status": "paymentStatus",
         }
         for snake, camel in mapping.items():
             if snake in data and camel not in data:
@@ -157,7 +171,10 @@ class InventoryPurchaseSerializer(serializers.ModelSerializer):
                 (item.get("total_price", Decimal("0")) for item in items_data), Decimal("0")
             )
 
-        purchase = InventoryPurchase.objects.create(**validated_data)
+        explicit_status = validated_data.get("payment_status")
+        purchase = InventoryPurchase(**validated_data)
+        purchase.recompute_payment_fields(explicit_status=explicit_status)
+        purchase.save()
         for item_data in items_data:
             item_data.pop("id", None)
             InventoryPurchaseItem.objects.create(purchase=purchase, **item_data)
@@ -165,8 +182,10 @@ class InventoryPurchaseSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         items_data = validated_data.pop("items", None)
+        explicit_status = validated_data.get("payment_status")
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
+        instance.recompute_payment_fields(explicit_status=explicit_status)
         instance.save()
         if items_data is not None:
             self._sync_items(instance, items_data)

@@ -14,9 +14,13 @@ class InventoryLedgerFilter(django_filters.FilterSet):
         field_name="transaction_type",
         choices=InventoryLedger.TransactionTypeChoices.choices,
     )
+    payment_status = django_filters.ChoiceFilter(
+        field_name="payment_status",
+        choices=InventoryLedger.PaymentStatusChoices.choices,
+    )
     date_from = django_filters.DateFilter(field_name="transaction_date", lookup_expr="gte")
     date_to = django_filters.DateFilter(field_name="transaction_date", lookup_expr="lte")
 
     class Meta:
         model = InventoryLedger
-        fields = ["item", "category", "supplier", "transaction_type"]
+        fields = ["item", "category", "supplier", "transaction_type", "payment_status"]

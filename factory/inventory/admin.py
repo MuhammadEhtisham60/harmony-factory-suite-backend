@@ -8,7 +8,7 @@ from factory.inventory.unit.models import InventoryUnit
 from factory.inventory.item.models import InventoryItem
 from factory.inventory.purchase.models import InventoryPurchase, InventoryPurchaseItem
 from factory.inventory.transaction.models import InventoryTransaction
-from factory.inventory.ledger.models import InventoryLedger
+from factory.inventory.ledger.models import InventoryLedger, InventoryPayment
 
 
 @admin.register(InventoryCategory)

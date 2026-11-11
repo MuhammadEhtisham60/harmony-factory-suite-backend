@@ -4,7 +4,7 @@ Views for the InventoryItem submodule.
 
 from decimal import Decimal
 
-from django.db.models import Sum, F, ExpressionWrapper, DecimalField, Q
+from django.db.models import Sum, F, ExpressionWrapper, DecimalField, Q, ProtectedError
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -106,7 +106,38 @@ class InventoryItemViewSet(ModelViewSet):
         instance = self.get_object()
         name = instance.item_name
         code = instance.item_code
-        instance.delete()
+
+        # Check if item has real transaction / purchase history
+        has_purchases = instance.purchase_items.exists()
+        has_transactions = instance.transactions.exists()
+        has_active_movements = instance.ledger_entries.exclude(transaction_type="Opening Stock").exists()
+
+        if has_purchases or has_transactions or has_active_movements:
+            return Response(
+                {
+                    "success": False,
+                    "message": f"Cannot delete item '{name}' ({code}) because it has recorded transactions or purchases. Please deactivate it by setting status to 'Inactive' instead.",
+                    "errors": {
+                        "detail": f"Item has transaction history. Set status to Inactive instead of deleting."
+                    },
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            # Safely remove opening stock ledger record since no actual stock movements occurred
+            instance.ledger_entries.filter(transaction_type="Opening Stock").delete()
+            instance.delete()
+        except ProtectedError as e:
+            return Response(
+                {
+                    "success": False,
+                    "message": f"Cannot delete item '{name}' because it is referenced by other records.",
+                    "errors": {"detail": str(e)},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         log_activity(
             request=request,
             action="Delete Inventory Item",
