@@ -31,3 +31,5 @@ md_files/
 /md_files
 md_files
 .baseline_tmp/
+.vercel
+.env*
