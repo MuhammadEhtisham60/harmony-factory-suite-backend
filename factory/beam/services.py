@@ -158,9 +158,13 @@ def load_beam_onto_loom(
                 resolved_quality = f"{' / '.join(parts)} ({w}\")" if parts else "Cotton Standard 40/40"
 
             if not resolved_cloth_name and resolved_quality:
+                effective_width = width or reed_width or getattr(beam, "width", None)
+                cn_defaults = {"created_by": user}
+                if effective_width is not None:
+                    cn_defaults["reed_width"] = effective_width
                 resolved_cloth_name, _ = ClothName.objects.get_or_create(
                     name=resolved_quality,
-                    defaults={"created_by": user}
+                    defaults=cn_defaults
                 )
 
             # Create BeamLoading record

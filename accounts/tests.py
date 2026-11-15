@@ -37,7 +37,6 @@ class AuthAndUserManagementAPITests(APITestCase):
             username="admin",
             email="admin@fahadweaving.com",
             password="Admin@123456",
-            full_name="Muhammad Ahmed",
             phone="+92 300 8492011",
             role=self.super_admin_role,
             status="Active"
@@ -48,7 +47,6 @@ class AuthAndUserManagementAPITests(APITestCase):
             username="ali.raza",
             email="ali@fahadweaving.com",
             password="Password@123",
-            full_name="Ali Raza",
             phone="+92 321 0000000",
             role=self.prod_role,
             status="Active"
@@ -156,7 +154,7 @@ class AuthAndUserManagementAPITests(APITestCase):
 
         # Verify created in DB
         created_user = User.objects.get(username='usman.khan')
-        self.assertEqual(created_user.full_name, 'Usman Khan')
+        self.assertEqual(created_user.email, 'usman@fahadweaving.com')
         self.assertEqual(created_user.role.name, 'Production Manager')
 
     def test_get_user_by_formatted_id(self):

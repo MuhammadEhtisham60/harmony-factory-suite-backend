@@ -440,7 +440,7 @@ def record_worker_advance(
     bank_txn = None
     if bank_account and payment_method in ["Online Transfer", "Cheque"]:
         bank_txn = BankTransaction.objects.create(
-            bank_account=bank_account,
+            account=bank_account,
             transaction_type=BankTransaction.TransactionType.DEBIT,
             amount=amount,
             date=advance_date,
@@ -510,7 +510,7 @@ def record_salary_payment(
     bank_txn = None
     if bank_account and payment_method in ["Online Transfer", "Cheque"]:
         bank_txn = BankTransaction.objects.create(
-            bank_account=bank_account,
+            account=bank_account,
             transaction_type=BankTransaction.TransactionType.DEBIT,
             amount=amount,
             date=payment_date,

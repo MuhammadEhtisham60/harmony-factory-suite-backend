@@ -2,10 +2,14 @@
 Views and API Endpoints for Power Loom Worker Salary & Attendance module.
 """
 
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
+from datetime import date as dt_date
+from django.db import transaction
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from rest_framework import status
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -171,9 +175,23 @@ class WorkerAttendanceViewSet(ModelViewSet):
     ordering_fields = ["date", "id", "worker__name", "earned_amount"]
     ordering = ["-date", "-id"]
 
+    @staticmethod
+    def _parse_date_or_today(raw_value, field_name="date"):
+        if not raw_value:
+            return timezone.localdate()
+        if isinstance(raw_value, dt_date):
+            return raw_value
+        parsed = parse_date(str(raw_value))
+        if parsed is None:
+            return Response({field_name: "Invalid date format. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+        return parsed
+
     def create(self, request, *args, **kwargs):
         worker_id = request.data.get("worker")
-        date = request.data.get("date") or str(timezone.localdate())
+        raw_date = request.data.get("date")
+        date = self._parse_date_or_today(raw_date, "date")
+        if isinstance(date, Response):
+            return date
         status_val = request.data.get("status", "Present")
         rate = request.data.get("daily_wage_rate")
         m_rate = request.data.get("per_meter_rate")
@@ -200,6 +218,48 @@ class WorkerAttendanceViewSet(ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except ValidationError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.is_salary_processed:
+            return Response(
+                {"detail": "Processed attendance cannot be modified."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        status_val = request.data.get("status", instance.status)
+        rate = request.data.get("daily_wage_rate", instance.daily_wage_rate)
+        m_rate = request.data.get("per_meter_rate", instance.per_meter_rate)
+        meters = request.data.get("meters_produced", instance.meters_produced)
+        notes = request.data.get("notes", instance.notes)
+        try:
+            att = record_daily_attendance(
+                worker=instance.worker,
+                date=instance.date,
+                status=status_val,
+                daily_wage_rate=rate,
+                per_meter_rate=m_rate,
+                meters_produced=meters,
+                notes=notes,
+                user=request.user,
+            )
+            serializer = self.get_serializer(att)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except ValidationError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.is_salary_processed:
+            return Response(
+                {"detail": "Processed attendance cannot be deleted."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        worker = instance.worker
+        with transaction.atomic():
+            WorkerSalaryLedger.objects.filter(attendance_record=instance).delete()
+            instance.delete()
+            recalculate_worker_ledger(worker)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=["post"], url_path="bulk-mark")
     def bulk_mark(self, request):
@@ -329,7 +389,9 @@ class PowerLoomSalaryPeriodViewSet(ModelViewSet):
     def record_period_payment(self, request, pk=None):
         salary_period = self.get_object()
         amount = request.data.get("amount")
-        payment_date = request.data.get("payment_date") or str(timezone.localdate())
+        payment_date = WorkerAttendanceViewSet._parse_date_or_today(request.data.get("payment_date"), "payment_date")
+        if isinstance(payment_date, Response):
+            return payment_date
         payment_method = request.data.get("payment_method", "Cash")
         bank_account_id = request.data.get("bank_account")
         reference_number = request.data.get("reference_number", "")
@@ -337,6 +399,11 @@ class PowerLoomSalaryPeriodViewSet(ModelViewSet):
 
         if not amount:
             return Response({"amount": "Amount is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            parsed_amount = Decimal(str(amount))
+        except (InvalidOperation, TypeError, ValueError):
+            return Response({"amount": "Invalid amount format."}, status=status.HTTP_400_BAD_REQUEST)
 
         bank_account = None
         if bank_account_id:
@@ -348,7 +415,7 @@ class PowerLoomSalaryPeriodViewSet(ModelViewSet):
         try:
             payment = record_salary_payment(
                 worker=salary_period.worker,
-                amount=Decimal(str(amount)),
+                amount=parsed_amount,
                 salary_period=salary_period,
                 payment_date=payment_date,
                 payment_method=payment_method,
@@ -395,10 +462,23 @@ class WorkerAdvanceViewSet(ModelViewSet):
     ordering_fields = ["advance_date", "id", "amount", "remaining_advance"]
     ordering = ["-advance_date", "-id"]
 
+    @staticmethod
+    def _parse_date_or_today(raw_value, field_name="date"):
+        if not raw_value:
+            return timezone.localdate()
+        if isinstance(raw_value, dt_date):
+            return raw_value
+        parsed = parse_date(str(raw_value))
+        if parsed is None:
+            return Response({field_name: "Invalid date format. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+        return parsed
+
     def create(self, request, *args, **kwargs):
         worker_id = request.data.get("worker")
         amount = request.data.get("amount")
-        advance_date = request.data.get("advance_date") or str(timezone.localdate())
+        advance_date = WorkerAttendanceViewSet._parse_date_or_today(request.data.get("advance_date"), "advance_date")
+        if isinstance(advance_date, Response):
+            return advance_date
         payment_method = request.data.get("payment_method", "Cash")
         bank_account_id = request.data.get("bank_account")
         notes = request.data.get("notes", "")
@@ -415,10 +495,17 @@ class WorkerAdvanceViewSet(ModelViewSet):
             except BankAccount.DoesNotExist:
                 return Response({"bank_account": "Bank account not found."}, status=status.HTTP_400_BAD_REQUEST)
 
+        if amount in (None, ""):
+            return Response({"amount": "Amount is required."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            parsed_amount = Decimal(str(amount))
+        except (InvalidOperation, TypeError, ValueError):
+            return Response({"amount": "Invalid amount format."}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             advance = record_worker_advance(
                 worker=worker,
-                amount=Decimal(str(amount)),
+                amount=parsed_amount,
                 advance_date=advance_date,
                 payment_method=payment_method,
                 bank_account=bank_account,
@@ -429,6 +516,23 @@ class WorkerAdvanceViewSet(ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except ValidationError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.amount_deducted > Decimal("0.00"):
+            return Response(
+                {"detail": "Cannot delete an advance that has already been partially or fully deducted."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        worker = instance.worker
+        with transaction.atomic():
+            WorkerSalaryLedger.objects.filter(advance_record=instance).delete()
+            bank_txn = instance.bank_transaction
+            instance.delete()
+            if bank_txn:
+                bank_txn.delete()
+            recalculate_worker_ledger(worker)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class WorkerSalaryPaymentViewSet(ModelViewSet):
@@ -454,11 +558,24 @@ class WorkerSalaryPaymentViewSet(ModelViewSet):
     ordering_fields = ["payment_date", "id", "amount"]
     ordering = ["-payment_date", "-id"]
 
+    @staticmethod
+    def _parse_date_or_today(raw_value, field_name="date"):
+        if not raw_value:
+            return timezone.localdate()
+        if isinstance(raw_value, dt_date):
+            return raw_value
+        parsed = parse_date(str(raw_value))
+        if parsed is None:
+            return Response({field_name: "Invalid date format. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+        return parsed
+
     def create(self, request, *args, **kwargs):
         worker_id = request.data.get("worker")
         salary_period_id = request.data.get("salary_period")
         amount = request.data.get("amount")
-        payment_date = request.data.get("payment_date") or str(timezone.localdate())
+        payment_date = WorkerAttendanceViewSet._parse_date_or_today(request.data.get("payment_date"), "payment_date")
+        if isinstance(payment_date, Response):
+            return payment_date
         payment_method = request.data.get("payment_method", "Cash")
         bank_account_id = request.data.get("bank_account")
         reference_number = request.data.get("reference_number", "")
@@ -483,10 +600,17 @@ class WorkerSalaryPaymentViewSet(ModelViewSet):
             except BankAccount.DoesNotExist:
                 return Response({"bank_account": "Bank account not found."}, status=status.HTTP_400_BAD_REQUEST)
 
+        if amount in (None, ""):
+            return Response({"amount": "Amount is required."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            parsed_amount = Decimal(str(amount))
+        except (InvalidOperation, TypeError, ValueError):
+            return Response({"amount": "Invalid amount format."}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             payment = record_salary_payment(
                 worker=worker,
-                amount=Decimal(str(amount)),
+                amount=parsed_amount,
                 salary_period=salary_period,
                 payment_date=payment_date,
                 payment_method=payment_method,
@@ -499,6 +623,27 @@ class WorkerSalaryPaymentViewSet(ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except ValidationError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        worker = instance.worker
+        salary_period = instance.salary_period
+        with transaction.atomic():
+            WorkerSalaryLedger.objects.filter(payment_record=instance).delete()
+            bank_txn = instance.bank_transaction
+            paid_amt = instance.amount
+            instance.delete()
+            if bank_txn:
+                bank_txn.delete()
+            if salary_period:
+                salary_period.total_paid_amount = max(
+                    Decimal("0.00"),
+                    (salary_period.total_paid_amount - paid_amt).quantize(Decimal("0.01")),
+                )
+                salary_period.update_financials()
+                salary_period.save()
+            recalculate_worker_ledger(worker)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class WorkerSalaryLedgerViewSet(ReadOnlyModelViewSet):
