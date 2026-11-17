@@ -27,6 +27,25 @@ from factory.yarn.b_grade_yarn.models import BGradeYarn
 from .models import YarnIntake, YarnOutcome, YarnOutcomeItem, YarnOutcomeBGradeItem
 
 
+def resolve_yarn_outcome_rate_per_lb(yo):
+    """Resolve the effective yarn rate per lb for a YarnOutcome record."""
+    if not yo:
+        return Decimal("0.0000")
+    total_price = Decimal(str(yo.total_price or 0))
+    weight_lb = Decimal(str(yo.outcome_weight_lb or 0))
+    if yo.outcome_type != "Sold" and total_price > Decimal("0") and weight_lb > Decimal("0"):
+        return (total_price / weight_lb).quantize(Decimal("0.0001"))
+    if yo.stock and yo.stock.price_per_lb and Decimal(str(yo.stock.price_per_lb)) > Decimal("0"):
+        return Decimal(str(yo.stock.price_per_lb)).quantize(Decimal("0.0001"))
+    first_item = yo.items.select_related("yarn_intake").first() if hasattr(yo, "items") else None
+    if first_item and first_item.yarn_intake and first_item.yarn_intake.rate_per_lb:
+        return Decimal(str(first_item.yarn_intake.rate_per_lb)).quantize(Decimal("0.0001"))
+    pi = getattr(yo, "primary_intake", None)
+    if pi and pi.rate_per_lb:
+        return Decimal(str(pi.rate_per_lb)).quantize(Decimal("0.0001"))
+    return Decimal("0.0000")
+
+
 class YarnOutcomeBGradeItemSerializer(serializers.ModelSerializer):
     """
     Serializer for B-grade yarn batch items dispatched within a YarnOutcome.
@@ -318,6 +337,8 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         max_digits=15, decimal_places=6,
         required=False, default=0
     )
+    ratePerLb = serializers.SerializerMethodField()
+    rate_per_lb = serializers.SerializerMethodField()
     ratePerKg = serializers.DecimalField(
         max_digits=15, decimal_places=6, required=False, allow_null=True
     )
@@ -462,6 +483,8 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
             "warping",
             "warpingDetail",
             "totalPrice",
+            "ratePerLb",
+            "rate_per_lb",
             "ratePerKg",
             "status",
             "sizingOutcome",
@@ -527,6 +550,12 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
                 return sync_yarn_outcome_status(obj)
             return getattr(obj, "status", None) or profile.in_progress_status
         return getattr(obj, "status", None) or "Dispatched"
+
+    def get_ratePerLb(self, obj):
+        return str(resolve_yarn_outcome_rate_per_lb(obj))
+
+    def get_rate_per_lb(self, obj):
+        return self.get_ratePerLb(obj)
 
     def get_isReceived(self, obj):
         return self.get_status(obj) == YarnOutcome.StatusChoices.RECEIVED

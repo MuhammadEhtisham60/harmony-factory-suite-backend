@@ -7,6 +7,33 @@ from factory.cloth.models import ClothName
 from .models import Beam
 
 
+def _resolve_beam_rate_per_lb(beam):
+    """Resolve the yarn rate per lb for a Beam from its linked YarnOutcome or SizingOutcome."""
+    from decimal import Decimal
+    from factory.yarn.yarn_intake.serializers import resolve_yarn_outcome_rate_per_lb
+
+    if not beam:
+        return "0.000000"
+    yo = getattr(beam, "dispatched_yarn_outcome", None)
+    if yo:
+        rate = resolve_yarn_outcome_rate_per_lb(yo)
+        if rate > Decimal("0"):
+            return str(rate)
+    if hasattr(beam, "sizing_assignments"):
+        assignment = beam.sizing_assignments.select_related("yarn_outcome").order_by("-assigned_at", "-id").first()
+        if assignment and assignment.yarn_outcome:
+            rate = resolve_yarn_outcome_rate_per_lb(assignment.yarn_outcome)
+            if rate > Decimal("0"):
+                return str(rate)
+    if hasattr(beam, "beam_loadings"):
+        loading = beam.beam_loadings.select_related("sizing_outcome__yarn_outcome").order_by("-id").first()
+        if loading and loading.sizing_outcome and loading.sizing_outcome.yarn_outcome:
+            rate = resolve_yarn_outcome_rate_per_lb(loading.sizing_outcome.yarn_outcome)
+            if rate > Decimal("0"):
+                return str(rate)
+    return "0.000000"
+
+
 class BeamListSerializer(serializers.ModelSerializer):
     """
     Lightweight serializer for list / table views.
@@ -27,6 +54,8 @@ class BeamListSerializer(serializers.ModelSerializer):
     productionOrder = serializers.CharField(
         source="production_order", required=False, allow_blank=True
     )
+    ratePerLb = serializers.SerializerMethodField()
+    rate_per_lb = serializers.SerializerMethodField()
     createdAt = serializers.DateTimeField(source="created_at", read_only=True)
     updatedAt = serializers.DateTimeField(source="updated_at", read_only=True)
     createdBy = serializers.SerializerMethodField()
@@ -45,12 +74,20 @@ class BeamListSerializer(serializers.ModelSerializer):
             "width",
             "weight",
             "productionOrder",
+            "ratePerLb",
+            "rate_per_lb",
             "status",
             "createdBy",
             "updatedBy",
             "createdAt",
             "updatedAt",
         ]
+
+    def get_ratePerLb(self, obj):
+        return _resolve_beam_rate_per_lb(obj)
+
+    def get_rate_per_lb(self, obj):
+        return self.get_ratePerLb(obj)
 
     def get_createdBy(self, obj):
         if obj.created_by:
@@ -101,6 +138,8 @@ class BeamDetailSerializer(serializers.ModelSerializer):
     productionOrder = serializers.CharField(
         source="production_order", required=False, allow_blank=True, default=""
     )
+    ratePerLb = serializers.SerializerMethodField()
+    rate_per_lb = serializers.SerializerMethodField()
     createdAt = serializers.DateTimeField(source="created_at", read_only=True)
     updatedAt = serializers.DateTimeField(source="updated_at", read_only=True)
     createdBy = serializers.SerializerMethodField()
@@ -119,6 +158,8 @@ class BeamDetailSerializer(serializers.ModelSerializer):
             "width",
             "weight",
             "productionOrder",
+            "ratePerLb",
+            "rate_per_lb",
             "status",
             "notes",
             "createdBy",
@@ -127,6 +168,12 @@ class BeamDetailSerializer(serializers.ModelSerializer):
             "updatedAt",
         ]
         read_only_fields = ["id", "createdAt", "updatedAt", "createdBy", "updatedBy"]
+
+    def get_ratePerLb(self, obj):
+        return _resolve_beam_rate_per_lb(obj)
+
+    def get_rate_per_lb(self, obj):
+        return self.get_ratePerLb(obj)
 
     def get_createdBy(self, obj):
         if obj.created_by:
@@ -381,6 +428,8 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
     dismountedBy = serializers.SerializerMethodField()
     dismounted_by = serializers.SerializerMethodField()
     reconciliation = serializers.SerializerMethodField()
+    ratePerLb = serializers.SerializerMethodField()
+    rate_per_lb = serializers.SerializerMethodField()
 
     createdAt = serializers.DateTimeField(source="created_at", read_only=True)
     updatedAt = serializers.DateTimeField(source="updated_at", read_only=True)
@@ -434,6 +483,8 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
             "dismountedBy",
             "dismounted_by",
             "reconciliation",
+            "ratePerLb",
+            "rate_per_lb",
             "createdBy",
             "updatedBy",
             "createdAt",
@@ -470,6 +521,8 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
             "dismountedBy",
             "dismounted_by",
             "reconciliation",
+            "ratePerLb",
+            "rate_per_lb",
             "createdBy",
             "updatedBy",
             "createdAt",
@@ -495,6 +548,7 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
                 "setNo": obj.sizing_outcome.set_no,
                 "sizingName": obj.sizing_outcome.sizing_name,
                 "outcomeDate": obj.sizing_outcome.outcome_date,
+                "ratePerLb": self.get_ratePerLb(obj),
             }
         return None
 
@@ -533,6 +587,19 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
         )
         total = max(float(patch_total or 0), float(prod_total or 0))
         return f"{total:.2f}"
+
+    def get_ratePerLb(self, obj):
+        from decimal import Decimal
+        from factory.yarn.yarn_intake.serializers import resolve_yarn_outcome_rate_per_lb
+        so = getattr(obj, "sizing_outcome", None)
+        if so and getattr(so, "yarn_outcome", None):
+            rate = resolve_yarn_outcome_rate_per_lb(so.yarn_outcome)
+            if rate > Decimal("0"):
+                return str(rate)
+        return _resolve_beam_rate_per_lb(getattr(obj, "beam", None))
+
+    def get_rate_per_lb(self, obj):
+        return self.get_ratePerLb(obj)
 
     def get_createdBy(self, obj):
         if obj.created_by:

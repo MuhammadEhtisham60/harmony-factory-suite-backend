@@ -38,6 +38,8 @@ class YarnOutcomeMinSerializer(serializers.ModelSerializer):
     b_grade_cones = serializers.IntegerField(read_only=True)
     bGradeWeightKg = serializers.DecimalField(source="b_grade_weight_kg", max_digits=15, decimal_places=6, read_only=True)
     b_grade_weight_kg = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
+    ratePerLb = serializers.SerializerMethodField()
+    rate_per_lb = serializers.SerializerMethodField()
     status = serializers.CharField(read_only=True)
 
     class Meta:
@@ -67,8 +69,17 @@ class YarnOutcomeMinSerializer(serializers.ModelSerializer):
             "sizingName",
             "warpingName",
             "processingUnitName",
+            "ratePerLb",
+            "rate_per_lb",
             "status",
         ]
+
+    def get_ratePerLb(self, obj):
+        from factory.yarn.yarn_intake.serializers import resolve_yarn_outcome_rate_per_lb
+        return str(resolve_yarn_outcome_rate_per_lb(obj))
+
+    def get_rate_per_lb(self, obj):
+        return self.get_ratePerLb(obj)
 
     def get_yarnName(self, obj):
         if obj.stock and obj.stock.yarn_name:
@@ -781,6 +792,8 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
     totalSetShortage = serializers.DecimalField(source="total_set_shortage", max_digits=15, decimal_places=6, required=False, allow_null=True)
     ratePerKg = serializers.DecimalField(source="rate_per_kg", max_digits=15, decimal_places=6, required=False, allow_null=True)
     rate_per_kg = serializers.DecimalField(max_digits=15, decimal_places=6, required=False, allow_null=True)
+    ratePerLb = serializers.SerializerMethodField()
+    rate_per_lb = serializers.SerializerMethodField()
     netWeightKg = serializers.DecimalField(source="net_weight_kg", max_digits=15, decimal_places=6, required=False, allow_null=True)
     net_weight_kg = serializers.DecimalField(max_digits=15, decimal_places=6, required=False, allow_null=True)
     totalRate = serializers.DecimalField(source="total_rate", max_digits=18, decimal_places=6, required=False, allow_null=True)
@@ -827,6 +840,13 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
 
     def get_return_price(self, obj):
         return self.get_returnPrice(obj)
+
+    def get_ratePerLb(self, obj):
+        from factory.yarn.yarn_intake.serializers import resolve_yarn_outcome_rate_per_lb
+        return str(resolve_yarn_outcome_rate_per_lb(getattr(obj, "yarn_outcome", None)))
+
+    def get_rate_per_lb(self, obj):
+        return self.get_ratePerLb(obj)
 
     amountPaid = serializers.DecimalField(source="amount_paid", max_digits=18, decimal_places=6, required=False)
     amount_paid = serializers.DecimalField(max_digits=18, decimal_places=6, required=False)
@@ -963,6 +983,8 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "totalSetShortage",
             "ratePerKg",
             "rate_per_kg",
+            "ratePerLb",
+            "rate_per_lb",
             "netWeightKg",
             "net_weight_kg",
             "totalRate",
