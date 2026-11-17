@@ -211,6 +211,7 @@ class YarnStock(models.Model):
         return self.price
 
     def save(self, *args, **kwargs):
+        self._clear_aggregate_cache()
         # Keep remaining fields and legacy balance aliases synchronized
         if self.remaining_bags and not self.total_boxes:
             self.total_boxes = self.remaining_bags
@@ -272,25 +273,63 @@ class YarnStock(models.Model):
         return f"{yname} {ycount} {ytype}{prod} - {self.total_weight_kg} kg"
 
     # ── Derived ledger summaries ───────────────────────────────────────────
+    # The totals below are computed with aggregate queries. Several properties
+    # depend on each other (e.g. total_returned_price -> total_returned_weight_lb
+    # -> total_returned_weight_kg -> total_received_* / total_returned_*), which
+    # previously re-ran the same SUM() queries ~18 times per serialization.
+    # They are now memoized per instance and invalidated on save()/refresh_from_db().
+    _AGG_CACHE_ATTRS = ("_intake_totals_cache", "_returned_totals_cache")
+
+    def _clear_aggregate_cache(self):
+        for attr in self._AGG_CACHE_ATTRS:
+            self.__dict__.pop(attr, None)
+
+    def refresh_from_db(self, *args, **kwargs):
+        self._clear_aggregate_cache()
+        return super().refresh_from_db(*args, **kwargs)
+
+    def _intake_totals(self):
+        cache = self.__dict__.get("_intake_totals_cache")
+        if cache is None:
+            cache = self.intakes.aggregate(
+                bags=models.Sum("bags"),
+                cones=models.Sum("total_cones"),
+                kg=models.Sum("net_weight_kg"),
+                lb=models.Sum("net_weight_lb"),
+                return_rate=models.Sum("return_total_rate"),
+            )
+            self.__dict__["_intake_totals_cache"] = cache
+        return cache
+
+    def _returned_totals(self):
+        cache = self.__dict__.get("_returned_totals_cache")
+        if cache is None:
+            from factory.yarn.sizing.models import SizingOutcome
+            from django.db.models import Q
+            cache = SizingOutcome.objects.filter(
+                Q(yarn_outcome__stock=self) | Q(yarn_outcome__items__yarn_intake__stock=self)
+            ).distinct().aggregate(
+                bags=models.Sum("return_bags"),
+                cones=models.Sum("return_cones"),
+            )
+            self.__dict__["_returned_totals_cache"] = cache
+        return cache
+
     @property
     def total_received_boxes(self):
-        agg = self.intakes.aggregate(models.Sum("bags"))
-        return agg["bags__sum"] or 0
+        return self._intake_totals()["bags"] or 0
 
     @property
     def total_received_cones(self):
-        agg = self.intakes.aggregate(models.Sum("total_cones"))
-        return agg["total_cones__sum"] or 0
+        return self._intake_totals()["cones"] or 0
 
     @property
     def total_received_weight_kg(self):
-        agg = self.intakes.aggregate(models.Sum("net_weight_kg"))
-        return agg["net_weight_kg__sum"] or Decimal("0.000000")
+        return self._intake_totals()["kg"] or Decimal("0.000000")
 
     @property
     def total_received_weight_lb(self):
-        agg = self.intakes.aggregate(models.Sum("net_weight_lb"))
-        return agg["net_weight_lb__sum"] or Decimal("0.000000")
+        return self._intake_totals()["lb"] or Decimal("0.000000")
 
     @property
     def total_dispatched_boxes(self):
@@ -318,21 +357,11 @@ class YarnStock(models.Model):
 
     @property
     def total_returned_boxes(self):
-        from factory.yarn.sizing.models import SizingOutcome
-        from django.db.models import Q
-        agg = SizingOutcome.objects.filter(
-            Q(yarn_outcome__stock=self) | Q(yarn_outcome__items__yarn_intake__stock=self)
-        ).distinct().aggregate(models.Sum("return_bags"))
-        return agg["return_bags__sum"] or Decimal("0.000000")
+        return self._returned_totals()["bags"] or Decimal("0.000000")
 
     @property
     def total_returned_cones(self):
-        from factory.yarn.sizing.models import SizingOutcome
-        from django.db.models import Q
-        agg = SizingOutcome.objects.filter(
-            Q(yarn_outcome__stock=self) | Q(yarn_outcome__items__yarn_intake__stock=self)
-        ).distinct().aggregate(models.Sum("return_cones"))
-        return agg["return_cones__sum"] or Decimal("0.000000")
+        return self._returned_totals()["cones"] or Decimal("0.000000")
 
     @property
     def total_returned_weight_kg(self):
@@ -350,8 +379,7 @@ class YarnStock(models.Model):
 
     @property
     def total_returned_price(self):
-        agg = self.intakes.aggregate(models.Sum("return_total_rate"))
-        ret_val = agg["return_total_rate__sum"]
+        ret_val = self._intake_totals()["return_rate"]
         if ret_val is not None and ret_val > Decimal("0.000000"):
             return ret_val
         return (self.total_returned_weight_lb * self.price_per_lb).quantize(Decimal("0.000001"))

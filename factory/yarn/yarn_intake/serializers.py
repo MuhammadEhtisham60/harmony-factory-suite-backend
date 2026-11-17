@@ -1495,7 +1495,13 @@ class YarnIntakeListSerializer(serializers.ModelSerializer):
 
     def get_stockDetail(self, obj):
         if obj.stock:
-            return YarnStockMinSerializer(obj.stock).data
+            # YarnStockMinSerializer triggers several SUM() aggregate queries per stock
+            # (model @property totals). Many intakes share one stock, so cache per
+            # stock_id for the lifetime of this (list) serializer.
+            cache = self.__dict__.setdefault("_stock_detail_cache", {})
+            if obj.stock_id not in cache:
+                cache[obj.stock_id] = YarnStockMinSerializer(obj.stock).data
+            return cache[obj.stock_id]
         return None
 
     def get_supplierDetail(self, obj):

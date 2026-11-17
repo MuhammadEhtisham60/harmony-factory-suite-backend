@@ -42,6 +42,7 @@ class LoomViewSet(ModelViewSet):
             "beam_loadings",
             "beam_loadings__beam",
             "beam_loadings__sizing_outcome",
+            "beam_loadings__cloth_name",
             "beam_loadings__productions",
             "beam_loadings__cloth_patches",
         )

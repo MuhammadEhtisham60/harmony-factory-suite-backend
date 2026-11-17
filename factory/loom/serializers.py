@@ -60,10 +60,16 @@ class LoomListSerializer(serializers.ModelSerializer):
     remainingMeters = serializers.SerializerMethodField()
 
     def _get_active_loading(self, obj):
+        # Iterate the prefetched `beam_loadings` (see LoomViewSet.queryset) instead of
+        # calling .filter(), which bypasses the prefetch cache and hits the DB per loom.
         if not hasattr(obj, "_cached_active_loading"):
-            obj._cached_active_loading = obj.beam_loadings.filter(
-                status__in=["Loaded", "In Production"]
-            ).first()
+            obj._cached_active_loading = next(
+                (
+                    bl for bl in obj.beam_loadings.all()
+                    if bl.status in ("Loaded", "In Production")
+                ),
+                None,
+            )
         return obj._cached_active_loading
 
     def get_currentBeamId(self, obj):
@@ -111,19 +117,22 @@ class LoomListSerializer(serializers.ModelSerializer):
         loading = self._get_active_loading(obj)
         if not loading:
             return 0.0
-        from django.db.models import Sum
+        if hasattr(obj, "_cached_produced_meters"):
+            return obj._cached_produced_meters
+        # Sum over prefetched relations in Python (no extra aggregate queries).
         patch_total = (
-            loading.cloth_patches.aggregate(Sum("productive_length"))["productive_length__sum"]
+            sum((p.productive_length or 0) for p in loading.cloth_patches.all())
             if hasattr(loading, "cloth_patches")
-            else None
+            else 0
         )
         prod_total = (
-            loading.productions.aggregate(Sum("meters_produced"))["meters_produced__sum"]
+            sum((p.meters_produced or 0) for p in loading.productions.all())
             if hasattr(loading, "productions")
-            else None
+            else 0
         )
         total = max(float(patch_total or 0), float(prod_total or 0))
-        return round(float(total), 2)
+        obj._cached_produced_meters = round(float(total), 2)
+        return obj._cached_produced_meters
 
     def get_remainingMeters(self, obj):
         total_len = self.get_beamLength(obj)
@@ -210,10 +219,16 @@ class LoomDetailSerializer(serializers.ModelSerializer):
     remainingMeters = serializers.SerializerMethodField()
 
     def _get_active_loading(self, obj):
+        # Iterate the prefetched `beam_loadings` (see LoomViewSet.queryset) instead of
+        # calling .filter(), which bypasses the prefetch cache and hits the DB per loom.
         if not hasattr(obj, "_cached_active_loading"):
-            obj._cached_active_loading = obj.beam_loadings.filter(
-                status__in=["Loaded", "In Production"]
-            ).first()
+            obj._cached_active_loading = next(
+                (
+                    bl for bl in obj.beam_loadings.all()
+                    if bl.status in ("Loaded", "In Production")
+                ),
+                None,
+            )
         return obj._cached_active_loading
 
     def get_currentBeamId(self, obj):
@@ -261,19 +276,22 @@ class LoomDetailSerializer(serializers.ModelSerializer):
         loading = self._get_active_loading(obj)
         if not loading:
             return 0.0
-        from django.db.models import Sum
+        if hasattr(obj, "_cached_produced_meters"):
+            return obj._cached_produced_meters
+        # Sum over prefetched relations in Python (no extra aggregate queries).
         patch_total = (
-            loading.cloth_patches.aggregate(Sum("productive_length"))["productive_length__sum"]
+            sum((p.productive_length or 0) for p in loading.cloth_patches.all())
             if hasattr(loading, "cloth_patches")
-            else None
+            else 0
         )
         prod_total = (
-            loading.productions.aggregate(Sum("meters_produced"))["meters_produced__sum"]
+            sum((p.meters_produced or 0) for p in loading.productions.all())
             if hasattr(loading, "productions")
-            else None
+            else 0
         )
         total = max(float(patch_total or 0), float(prod_total or 0))
-        return round(float(total), 2)
+        obj._cached_produced_meters = round(float(total), 2)
+        return obj._cached_produced_meters
 
     def get_remainingMeters(self, obj):
         total_len = self.get_beamLength(obj)
