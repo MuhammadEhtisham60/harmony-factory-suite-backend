@@ -333,9 +333,12 @@ class YarnOutcomeViewSet(ModelViewSet):
         from factory.yarn.sizing.serializers import SizingBeamAssignmentSerializer
 
         outcome = self.get_object()
-        if outcome.outcome_type != YarnOutcome.OutcomeTypeChoices.SIZING:
+        if outcome.outcome_type not in (
+            YarnOutcome.OutcomeTypeChoices.SIZING,
+            YarnOutcome.OutcomeTypeChoices.WARPING,
+        ):
             return Response(
-                {"success": False, "message": "Beams can only be assigned to Sizing outcomes."},
+                {"success": False, "message": "Beams can only be assigned to Sizing or Warping outcomes."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
