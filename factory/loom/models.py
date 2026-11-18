@@ -9,12 +9,15 @@ from django.conf import settings
 class Loom(models.Model):
 
     class StatusChoices(models.TextChoices):
-        ACTIVE = "Active", "Active"
+        AVAILABLE = "Available", "Available"
         INACTIVE = "Inactive", "Inactive"
         SIZING = "Sizing", "Sizing"
         PRODUCTION = "Production", "Production"
         MAINTENANCE = "Maintenance", "Maintenance"
         BREAKDOWN = "Breakdown", "Breakdown"
+
+    # Backward compatibility alias
+    StatusChoices.ACTIVE = StatusChoices.AVAILABLE
 
     loom_code = models.CharField(
         max_length=50,
@@ -52,7 +55,7 @@ class Loom(models.Model):
     status = models.CharField(
         max_length=30,
         choices=StatusChoices.choices,
-        default=StatusChoices.ACTIVE
+        default=StatusChoices.AVAILABLE
     )
 
     notes = models.TextField(
@@ -88,6 +91,9 @@ class Loom(models.Model):
         ordering = ["loom_code"]
         verbose_name = "Loom"
         verbose_name_plural = "Looms"
+        indexes = [
+            models.Index(fields=["status"], name="factory_loom_stat_idx"),
+        ]
 
     def __str__(self):
         return f"{self.loom_code} - {self.loom_name}"

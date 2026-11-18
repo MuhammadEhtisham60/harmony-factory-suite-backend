@@ -80,9 +80,10 @@ assert open_ledger.running_balance == Decimal("10")
 print(f"✓ Opening stock ledger verified: Running balance = {open_ledger.running_balance}")
 
 # 4. Record and Confirm Purchase from Supplier (Stock In)
+today_date = item.created_at.date() if hasattr(item.created_at, "date") else item.created_at
 purchase = InventoryPurchase.objects.create(
     supplier=supplier,
-    purchase_date="2026-11-11",
+    purchase_date=today_date,
     reference_number="BILL-9901",
     notes="Test delivery of 15 rapier grippers",
     created_by=admin_user,
@@ -109,7 +110,7 @@ print(f"✓ Purchase ledger entry verified: Qty In = {pur_ledger.quantity_in}, R
 
 # 5. Record Stock Out / Usage
 stock_out = InventoryTransaction.objects.create(
-    transaction_date="2026-11-11",
+    transaction_date=today_date,
     inventory_item=item,
     transaction_type="Stock Out",
     quantity=Decimal("8"),
@@ -127,7 +128,7 @@ assert item.current_stock == Decimal("17"), f"Expected 17, got {item.current_sto
 # 6. Test Insufficient Stock Prevention
 try:
     excess_out = InventoryTransaction.objects.create(
-        transaction_date="2026-11-11",
+        transaction_date=today_date,
         inventory_item=item,
         transaction_type="Stock Out",
         quantity=Decimal("100"),  # Only 17 available!
@@ -140,7 +141,7 @@ except ValidationError as e:
 
 # 7. Record Stock Adjustment (Adjustment In & Out)
 adj_in = InventoryTransaction.objects.create(
-    transaction_date="2026-11-11",
+    transaction_date=today_date,
     inventory_item=item,
     transaction_type="Adjustment In",
     quantity=Decimal("3"),
@@ -153,7 +154,7 @@ print(f"✓ Adjustment In recorded: +3, New stock: {item.current_stock} (Expecte
 assert item.current_stock == Decimal("20")
 
 adj_out = InventoryTransaction.objects.create(
-    transaction_date="2026-11-11",
+    transaction_date=today_date,
     inventory_item=item,
     transaction_type="Adjustment Out",
     quantity=Decimal("2"),

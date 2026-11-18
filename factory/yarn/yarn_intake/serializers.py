@@ -31,19 +31,37 @@ def resolve_yarn_outcome_rate_per_lb(yo):
     """Resolve the effective yarn rate per lb for a YarnOutcome record."""
     if not yo:
         return Decimal("0.0000")
+    if hasattr(yo, "_cached_rate_per_lb"):
+        return yo._cached_rate_per_lb
     total_price = Decimal(str(yo.total_price or 0))
     weight_lb = Decimal(str(yo.outcome_weight_lb or 0))
     if yo.outcome_type != "Sold" and total_price > Decimal("0") and weight_lb > Decimal("0"):
-        return (total_price / weight_lb).quantize(Decimal("0.0001"))
+        res = (total_price / weight_lb).quantize(Decimal("0.0001"))
+        yo._cached_rate_per_lb = res
+        return res
     if yo.stock and yo.stock.price_per_lb and Decimal(str(yo.stock.price_per_lb)) > Decimal("0"):
-        return Decimal(str(yo.stock.price_per_lb)).quantize(Decimal("0.0001"))
-    first_item = yo.items.select_related("yarn_intake").first() if hasattr(yo, "items") else None
+        res = Decimal(str(yo.stock.price_per_lb)).quantize(Decimal("0.0001"))
+        yo._cached_rate_per_lb = res
+        return res
+    first_item = None
+    if hasattr(yo, "_prefetched_objects_cache") and "items" in yo._prefetched_objects_cache:
+        items_list = yo._prefetched_objects_cache["items"]
+        if items_list:
+            first_item = items_list[0]
+    elif hasattr(yo, "items"):
+        first_item = yo.items.select_related("yarn_intake").first()
     if first_item and first_item.yarn_intake and first_item.yarn_intake.rate_per_lb:
-        return Decimal(str(first_item.yarn_intake.rate_per_lb)).quantize(Decimal("0.0001"))
+        res = Decimal(str(first_item.yarn_intake.rate_per_lb)).quantize(Decimal("0.0001"))
+        yo._cached_rate_per_lb = res
+        return res
     pi = getattr(yo, "primary_intake", None)
     if pi and pi.rate_per_lb:
-        return Decimal(str(pi.rate_per_lb)).quantize(Decimal("0.0001"))
-    return Decimal("0.0000")
+        res = Decimal(str(pi.rate_per_lb)).quantize(Decimal("0.0001"))
+        yo._cached_rate_per_lb = res
+        return res
+    res = Decimal("0.0000")
+    yo._cached_rate_per_lb = res
+    return res
 
 
 class YarnOutcomeBGradeItemSerializer(serializers.ModelSerializer):
@@ -543,13 +561,26 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         return []
 
     def get_status(self, obj):
+        if hasattr(obj, "_cached_status"):
+            return obj._cached_status
         profile = getattr(obj, "processing_profile", None)
         if profile:
-            if hasattr(obj, "sizing_outcomes") and obj.sizing_outcomes.exists():
+            has_so = False
+            if hasattr(obj, "_prefetched_objects_cache") and "sizing_outcomes" in obj._prefetched_objects_cache:
+                has_so = len(obj._prefetched_objects_cache["sizing_outcomes"]) > 0
+            elif hasattr(obj, "sizing_outcomes"):
+                has_so = obj.sizing_outcomes.exists()
+            if has_so:
                 from factory.yarn.sizing.services import sync_yarn_outcome_status
-                return sync_yarn_outcome_status(obj)
-            return getattr(obj, "status", None) or profile.in_progress_status
-        return getattr(obj, "status", None) or "Dispatched"
+                res = sync_yarn_outcome_status(obj)
+                obj._cached_status = res
+                return res
+            res = getattr(obj, "status", None) or profile.in_progress_status
+            obj._cached_status = res
+            return res
+        res = getattr(obj, "status", None) or "Dispatched"
+        obj._cached_status = res
+        return res
 
     def get_ratePerLb(self, obj):
         return str(resolve_yarn_outcome_rate_per_lb(obj))
@@ -564,45 +595,66 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         return self.get_status(obj) == YarnOutcome.StatusChoices.PARTIALLY_RECEIVED
 
     def get_sizingOutcome(self, obj):
-        if hasattr(obj, "sizing_outcomes"):
+        if hasattr(obj, "_cached_sizing_outcome_dict"):
+            return obj._cached_sizing_outcome_dict
+        so = None
+        if hasattr(obj, "_prefetched_objects_cache") and "sizing_outcomes" in obj._prefetched_objects_cache:
+            so_list = obj._prefetched_objects_cache["sizing_outcomes"]
+            if so_list:
+                so = sorted(so_list, key=lambda x: x.id, reverse=True)[0]
+        elif hasattr(obj, "sizing_outcomes"):
             so = obj.sizing_outcomes.order_by("-id").first()
-            if so:
-                rate_per_lb = Decimal("0.000000")
+        if so:
+            rate_per_lb = Decimal("0.000000")
+            first_item = None
+            if hasattr(obj, "_prefetched_objects_cache") and "items" in obj._prefetched_objects_cache:
+                it_list = obj._prefetched_objects_cache["items"]
+                if it_list:
+                    first_item = it_list[0]
+            elif hasattr(obj, "items"):
                 first_item = obj.items.first()
-                if first_item and first_item.yarn_intake and first_item.yarn_intake.rate_per_lb:
-                    rate_per_lb = Decimal(str(first_item.yarn_intake.rate_per_lb))
-                elif obj.stock and obj.stock.price_per_lb:
-                    rate_per_lb = Decimal(str(obj.stock.price_per_lb))
-                ret_bags = Decimal(str(so.return_bags or 0))
-                ret_cones = Decimal(str(so.return_cones or 0))
-                wpb = Decimal(str(obj.outcome_weight_per_bag_kg or 0))
-                cpb = Decimal(str(obj.outcome_cones_per_bag or 0))
-                wpc = (wpb / cpb) if cpb > 0 else Decimal("0.000000")
-                ret_kg = (ret_bags * wpb) + (ret_cones * wpc)
-                ret_lb = ret_kg * LB_PER_KG
-                ret_price = (ret_lb * rate_per_lb).quantize(Decimal("0.000001"))
-                return {
-                    "id": so.id,
-                    "setNo": so.set_no,
-                    "setBill": so.set_bill,
-                    "ratePerKg": str(so.rate_per_kg) if so.rate_per_kg is not None else None,
-                    "totalRate": str(so.total_rate) if so.total_rate is not None else None,
-                    "netWeightKg": str(so.net_weight_kg) if so.net_weight_kg is not None else None,
-                    "returnBags": str(so.return_bags) if so.return_bags is not None else "0.000000",
-                    "return_bags": str(so.return_bags) if so.return_bags is not None else "0.000000",
-                    "returnCones": str(so.return_cones) if so.return_cones is not None else "0.000000",
-                    "return_cones": str(so.return_cones) if so.return_cones is not None else "0.000000",
-                    "returnPrice": str(ret_price),
-                    "return_price": str(ret_price),
-                    "outcomeDate": so.outcome_date,
-                    "amountPaid": str(so.amount_paid) if so.amount_paid is not None else "0.000000",
-                    "amountDue": str(so.amount_due) if so.amount_due is not None else "0.000000",
-                    "paymentStatus": so.payment_status or "Unpaid",
-                }
+            if first_item and first_item.yarn_intake and first_item.yarn_intake.rate_per_lb:
+                rate_per_lb = Decimal(str(first_item.yarn_intake.rate_per_lb))
+            elif obj.stock and obj.stock.price_per_lb:
+                rate_per_lb = Decimal(str(obj.stock.price_per_lb))
+            ret_bags = Decimal(str(so.return_bags or 0))
+            ret_cones = Decimal(str(so.return_cones or 0))
+            wpb = Decimal(str(obj.outcome_weight_per_bag_kg or 0))
+            cpb = Decimal(str(obj.outcome_cones_per_bag or 0))
+            wpc = (wpb / cpb) if cpb > 0 else Decimal("0.000000")
+            ret_kg = (ret_bags * wpb) + (ret_cones * wpc)
+            ret_lb = ret_kg * LB_PER_KG
+            ret_price = (ret_lb * rate_per_lb).quantize(Decimal("0.000001"))
+            res = {
+                "id": so.id,
+                "setNo": so.set_no,
+                "setBill": so.set_bill,
+                "ratePerKg": str(so.rate_per_kg) if so.rate_per_kg is not None else None,
+                "totalRate": str(so.total_rate) if so.total_rate is not None else None,
+                "netWeightKg": str(so.net_weight_kg) if so.net_weight_kg is not None else None,
+                "returnBags": str(so.return_bags) if so.return_bags is not None else "0.000000",
+                "return_bags": str(so.return_bags) if so.return_bags is not None else "0.000000",
+                "returnCones": str(so.return_cones) if so.return_cones is not None else "0.000000",
+                "return_cones": str(so.return_cones) if so.return_cones is not None else "0.000000",
+                "returnPrice": str(ret_price),
+                "return_price": str(ret_price),
+                "outcomeDate": so.outcome_date,
+                "amountPaid": str(so.amount_paid) if so.amount_paid is not None else "0.000000",
+                "amountDue": str(so.amount_due) if so.amount_due is not None else "0.000000",
+                "paymentStatus": so.payment_status or "Unpaid",
+            }
+            obj._cached_sizing_outcome_dict = res
+            return res
+        obj._cached_sizing_outcome_dict = None
         return None
 
     def get_intakeSetNumbers(self, obj):
-        set_nos = [item.yarn_intake.set_no for item in obj.items.all() if item.yarn_intake and item.yarn_intake.set_no]
+        items_list = []
+        if hasattr(obj, "_prefetched_objects_cache") and "items" in obj._prefetched_objects_cache:
+            items_list = obj._prefetched_objects_cache["items"]
+        elif hasattr(obj, "items"):
+            items_list = obj.items.all()
+        set_nos = [item.yarn_intake.set_no for item in items_list if item.yarn_intake and item.yarn_intake.set_no]
         if not set_nos and obj.primary_intake and obj.primary_intake.set_no:
             set_nos = [obj.primary_intake.set_no]
         return list(dict.fromkeys(set_nos))

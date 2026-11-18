@@ -124,6 +124,10 @@ class Beam(models.Model):
         ordering = ["beam_number"]
         verbose_name = "Beam"
         verbose_name_plural = "Beams"
+        indexes = [
+            models.Index(fields=["status"], name="factory_beam_stat_idx"),
+            models.Index(fields=["beam_number"], name="factory_beam_num_idx"),
+        ]
 
     def __str__(self):
         return f"{self.beam_number} - {self.beam_name}" if self.beam_name else self.beam_number
@@ -185,6 +189,55 @@ class BeamLoading(models.Model):
         null=True,
         blank=True,
         help_text="Lakhai (drawing-in / drafting cost or measurement)"
+    )
+
+    warping_sizing_cost_per_meter = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        help_text="Warping / Sizing cost per meter"
+    )
+
+    warp_rate_per_meter = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        help_text="Warp rate / cost per meter"
+    )
+
+    warp_weight_per_meter = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        help_text="Warp weight per meter in lbs"
+    )
+
+    production_per_day = models.DecimalField(
+        max_digits=15,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        help_text="Calculated production per day in meters: ((loomrpm * 60 * hour) / pick count) / 40"
+    )
+
+    loom_rpm = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Loom RPM used for calculation"
+    )
+
+    working_hours = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        default=24,
+        help_text="Working hours per day"
     )
 
     @property

@@ -259,6 +259,13 @@ class YarnIntake(models.Model):
         related_name="updated_yarn_intakes"
     )
 
+    def refresh_from_db(self, *args, **kwargs):
+        self.__dict__.pop("_cached_primary_intake", None)
+        self.__dict__.pop("_cached_status", None)
+        self.__dict__.pop("_cached_rate_per_lb", None)
+        self.__dict__.pop("_cached_sizing_outcome_dict", None)
+        return super().refresh_from_db(*args, **kwargs)
+
     def __init__(self, *args, **kwargs):
         from factory.yarn.yarn_name.models import YarnName
         from factory.yarn.yarn_type.models import YarnType
@@ -291,6 +298,10 @@ class YarnIntake(models.Model):
         ordering = ["-intake_date", "-id"]
         verbose_name = "Yarn Intake"
         verbose_name_plural = "Yarn Intakes"
+        indexes = [
+            models.Index(fields=["-intake_date"], name="factory_yi_date_idx"),
+            models.Index(fields=["set_no"], name="factory_yi_setno_idx"),
+        ]
 
     def __str__(self):
         name = self.yarn_name.name if self.yarn_name else ""
@@ -616,6 +627,17 @@ class YarnOutcome(models.Model):
         ordering = ["-outcome_date", "-id"]
         verbose_name = "Yarn Outcome"
         verbose_name_plural = "Yarn Outcomes"
+        indexes = [
+            models.Index(fields=["outcome_type", "-outcome_date"], name="factory_yo_typ_dt_idx"),
+            models.Index(fields=["status"], name="factory_yo_stat_idx"),
+        ]
+
+    def refresh_from_db(self, *args, **kwargs):
+        self.__dict__.pop("_cached_primary_intake", None)
+        self.__dict__.pop("_cached_status", None)
+        self.__dict__.pop("_cached_rate_per_lb", None)
+        self.__dict__.pop("_cached_sizing_outcome_dict", None)
+        return super().refresh_from_db(*args, **kwargs)
 
     def __init__(self, *args, **kwargs):
         intake = kwargs.pop("yarn_intake", None) or kwargs.pop("yarnIntake", None)
@@ -865,15 +887,25 @@ class YarnOutcome(models.Model):
 
     @property
     def primary_intake(self):
+        if hasattr(self, "_cached_primary_intake"):
+            return self._cached_primary_intake
+        res = None
         if self.pk and hasattr(self, "items"):
-            first_item = self.items.select_related("yarn_intake").first()
-            if first_item:
-                return first_item.yarn_intake
-        if hasattr(self, "_initial_yarn_intake") and self._initial_yarn_intake:
+            if hasattr(self, "_prefetched_objects_cache") and "items" in self._prefetched_objects_cache:
+                items_list = self._prefetched_objects_cache["items"]
+                if items_list:
+                    res = getattr(items_list[0], "yarn_intake", None)
+            else:
+                first_item = self.items.select_related("yarn_intake").first()
+                if first_item:
+                    res = first_item.yarn_intake
+        if res is None and hasattr(self, "_initial_yarn_intake") and self._initial_yarn_intake:
             if isinstance(self._initial_yarn_intake, int):
-                return YarnIntake.objects.filter(pk=self._initial_yarn_intake).first()
-            return self._initial_yarn_intake
-        return None
+                res = YarnIntake.objects.filter(pk=self._initial_yarn_intake).first()
+            else:
+                res = self._initial_yarn_intake
+        self._cached_primary_intake = res
+        return res
 
     @property
     def yarn_intake(self):

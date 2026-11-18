@@ -222,9 +222,13 @@ class YarnStockListSerializer(serializers.ModelSerializer):
         return {"id": obj.yarn_count.id, "name": obj.yarn_count.name} if obj.yarn_count else None
 
     def get_intakesCount(self, obj):
+        if hasattr(obj, "_prefetched_objects_cache") and "intakes" in obj._prefetched_objects_cache:
+            return len(obj._prefetched_objects_cache["intakes"])
         return obj.intakes.count()
 
     def get_outcomesCount(self, obj):
+        if hasattr(obj, "_prefetched_objects_cache") and "outcomes" in obj._prefetched_objects_cache:
+            return len(obj._prefetched_objects_cache["outcomes"])
         return obj.outcomes.count()
 
     def get_createdBy(self, obj):

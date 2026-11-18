@@ -278,7 +278,7 @@ class YarnStock(models.Model):
     # -> total_returned_weight_kg -> total_received_* / total_returned_*), which
     # previously re-ran the same SUM() queries ~18 times per serialization.
     # They are now memoized per instance and invalidated on save()/refresh_from_db().
-    _AGG_CACHE_ATTRS = ("_intake_totals_cache", "_returned_totals_cache")
+    _AGG_CACHE_ATTRS = ("_intake_totals_cache", "_returned_totals_cache", "_dispatched_totals_cache")
 
     def _clear_aggregate_cache(self):
         for attr in self._AGG_CACHE_ATTRS:
@@ -291,14 +291,53 @@ class YarnStock(models.Model):
     def _intake_totals(self):
         cache = self.__dict__.get("_intake_totals_cache")
         if cache is None:
-            cache = self.intakes.aggregate(
-                bags=models.Sum("bags"),
-                cones=models.Sum("total_cones"),
-                kg=models.Sum("net_weight_kg"),
-                lb=models.Sum("net_weight_lb"),
-                return_rate=models.Sum("return_total_rate"),
-            )
+            if hasattr(self, "_prefetched_objects_cache") and "intakes" in self._prefetched_objects_cache:
+                intakes_list = self._prefetched_objects_cache["intakes"]
+                bags = sum((i.bags or 0 for i in intakes_list))
+                cones = sum((i.total_cones or 0 for i in intakes_list))
+                kg = sum((Decimal(str(i.net_weight_kg or 0)) for i in intakes_list), Decimal("0.000000"))
+                lb = sum((Decimal(str(i.net_weight_lb or 0)) for i in intakes_list), Decimal("0.000000"))
+                return_rate = sum((Decimal(str(i.return_total_rate or 0)) for i in intakes_list), Decimal("0.000000"))
+                cache = {"bags": bags, "cones": cones, "kg": kg, "lb": lb, "return_rate": return_rate}
+            else:
+                cache = self.intakes.aggregate(
+                    bags=models.Sum("bags"),
+                    cones=models.Sum("total_cones"),
+                    kg=models.Sum("net_weight_kg"),
+                    lb=models.Sum("net_weight_lb"),
+                    return_rate=models.Sum("return_total_rate"),
+                )
             self.__dict__["_intake_totals_cache"] = cache
+        return cache
+
+    def _dispatched_totals(self):
+        cache = self.__dict__.get("_dispatched_totals_cache")
+        if cache is None:
+            if hasattr(self, "_prefetched_objects_cache") and "outcomes" in self._prefetched_objects_cache:
+                outcomes_list = self._prefetched_objects_cache["outcomes"]
+                boxes = sum((o.outcome_bags or 0 for o in outcomes_list))
+                cones = sum(((o.outcome_bags or 0) * (o.outcome_cones_per_bag or 0) for o in outcomes_list))
+                kg = sum((Decimal(str(o.outcome_weight_kg or 0)) for o in outcomes_list), Decimal("0.000000"))
+                lb = sum((Decimal(str(o.outcome_weight_lb or 0)) for o in outcomes_list), Decimal("0.000000"))
+                cache = {"boxes": boxes, "cones": cones, "kg": kg, "lb": lb}
+            else:
+                outcome_cone_expr = models.ExpressionWrapper(
+                    models.F("outcome_bags") * models.F("outcome_cones_per_bag"),
+                    output_field=models.IntegerField()
+                )
+                agg = self.outcomes.annotate(calc_cones=outcome_cone_expr).aggregate(
+                    boxes=models.Sum("outcome_bags"),
+                    cones=models.Sum("calc_cones"),
+                    kg=models.Sum("outcome_weight_kg"),
+                    lb=models.Sum("outcome_weight_lb"),
+                )
+                cache = {
+                    "boxes": agg["boxes"] or 0,
+                    "cones": agg["cones"] or 0,
+                    "kg": agg["kg"] or Decimal("0.000000"),
+                    "lb": agg["lb"] or Decimal("0.000000"),
+                }
+            self.__dict__["_dispatched_totals_cache"] = cache
         return cache
 
     def _returned_totals(self):
@@ -333,27 +372,19 @@ class YarnStock(models.Model):
 
     @property
     def total_dispatched_boxes(self):
-        agg = self.outcomes.aggregate(models.Sum("outcome_bags"))
-        return agg["outcome_bags__sum"] or 0
+        return self._dispatched_totals()["boxes"] or 0
 
     @property
     def total_dispatched_cones(self):
-        outcome_cone_expr = models.ExpressionWrapper(
-            models.F("outcome_bags") * models.F("outcome_cones_per_bag"),
-            output_field=models.IntegerField()
-        )
-        agg = self.outcomes.annotate(calc_cones=outcome_cone_expr).aggregate(models.Sum("calc_cones"))
-        return agg["calc_cones__sum"] or 0
+        return self._dispatched_totals()["cones"] or 0
 
     @property
     def total_dispatched_weight_kg(self):
-        agg = self.outcomes.aggregate(models.Sum("outcome_weight_kg"))
-        return agg["outcome_weight_kg__sum"] or Decimal("0.000000")
+        return self._dispatched_totals()["kg"] or Decimal("0.000000")
 
     @property
     def total_dispatched_weight_lb(self):
-        agg = self.outcomes.aggregate(models.Sum("outcome_weight_lb"))
-        return agg["outcome_weight_lb__sum"] or Decimal("0.000000")
+        return self._dispatched_totals()["lb"] or Decimal("0.000000")
 
     @property
     def total_returned_boxes(self):
@@ -424,6 +455,11 @@ class YarnStock(models.Model):
         if self.total_price and self.total_price > Decimal("0.000000"):
             return self.total_price
         total = Decimal("0.000000")
-        for intake in self.intakes.all():
+        intakes_list = (
+            self._prefetched_objects_cache["intakes"]
+            if hasattr(self, "_prefetched_objects_cache") and "intakes" in self._prefetched_objects_cache
+            else self.intakes.all()
+        )
+        for intake in intakes_list:
             total += (Decimal(str(intake.net_weight_lb or 0)) * Decimal(str(intake.rate_per_lb or 0)))
         return total.quantize(Decimal("0.000001"))

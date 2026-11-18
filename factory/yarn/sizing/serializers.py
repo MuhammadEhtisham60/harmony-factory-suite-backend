@@ -155,23 +155,46 @@ class BeamMinSerializer(serializers.ModelSerializer):
         ]
 
     def get_loading(self, obj):
+        if hasattr(obj, "_cached_min_loading"):
+            return obj._cached_min_loading
         from factory.beam.models import BeamLoading
         from django.db.models import Sum
         outcome = self.context.get("sizing_outcome")
+        loading = None
         if outcome:
-            loading = BeamLoading.objects.filter(beam=obj, sizing_outcome=outcome).order_by("-id").first()
-        else:
-            loading = BeamLoading.objects.filter(beam=obj).order_by("-id").first()
+            if hasattr(outcome, "_prefetched_objects_cache") and "beam_loadings" in outcome._prefetched_objects_cache:
+                for bl in outcome._prefetched_objects_cache["beam_loadings"]:
+                    if bl.beam_id == obj.id:
+                        loading = bl
+                        break
+            elif hasattr(outcome, "beam_loadings"):
+                loading = outcome.beam_loadings.filter(beam=obj).order_by("-id").first()
+        if not loading:
+            if hasattr(obj, "_prefetched_objects_cache") and "loadings" in obj._prefetched_objects_cache:
+                bl_list = obj._prefetched_objects_cache["loadings"]
+                if bl_list:
+                    loading = sorted(bl_list, key=lambda x: x.id or 0, reverse=True)[0]
+            elif hasattr(obj, "loadings"):
+                loading = obj.loadings.order_by("-id").first()
+            else:
+                loading = BeamLoading.objects.filter(beam=obj).order_by("-id").first()
         if loading:
-            total_prod = loading.productions.aggregate(Sum("meters_produced"))["meters_produced__sum"] or 0
-            return {
+            if hasattr(loading, "_prefetched_objects_cache") and "productions" in loading._prefetched_objects_cache:
+                total_prod = sum((p.meters_produced or Decimal("0") for p in loading._prefetched_objects_cache["productions"]), Decimal("0"))
+            else:
+                total_prod = loading.productions.aggregate(Sum("meters_produced"))["meters_produced__sum"] or 0
+            loom_code = loading.loom.loom_code if loading.loom else ""
+            res = {
                 "id": loading.id,
                 "loomId": loading.loom_id,
-                "loomCode": loading.loom.loom_code if loading.loom else "",
+                "loomCode": loom_code,
                 "status": loading.status,
                 "installationDate": loading.installation_date,
                 "producedMeters": total_prod if total_prod is not None else Decimal("0"),
             }
+            obj._cached_min_loading = res
+            return res
+        obj._cached_min_loading = None
         return None
 
     def get_producedMeters(self, obj):
@@ -374,17 +397,23 @@ class SizingBeamAssignmentSerializer(serializers.ModelSerializer):
         ]
 
     def get_beamId(self, obj):
+        if hasattr(obj, "_prefetched_objects_cache") and "beam" in obj._prefetched_objects_cache:
+            beams = obj._prefetched_objects_cache["beam"]
+            return beams[0].id if beams else None
         first_b = obj.beam.first()
         return first_b.id if first_b else None
 
     def get_beams(self, obj):
+        beams = obj.beam.all()
         return BeamMinSerializer(
-            obj.beam.all(),
+            beams,
             many=True,
             context={**self.context, "assignment": obj},
         ).data
 
     def get_totalBeams(self, obj):
+        if hasattr(obj, "_prefetched_objects_cache") and "beam" in obj._prefetched_objects_cache:
+            return len(obj._prefetched_objects_cache["beam"])
         return obj.beam.count()
 
     def get_createdBy(self, obj):
@@ -818,15 +847,25 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
         return self.get_status(obj) == "Partially Received"
 
     def get_returnPrice(self, obj):
+        if hasattr(obj, "_cached_return_price"):
+            return obj._cached_return_price
         yo = obj.yarn_outcome
         if not yo:
+            obj._cached_return_price = "0.000000"
             return "0.000000"
         ret_bags = Decimal(str(obj.return_bags or 0))
         ret_cones = Decimal(str(obj.return_cones or 0))
         if ret_bags == 0 and ret_cones == 0:
+            obj._cached_return_price = "0.000000"
             return "0.000000"
         rate_per_lb = Decimal("0.000000")
-        first_item = yo.items.first()
+        first_item = None
+        if hasattr(yo, "_prefetched_objects_cache") and "items" in yo._prefetched_objects_cache:
+            items_list = yo._prefetched_objects_cache["items"]
+            if items_list:
+                first_item = items_list[0]
+        elif hasattr(yo, "items"):
+            first_item = yo.items.first()
         if first_item and first_item.yarn_intake and first_item.yarn_intake.rate_per_lb:
             rate_per_lb = Decimal(str(first_item.yarn_intake.rate_per_lb))
         elif yo.stock and yo.stock.price_per_lb:
@@ -836,7 +875,9 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
         wpc = (wpb / cpb) if cpb > 0 else Decimal("0.000000")
         ret_kg = (ret_bags * wpb) + (ret_cones * wpc)
         ret_lb = ret_kg * LB_PER_KG
-        return str((ret_lb * rate_per_lb).quantize(Decimal("0.000001")))
+        res = str((ret_lb * rate_per_lb).quantize(Decimal("0.000001")))
+        obj._cached_return_price = res
+        return res
 
     def get_return_price(self, obj):
         return self.get_returnPrice(obj)
@@ -884,25 +925,42 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
     totalBeams = serializers.IntegerField(source="total_beams", read_only=True)
 
     def get_beamAssignments(self, obj):
-        if hasattr(obj, "beam_assignments"):
-            return SizingBeamAssignmentSerializer(obj.beam_assignments.all(), many=True, context={**self.context, "sizing_outcome": obj}).data
-        if obj.yarn_outcome_id:
+        if hasattr(obj, "_cached_beam_assignments_data"):
+            return obj._cached_beam_assignments_data
+        assignments = []
+        if obj.yarn_outcome:
+            yo = obj.yarn_outcome
+            if hasattr(yo, "_prefetched_objects_cache") and "beam_assignments" in yo._prefetched_objects_cache:
+                assignments = yo._prefetched_objects_cache["beam_assignments"]
+            elif hasattr(yo, "beam_assignments"):
+                assignments = yo.beam_assignments.all()
+        elif hasattr(obj, "beam_assignments"):
+            assignments = obj.beam_assignments.all()
+        elif obj.yarn_outcome_id:
             from factory.yarn.sizing.models import SizingBeamAssignment
             assignments = SizingBeamAssignment.objects.filter(yarn_outcome_id=obj.yarn_outcome_id).order_by("-assigned_at")
-            return SizingBeamAssignmentSerializer(assignments, many=True, context={**self.context, "sizing_outcome": obj}).data
         elif obj.sizing_id:
             from factory.yarn.sizing.models import SizingBeamAssignment
             assignments = SizingBeamAssignment.objects.filter(yarn_outcome__sizing_id=obj.sizing_id).order_by("-assigned_at")
-            return SizingBeamAssignmentSerializer(assignments, many=True, context={**self.context, "sizing_outcome": obj}).data
-        return []
+        res = SizingBeamAssignmentSerializer(assignments, many=True, context={**self.context, "sizing_outcome": obj}).data
+        obj._cached_beam_assignments_data = res
+        return res
 
     def get_beamLoadings(self, obj):
+        if hasattr(obj, "_cached_beam_loadings_data"):
+            return obj._cached_beam_loadings_data
         from factory.beam.serializers import BeamLoadingSerializer
-        if hasattr(obj, "beam_loadings"):
-            return BeamLoadingSerializer(obj.beam_loadings.all(), many=True, context=self.context).data
-        from factory.beam.models import BeamLoading
-        loadings = BeamLoading.objects.filter(sizing_outcome_id=obj.id).order_by("-id")
-        return BeamLoadingSerializer(loadings, many=True, context=self.context).data
+        loadings = []
+        if hasattr(obj, "_prefetched_objects_cache") and "beam_loadings" in obj._prefetched_objects_cache:
+            loadings = obj._prefetched_objects_cache["beam_loadings"]
+        elif hasattr(obj, "beam_loadings"):
+            loadings = obj.beam_loadings.all()
+        else:
+            from factory.beam.models import BeamLoading
+            loadings = BeamLoading.objects.filter(sizing_outcome_id=obj.id).order_by("-id")
+        res = BeamLoadingSerializer(loadings, many=True, context=self.context).data
+        obj._cached_beam_loadings_data = res
+        return res
 
     createdAt = serializers.DateTimeField(source="created_at", read_only=True)
     updatedAt = serializers.DateTimeField(source="updated_at", read_only=True)

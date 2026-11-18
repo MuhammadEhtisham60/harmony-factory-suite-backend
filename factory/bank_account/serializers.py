@@ -277,9 +277,21 @@ class BankAccountSerializer(serializers.ModelSerializer):
         }
 
     def get_transactionsCount(self, obj):
+        if hasattr(obj, "_prefetched_objects_cache") and "transactions" in obj._prefetched_objects_cache:
+            return len(obj._prefetched_objects_cache["transactions"])
         return obj.transactions.count()
 
     def get_lastTransactionDate(self, obj):
+        if hasattr(obj, "_prefetched_objects_cache") and "transactions" in obj._prefetched_objects_cache:
+            tx_list = obj._prefetched_objects_cache["transactions"]
+            if tx_list:
+                sorted_tx = sorted(
+                    tx_list,
+                    key=lambda t: (str(getattr(t, "date", "")), str(getattr(t, "created_at", ""))),
+                    reverse=True
+                )
+                return str(sorted_tx[0].date) if sorted_tx[0] else None
+            return None
         last_tx = obj.transactions.order_by("-date", "-created_at").first()
         return str(last_tx.date) if last_tx else None
 

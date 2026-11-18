@@ -35,6 +35,12 @@ def load_beam_onto_loom(
     shortage=None,
     width=None,
     lakhai=None,
+    warping_sizing_cost_per_meter=None,
+    warp_rate_per_meter=None,
+    warp_weight_per_meter=None,
+    production_per_day=None,
+    loom_rpm=None,
+    working_hours=None,
     installation_date=None,
     user=None,
     request=None,
@@ -175,6 +181,12 @@ def load_beam_onto_loom(
                 cloth_name=resolved_cloth_name,
                 shortage=shortage,
                 lakhai=lakhai,
+                warping_sizing_cost_per_meter=warping_sizing_cost_per_meter,
+                warp_rate_per_meter=warp_rate_per_meter,
+                warp_weight_per_meter=warp_weight_per_meter,
+                production_per_day=production_per_day,
+                loom_rpm=loom_rpm,
+                working_hours=working_hours or 24,
                 installation_date=installation_date,
                 status=BeamLoading.StatusChoices.LOADED,
                 created_by=user,
@@ -277,7 +289,7 @@ def record_production_entry(
             beam.updated_by = user
             beam.save(update_fields=["status", "updated_by", "updated_at"])
 
-            loom.status = Loom.StatusChoices.ACTIVE
+            loom.status = Loom.StatusChoices.AVAILABLE
             loom.updated_by = user
             loom.save(update_fields=["status", "updated_by", "updated_at"])
 
@@ -346,7 +358,7 @@ def mark_beam_empty_and_available(beam_loading_or_id, user=None, request=None):
         beam.updated_by = user
         beam.save(update_fields=["status", "updated_by", "updated_at"])
 
-        loom.status = Loom.StatusChoices.ACTIVE
+        loom.status = Loom.StatusChoices.AVAILABLE
         loom.updated_by = user
         loom.save(update_fields=["status", "updated_by", "updated_at"])
 
@@ -561,7 +573,7 @@ def dismount_beam_loading(
         beam.updated_by = user
         beam.save(update_fields=["status", "updated_by", "updated_at"])
 
-        loom.status = Loom.StatusChoices.ACTIVE
+        loom.status = Loom.StatusChoices.AVAILABLE
         loom.updated_by = user
         loom.save(update_fields=["status", "updated_by", "updated_at"])
 

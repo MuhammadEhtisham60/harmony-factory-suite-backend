@@ -50,6 +50,12 @@ class BeamViewSet(ModelViewSet):
     queryset = (
         Beam.objects
         .select_related("created_by", "updated_by")
+        .prefetch_related(
+            "sizing_assignments",
+            "sizing_assignments__yarn_outcome",
+            "loadings",
+            "loadings__sizing_outcome__yarn_outcome",
+        )
         .all()
     )
     permission_classes = [IsAuthenticated, HasERPModulePermission]
@@ -504,7 +510,7 @@ class BeamLoadingViewSet(ModelViewSet):
                 status__in=[BeamLoading.StatusChoices.LOADED, BeamLoading.StatusChoices.IN_PRODUCTION]
             ).exists()
             if not has_other_loom and loom.status in [Loom.StatusChoices.PRODUCTION, Loom.StatusChoices.IN_USE]:
-                loom.status = Loom.StatusChoices.ACTIVE
+                loom.status = Loom.StatusChoices.AVAILABLE
                 loom.save(update_fields=["status", "updated_at"])
 
         log_activity(

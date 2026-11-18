@@ -68,6 +68,9 @@ class YarnOutcomeViewSet(ModelViewSet):
             "items",
             "items__yarn_intake",
             "items__yarn_intake__supplier",
+            "sizing_outcomes",
+            "beam_assignments",
+            "beam_assignments__beam",
         )
         .all()
     )

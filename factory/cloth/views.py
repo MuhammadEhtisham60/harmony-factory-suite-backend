@@ -57,7 +57,7 @@ class ClothNameViewSet(ModelViewSet):
     """
     CRUD API for ClothName master items.
     """
-    queryset = ClothName.objects.all().order_by("name")
+    queryset = ClothName.objects.select_related("created_by", "updated_by").all().order_by("name")
     serializer_class = ClothNameSerializer
     permission_classes = [IsAuthenticated, HasERPModulePermission]
     pagination_class = StandardResultsSetPagination

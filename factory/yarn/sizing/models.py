@@ -371,6 +371,10 @@ class SizingOutcome(models.Model):
         ordering = ["-outcome_date", "-id"]
         verbose_name = "Sizing Outcome"
         verbose_name_plural = "Sizing Outcomes"
+        indexes = [
+            models.Index(fields=["-outcome_date"], name="factory_so_date_idx"),
+            models.Index(fields=["set_no"], name="factory_so_setno_idx"),
+        ]
 
     def __init__(self, *args, **kwargs):
         # Backward compatibility: resolve yarn_outcome from legacy sizing kwargs if provided

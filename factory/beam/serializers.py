@@ -14,24 +14,54 @@ def _resolve_beam_rate_per_lb(beam):
 
     if not beam:
         return "0.000000"
+    if hasattr(beam, "_cached_rate_per_lb"):
+        return beam._cached_rate_per_lb
     yo = getattr(beam, "dispatched_yarn_outcome", None)
     if yo:
         rate = resolve_yarn_outcome_rate_per_lb(yo)
         if rate > Decimal("0"):
-            return str(rate)
-    if hasattr(beam, "sizing_assignments"):
+            res = str(rate)
+            beam._cached_rate_per_lb = res
+            return res
+    if hasattr(beam, "_prefetched_objects_cache") and "sizing_assignments" in beam._prefetched_objects_cache:
+        sa_list = beam._prefetched_objects_cache["sizing_assignments"]
+        if sa_list:
+            sa = sorted(sa_list, key=lambda x: (str(getattr(x, "assigned_at", "")), x.id or 0), reverse=True)[0]
+            if sa and getattr(sa, "yarn_outcome", None):
+                rate = resolve_yarn_outcome_rate_per_lb(sa.yarn_outcome)
+                if rate > Decimal("0"):
+                    res = str(rate)
+                    beam._cached_rate_per_lb = res
+                    return res
+    elif hasattr(beam, "sizing_assignments"):
         assignment = beam.sizing_assignments.select_related("yarn_outcome").order_by("-assigned_at", "-id").first()
         if assignment and assignment.yarn_outcome:
             rate = resolve_yarn_outcome_rate_per_lb(assignment.yarn_outcome)
             if rate > Decimal("0"):
-                return str(rate)
-    if hasattr(beam, "beam_loadings"):
-        loading = beam.beam_loadings.select_related("sizing_outcome__yarn_outcome").order_by("-id").first()
+                res = str(rate)
+                beam._cached_rate_per_lb = res
+                return res
+    if hasattr(beam, "_prefetched_objects_cache") and "loadings" in beam._prefetched_objects_cache:
+        bl_list = beam._prefetched_objects_cache["loadings"]
+        if bl_list:
+            bl = sorted(bl_list, key=lambda x: x.id or 0, reverse=True)[0]
+            if bl and getattr(bl, "sizing_outcome", None) and getattr(bl.sizing_outcome, "yarn_outcome", None):
+                rate = resolve_yarn_outcome_rate_per_lb(bl.sizing_outcome.yarn_outcome)
+                if rate > Decimal("0"):
+                    res = str(rate)
+                    beam._cached_rate_per_lb = res
+                    return res
+    elif hasattr(beam, "loadings"):
+        loading = beam.loadings.select_related("sizing_outcome__yarn_outcome").order_by("-id").first()
         if loading and loading.sizing_outcome and loading.sizing_outcome.yarn_outcome:
             rate = resolve_yarn_outcome_rate_per_lb(loading.sizing_outcome.yarn_outcome)
             if rate > Decimal("0"):
-                return str(rate)
-    return "0.000000"
+                res = str(rate)
+                beam._cached_rate_per_lb = res
+                return res
+    res = "0.000000"
+    beam._cached_rate_per_lb = res
+    return res
 
 
 class BeamListSerializer(serializers.ModelSerializer):
@@ -418,6 +448,84 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
     shortage = serializers.DecimalField(max_digits=15, decimal_places=6, required=False, allow_null=True)
     width = serializers.DecimalField(max_digits=15, decimal_places=6, read_only=True)
     lakhai = serializers.DecimalField(max_digits=15, decimal_places=6, required=False, allow_null=True)
+    warpingSizingCostPerMeter = serializers.DecimalField(
+        source="warping_sizing_cost_per_meter",
+        max_digits=15,
+        decimal_places=6,
+        required=False,
+        allow_null=True,
+    )
+    warping_sizing_cost_per_meter = serializers.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        required=False,
+        allow_null=True,
+    )
+    warpRatePerMeter = serializers.DecimalField(
+        source="warp_rate_per_meter",
+        max_digits=15,
+        decimal_places=6,
+        required=False,
+        allow_null=True,
+    )
+    warp_rate_per_meter = serializers.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        required=False,
+        allow_null=True,
+    )
+    warpWeightPerMeter = serializers.DecimalField(
+        source="warp_weight_per_meter",
+        max_digits=15,
+        decimal_places=6,
+        required=False,
+        allow_null=True,
+    )
+    warp_weight_per_meter = serializers.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        required=False,
+        allow_null=True,
+    )
+    productionPerDay = serializers.DecimalField(
+        source="production_per_day",
+        max_digits=15,
+        decimal_places=4,
+        required=False,
+        allow_null=True,
+    )
+    production_per_day = serializers.DecimalField(
+        max_digits=15,
+        decimal_places=4,
+        required=False,
+        allow_null=True,
+    )
+    loomRpm = serializers.DecimalField(
+        source="loom_rpm",
+        max_digits=10,
+        decimal_places=2,
+        required=False,
+        allow_null=True,
+    )
+    loom_rpm = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        required=False,
+        allow_null=True,
+    )
+    workingHours = serializers.DecimalField(
+        source="working_hours",
+        max_digits=5,
+        decimal_places=2,
+        required=False,
+        allow_null=True,
+    )
+    working_hours = serializers.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        required=False,
+        allow_null=True,
+    )
     installationDate = serializers.DateField(source="installation_date", required=False, allow_null=True)
 
     totalMetersProduced = serializers.SerializerMethodField()
@@ -473,6 +581,18 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
             "shortage",
             "width",
             "lakhai",
+            "warpingSizingCostPerMeter",
+            "warping_sizing_cost_per_meter",
+            "warpRatePerMeter",
+            "warp_rate_per_meter",
+            "warpWeightPerMeter",
+            "warp_weight_per_meter",
+            "productionPerDay",
+            "production_per_day",
+            "loomRpm",
+            "loom_rpm",
+            "workingHours",
+            "working_hours",
             "installationDate",
             "status",
             "totalMetersProduced",
@@ -649,6 +769,12 @@ class BeamLoadingSerializer(serializers.ModelSerializer):
             "installation_date": "installationDate",
             "expected_length": "expectedLength",
             "dismount_date": "dismountDate",
+            "warping_sizing_cost_per_meter": "warpingSizingCostPerMeter",
+            "warp_rate_per_meter": "warpRatePerMeter",
+            "warp_weight_per_meter": "warpWeightPerMeter",
+            "production_per_day": "productionPerDay",
+            "loom_rpm": "loomRpm",
+            "working_hours": "workingHours",
         }
         for snake, camel in mapping.items():
             if snake in data and camel not in data:

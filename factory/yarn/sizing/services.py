@@ -442,29 +442,53 @@ def sync_yarn_outcome_status(yarn_outcome):
     if not profile:
         return yarn_outcome.status
 
-    sizing_outcomes = yarn_outcome.sizing_outcomes.all()
-    if not sizing_outcomes.exists():
-        new_status = profile.in_progress_status
-    else:
-        total_lagat = sizing_outcomes.aggregate(total=Sum("lagat_bags"))["total"] or Decimal("0")
-        total_returned = sizing_outcomes.aggregate(total=Sum("return_bags"))["total"] or Decimal("0")
-        total_accounted = total_lagat + total_returned
-        sent_bags = Decimal(str(getattr(yarn_outcome, "total_set_bags", yarn_outcome.outcome_bags) or 0))
-
-        # Check the latest sizing outcome for remaining bags on sizing stock
-        latest_so = sizing_outcomes.order_by("-outcome_date", "-id").first()
-        latest_remaining_stock = (
-            latest_so.remaining_bags_on_sizing_stock
-            if latest_so and latest_so.remaining_bags_on_sizing_stock is not None
-            else 0
-        )
-
-        if total_accounted <= Decimal("0") and latest_remaining_stock == 0:
+    if hasattr(yarn_outcome, "_prefetched_objects_cache") and "sizing_outcomes" in yarn_outcome._prefetched_objects_cache:
+        so_list = yarn_outcome._prefetched_objects_cache["sizing_outcomes"]
+        if not so_list:
             new_status = profile.in_progress_status
-        elif latest_remaining_stock > 0 or (sent_bags > Decimal("0") and total_accounted < sent_bags):
-            new_status = YarnOutcome.StatusChoices.PARTIALLY_RECEIVED
         else:
-            new_status = YarnOutcome.StatusChoices.RECEIVED
+            total_lagat = sum((Decimal(str(so.lagat_bags or 0)) for so in so_list), Decimal("0"))
+            total_returned = sum((Decimal(str(so.return_bags or 0)) for so in so_list), Decimal("0"))
+            total_accounted = total_lagat + total_returned
+            sent_bags = Decimal(str(getattr(yarn_outcome, "total_set_bags", yarn_outcome.outcome_bags) or 0))
+            sorted_so = sorted(so_list, key=lambda s: (str(s.outcome_date or ""), s.id or 0), reverse=True)
+            latest_so = sorted_so[0] if sorted_so else None
+            latest_remaining_stock = (
+                latest_so.remaining_bags_on_sizing_stock
+                if latest_so and latest_so.remaining_bags_on_sizing_stock is not None
+                else 0
+            )
+
+            if total_accounted <= Decimal("0") and latest_remaining_stock == 0:
+                new_status = profile.in_progress_status
+            elif latest_remaining_stock > 0 or (sent_bags > Decimal("0") and total_accounted < sent_bags):
+                new_status = YarnOutcome.StatusChoices.PARTIALLY_RECEIVED
+            else:
+                new_status = YarnOutcome.StatusChoices.RECEIVED
+    else:
+        sizing_outcomes = yarn_outcome.sizing_outcomes.all()
+        if not sizing_outcomes.exists():
+            new_status = profile.in_progress_status
+        else:
+            total_lagat = sizing_outcomes.aggregate(total=Sum("lagat_bags"))["total"] or Decimal("0")
+            total_returned = sizing_outcomes.aggregate(total=Sum("return_bags"))["total"] or Decimal("0")
+            total_accounted = total_lagat + total_returned
+            sent_bags = Decimal(str(getattr(yarn_outcome, "total_set_bags", yarn_outcome.outcome_bags) or 0))
+
+            # Check the latest sizing outcome for remaining bags on sizing stock
+            latest_so = sizing_outcomes.order_by("-outcome_date", "-id").first()
+            latest_remaining_stock = (
+                latest_so.remaining_bags_on_sizing_stock
+                if latest_so and latest_so.remaining_bags_on_sizing_stock is not None
+                else 0
+            )
+
+            if total_accounted <= Decimal("0") and latest_remaining_stock == 0:
+                new_status = profile.in_progress_status
+            elif latest_remaining_stock > 0 or (sent_bags > Decimal("0") and total_accounted < sent_bags):
+                new_status = YarnOutcome.StatusChoices.PARTIALLY_RECEIVED
+            else:
+                new_status = YarnOutcome.StatusChoices.RECEIVED
 
     if yarn_outcome.status != new_status:
         yarn_outcome.status = new_status

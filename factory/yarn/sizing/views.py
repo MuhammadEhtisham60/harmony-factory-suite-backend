@@ -198,7 +198,28 @@ class SizingOutcomeViewSet(ModelViewSet):
 
     queryset = (
         SizingOutcome.objects
-        .select_related("yarn_outcome", "yarn_outcome__sizing", "yarn_outcome__warping", "created_by", "updated_by")
+        .select_related(
+            "yarn_outcome",
+            "yarn_outcome__sizing",
+            "yarn_outcome__warping",
+            "yarn_outcome__stock",
+            "yarn_outcome__stock__yarn_name",
+            "yarn_outcome__stock__yarn_count",
+            "yarn_outcome__stock__yarn_type",
+            "created_by",
+            "updated_by",
+        )
+        .prefetch_related(
+            "beam_loadings",
+            "beam_loadings__loom",
+            "beam_loadings__productions",
+            "yarn_outcome__beam_assignments",
+            "yarn_outcome__beam_assignments__beam",
+            "yarn_outcome__beam_assignments__beam__created_by",
+            "yarn_outcome__beam_assignments__beam__updated_by",
+            "yarn_outcome__items",
+            "yarn_outcome__items__yarn_intake",
+        )
         .all()
     )
     serializer_class = SizingOutcomeSerializer
