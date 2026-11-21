@@ -13,6 +13,7 @@ Endpoints:
 from decimal import Decimal
 from django.db.models import Subquery, OuterRef, Sum, Count, IntegerField, DecimalField
 from django.db.models.functions import Coalesce
+from django.utils.dateparse import parse_date
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -535,6 +536,37 @@ class ClothStockViewSet(ModelViewSet):
             "success": True,
             "message": f"Cloth stock for '{name}' deleted successfully.",
         }, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["get"], url_path="summary")
+    def summary(self, request):
+        """
+        Lightweight aggregate of all cloth stock (single query, no pagination):
+        total clean meters, total defected meters and number of cloth names.
+        Supports optional date_from / date_to filtering on stock_date.
+        """
+        date_from = parse_date(request.query_params.get("date_from") or "")
+        date_to = parse_date(request.query_params.get("date_to") or "")
+
+        clean_qs = CleanClothStock.objects.all()
+        defected_qs = DefectedClothStock.objects.all()
+        if date_from:
+            clean_qs = clean_qs.filter(stock_date__gte=date_from)
+            defected_qs = defected_qs.filter(stock_date__gte=date_from)
+        if date_to:
+            clean_qs = clean_qs.filter(stock_date__lte=date_to)
+            defected_qs = defected_qs.filter(stock_date__lte=date_to)
+
+        clean = clean_qs.aggregate(total=Sum("total_length"))["total"] or Decimal("0")
+        defected = defected_qs.aggregate(total=Sum("total_length"))["total"] or Decimal("0")
+        return Response({
+            "success": True,
+            "data": {
+                "totalCleanLength": str(clean),
+                "totalDefectedLength": str(defected),
+                "totalLength": str(clean + defected),
+                "clothCount": ClothStock.objects.count(),
+            },
+        })
 
     @action(detail=True, methods=["post"], url_path="recalculate")
     def recalculate(self, request, pk=None):
