@@ -2,6 +2,7 @@
 Views for YarnType – full CRUD via ModelViewSet.
 """
 
+from django.db.models.deletion import ProtectedError
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -32,7 +33,7 @@ class YarnTypeViewSet(ModelViewSet):
         DELETE /api/v1/yarn-types/{id}/    – delete
         GET    /api/v1/yarn-types/choices/ – dropdown choices
     """
-    queryset = YarnType.objects.select_related("created_by", "updated_by").all()
+    queryset = YarnType.objects.select_related("created_by", "updated_by").exclude(status="Deleted")
     serializer_class = YarnTypeSerializer
     permission_classes = [IsAuthenticated, HasERPModulePermission]
     pagination_class = StandardResultsSetPagination
@@ -40,8 +41,8 @@ class YarnTypeViewSet(ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = YarnTypeFilter
     search_fields = ["name", "description"]
-    ordering_fields = ["name", "status", "created_at", "updated_at"]
-    ordering = ["name"]
+    ordering_fields = ["status", "created_at", "updated_at"]
+    ordering = ["-created_at"]
 
     permission_map = {
         "GET": "yarn_intake.view",
@@ -52,6 +53,22 @@ class YarnTypeViewSet(ModelViewSet):
     }
 
     def create(self, request, *args, **kwargs):
+        raw_name = (request.data.get("name") or "").strip()
+        if raw_name:
+            existing_deleted = YarnType.objects.filter(name__iexact=raw_name, status="Deleted").first()
+            if existing_deleted:
+                existing_deleted.name = raw_name
+                existing_deleted.description = request.data.get("description", existing_deleted.description or "")
+                existing_deleted.status = request.data.get("status") or YarnType.StatusChoices.ACTIVE
+                if request.user and request.user.is_authenticated:
+                    existing_deleted.updated_by = request.user
+                existing_deleted.save()
+                serializer = self.get_serializer(existing_deleted)
+                return Response(
+                    {"success": True, "message": "Yarn type created successfully.", "data": serializer.data},
+                    status=status.HTTP_201_CREATED,
+                )
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         instance = serializer.save()
@@ -94,7 +111,15 @@ class YarnTypeViewSet(ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         name = instance.name
-        instance.delete()
+        try:
+            instance.delete()
+        except ProtectedError:
+            try:
+                instance.yarn_stocks.all().delete()
+                instance.delete()
+            except ProtectedError:
+                instance.status = "Deleted"
+                instance.save(update_fields=["status", "updated_at"])
 
         log_activity(
             request=request,
