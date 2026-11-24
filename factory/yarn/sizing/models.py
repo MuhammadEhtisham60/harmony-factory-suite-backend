@@ -114,6 +114,42 @@ class SizingOutcome(models.Model):
         help_text="Optional bill receipt photo or PDF"
     )
 
+    # ── Waste Material ────────────────────────────────────────────────────
+    gule_bags = models.PositiveIntegerField(
+        default=0,
+        blank=True,
+        help_text="Number of gule bags"
+    )
+    gule_bags_weight = models.DecimalField(
+        max_digits=15,
+        decimal_places=4,
+        default=Decimal("0.0000"),
+        blank=True,
+        help_text="Weight of gule bags (kg)"
+    )
+    empty_bags = models.PositiveIntegerField(
+        default=0,
+        blank=True,
+        help_text="Number of empty bags"
+    )
+    paper_bags = models.PositiveIntegerField(
+        default=0,
+        blank=True,
+        help_text="Number of paper bags"
+    )
+    waste_bags = models.PositiveIntegerField(
+        default=0,
+        blank=True,
+        help_text="Number of waste bags"
+    )
+    waste_bags_weight = models.DecimalField(
+        max_digits=15,
+        decimal_places=4,
+        default=Decimal("0.0000"),
+        blank=True,
+        help_text="Weight of waste bags (kg)"
+    )
+
     outcome_date = models.DateField()
 
     set_no = models.CharField(

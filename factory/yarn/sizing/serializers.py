@@ -726,6 +726,18 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
     bill_number = serializers.CharField(required=False, allow_blank=True, default="")
     billReceipt = serializers.FileField(source="bill_receipt", required=False, allow_null=True)
     bill_receipt = serializers.FileField(required=False, allow_null=True)
+    guleBags = serializers.IntegerField(source="gule_bags", required=False, min_value=0, default=0)
+    gule_bags = serializers.IntegerField(required=False, min_value=0, default=0)
+    guleBagsWeight = serializers.DecimalField(source="gule_bags_weight", max_digits=15, decimal_places=4, required=False, default=Decimal("0.0000"))
+    gule_bags_weight = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=Decimal("0.0000"))
+    emptyBags = serializers.IntegerField(source="empty_bags", required=False, min_value=0, default=0)
+    empty_bags = serializers.IntegerField(required=False, min_value=0, default=0)
+    paperBags = serializers.IntegerField(source="paper_bags", required=False, min_value=0, default=0)
+    paper_bags = serializers.IntegerField(required=False, min_value=0, default=0)
+    wasteBags = serializers.IntegerField(source="waste_bags", required=False, min_value=0, default=0)
+    waste_bags = serializers.IntegerField(required=False, min_value=0, default=0)
+    wasteBagsWeight = serializers.DecimalField(source="waste_bags_weight", max_digits=15, decimal_places=4, required=False, default=Decimal("0.0000"))
+    waste_bags_weight = serializers.DecimalField(max_digits=15, decimal_places=4, required=False, default=Decimal("0.0000"))
     sizingName = serializers.CharField(source="sizing_name", required=False, allow_blank=True, default="")
     sizing_name = serializers.CharField(required=False, allow_blank=True, default="")
     totalBagsOnSizing = serializers.IntegerField(source="total_bags_on_sizing", required=False, default=0)
@@ -996,6 +1008,18 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "bill_number",
             "billReceipt",
             "bill_receipt",
+            "guleBags",
+            "gule_bags",
+            "guleBagsWeight",
+            "gule_bags_weight",
+            "emptyBags",
+            "empty_bags",
+            "paperBags",
+            "paper_bags",
+            "wasteBags",
+            "waste_bags",
+            "wasteBagsWeight",
+            "waste_bags_weight",
             "sizingName",
             "sizing_name",
             "totalBagsOnSizing",
@@ -1160,6 +1184,12 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "set_bill": "setBill",
             "bill_number": "billNumber",
             "bill_receipt": "billReceipt",
+            "gule_bags": "guleBags",
+            "gule_bags_weight": "guleBagsWeight",
+            "empty_bags": "emptyBags",
+            "paper_bags": "paperBags",
+            "waste_bags": "wasteBags",
+            "waste_bags_weight": "wasteBagsWeight",
             "sizing_name": "sizingName",
             "total_bags_on_sizing": "totalBagsOnSizing",
             "bag_packing_cone": "bagPackingCone",
