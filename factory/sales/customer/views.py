@@ -59,7 +59,6 @@ class CustomerViewSet(ModelViewSet):
         "contact_person",
     ]
     ordering_fields = [
-        "customer_name",
         "customer_code",
         "company_name",
         "status",
@@ -67,7 +66,7 @@ class CustomerViewSet(ModelViewSet):
         "created_at",
         "updated_at",
     ]
-    ordering = ["customer_name"]
+    ordering = ["-created_at"]
 
     # RBAC permission map
     permission_map = {

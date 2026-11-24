@@ -61,7 +61,6 @@ class LoomViewSet(ModelViewSet):
     ]
     ordering_fields = [
         "loom_code",
-        "loom_name",
         "status",
         "location",
         "installation_date",

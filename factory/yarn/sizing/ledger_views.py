@@ -176,9 +176,9 @@ class SizingLedgerViewSet(ViewSet):
         if not errors and date_from and date_to and date_from > date_to:
             errors["date_from"] = "date_from cannot be after date_to."
 
-        ordering_param = params.get("ordering") or "sizing_name"
+        ordering_param = params.get("ordering") or "-created_at"
         valid_orderings = {
-            "sizing_name", "-sizing_name", "status", "-status", "created_at", "-created_at",
+            "status", "-status", "created_at", "-created_at",
             "total_boxes_sent", "-total_boxes_sent", "total_boxes_received", "-total_boxes_received",
             "total_boxes_balance", "-total_boxes_balance", "total_payables", "-total_payables",
             "total_charges", "-total_charges", "total_paid", "-total_paid",

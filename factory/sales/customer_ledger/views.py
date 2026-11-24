@@ -82,9 +82,8 @@ class CustomerClothLedgerViewSet(ViewSet):
         if entry_type is not None and entry_type not in ENTRY_TYPES:
             errors["entry_type"] = f"Must be one of: {', '.join(ENTRY_TYPES)}."
 
-        ordering = params.get("ordering") or "customer_name"
+        ordering = params.get("ordering") or "-date"
         allowed_orderings = (
-            "customer_name", "-customer_name",
             "customer_code", "-customer_code",
             "company_name", "-company_name",
             "total_meters_sold", "-total_meters_sold",
@@ -94,7 +93,7 @@ class CustomerClothLedgerViewSet(ViewSet):
             "date", "-date"
         )
         if ordering not in allowed_orderings:
-            ordering = "customer_name"
+            ordering = "-date"
 
         try:
             date_from = self._parse_date(params, "date_from")

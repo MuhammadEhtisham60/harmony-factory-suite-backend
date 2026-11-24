@@ -156,16 +156,16 @@ class YarnSupplierLedgerViewSet(ViewSet):
         if not errors and date_from and date_to and date_from > date_to:
             errors["date_from"] = "date_from cannot be after date_to."
 
-        ordering = params.get("ordering") or "supplier_name"
+        ordering = params.get("ordering") or "-created_at"
         valid_orderings = {
-            "supplier_name", "-supplier_name", "supplier_code", "-supplier_code",
+            "supplier_code", "-supplier_code", "created_at", "-created_at",
             "status", "-status", "total_bags_received", "-total_bags_received",
             "total_remaining_bags", "-total_remaining_bags", "total_purchases", "-total_purchases",
             "total_paid", "-total_paid", "total_payables", "-total_payables",
             "transactions_count", "-transactions_count",
         }
         if ordering not in valid_orderings:
-            ordering = "supplier_name"
+            ordering = "-created_at"
 
         if errors:
             raise ValidationError(errors)

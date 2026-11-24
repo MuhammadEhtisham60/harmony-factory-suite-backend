@@ -483,6 +483,7 @@ def get_main_yarn_supplier_ledger(
                 "intakes_count": st["intakes_count"],
                 "payments_count": st["payments_count"],
                 "transactions_count": st["intakes_count"] + st["payments_count"],
+                "created_at": sup.created_at,
             }
             results.append(item)
 

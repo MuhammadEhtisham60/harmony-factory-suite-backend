@@ -59,7 +59,6 @@ class SupplierViewSet(ModelViewSet):
         "contact_person",
     ]
     ordering_fields = [
-        "supplier_name",
         "supplier_code",
         "company_name",
         "status",
@@ -67,7 +66,7 @@ class SupplierViewSet(ModelViewSet):
         "created_at",
         "updated_at",
     ]
-    ordering = ["supplier_name"]
+    ordering = ["-created_at"]
 
     # Permission map for RBAC
     permission_map = {

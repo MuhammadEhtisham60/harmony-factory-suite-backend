@@ -54,8 +54,8 @@ class WarpingViewSet(ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = WarpingFilter
     search_fields = ["warping_name", "contact_person", "phone_no", "email"]
-    ordering_fields = ["warping_name", "status", "created_at", "updated_at"]
-    ordering = ["warping_name"]
+    ordering_fields = ["status", "created_at", "updated_at"]
+    ordering = ["-created_at"]
 
     permission_map = {
         "GET": "warping.view",

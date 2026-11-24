@@ -58,17 +58,17 @@ class ClothNameViewSet(ModelViewSet):
     """
     CRUD API for ClothName master items.
     """
-    queryset = ClothName.objects.select_related("created_by", "updated_by").all().order_by("name")
+    queryset = ClothName.objects.select_related("created_by", "updated_by").all().order_by("-created_at")
     serializer_class = ClothNameSerializer
     permission_classes = [IsAuthenticated, HasERPModulePermission]
     pagination_class = StandardResultsSetPagination
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     search_fields = ["name", "description", "warp_count", "weft_count"]
     ordering_fields = [
-        "name", "warp_count", "weft_count", "reed_count", "pick_count", "reed_width",
+        "warp_count", "weft_count", "reed_count", "pick_count", "reed_width",
         "created_at", "updated_at", "id"
     ]
-    ordering = ["name"]
+    ordering = ["-created_at"]
 
     permission_map = {
         "GET": "cloth.view",
