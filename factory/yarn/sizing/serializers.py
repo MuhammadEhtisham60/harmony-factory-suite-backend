@@ -722,6 +722,10 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
     set_no = serializers.CharField(required=False, allow_blank=True, default="")
     setBill = serializers.CharField(source="set_bill", required=False, allow_blank=True, default="")
     set_bill = serializers.CharField(required=False, allow_blank=True, default="")
+    billNumber = serializers.CharField(source="bill_number", required=False, allow_blank=True, default="")
+    bill_number = serializers.CharField(required=False, allow_blank=True, default="")
+    billReceipt = serializers.FileField(source="bill_receipt", required=False, allow_null=True)
+    bill_receipt = serializers.FileField(required=False, allow_null=True)
     sizingName = serializers.CharField(source="sizing_name", required=False, allow_blank=True, default="")
     sizing_name = serializers.CharField(required=False, allow_blank=True, default="")
     totalBagsOnSizing = serializers.IntegerField(source="total_bags_on_sizing", required=False, default=0)
@@ -988,6 +992,10 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
             "set_no",
             "setBill",
             "set_bill",
+            "billNumber",
+            "bill_number",
+            "billReceipt",
+            "bill_receipt",
             "sizingName",
             "sizing_name",
             "totalBagsOnSizing",
@@ -1128,10 +1136,30 @@ class SizingOutcomeSerializer(serializers.ModelSerializer):
         return None
 
     def to_internal_value(self, data):
+        import json as _json
         data = data.copy() if hasattr(data, "copy") else dict(data)
+        if hasattr(data, "dict"):
+            # QueryDict (multipart/form-data): convert to mutable dict preserving files
+            plain = {}
+            for k in data.keys():
+                vals = data.getlist(k)
+                plain[k] = vals[-1] if len(vals) == 1 else vals
+            data = plain
+        for json_key in ("beam_ids", "beamIds", "beam_yarn_length", "beamYarnLength"):
+            if json_key in data and isinstance(data[json_key], str):
+                raw_str = data[json_key].strip()
+                if raw_str:
+                    try:
+                        data[json_key] = _json.loads(raw_str)
+                    except (ValueError, TypeError):
+                        pass
+                else:
+                    data.pop(json_key, None)
         mapping = {
             "set_no": "setNo",
             "set_bill": "setBill",
+            "bill_number": "billNumber",
+            "bill_receipt": "billReceipt",
             "sizing_name": "sizingName",
             "total_bags_on_sizing": "totalBagsOnSizing",
             "bag_packing_cone": "bagPackingCone",

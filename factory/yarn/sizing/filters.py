@@ -38,6 +38,7 @@ class SizingOutcomeFilter(django_filters.FilterSet):
     )
     set_no = django_filters.CharFilter(lookup_expr="icontains")
     set_bill = django_filters.CharFilter(lookup_expr="icontains")
+    bill_number = django_filters.CharFilter(lookup_expr="icontains")
     outcome_date = django_filters.DateFilter(field_name="outcome_date")
     start_date = django_filters.DateFilter(field_name="outcome_date", lookup_expr="gte")
     end_date = django_filters.DateFilter(field_name="outcome_date", lookup_expr="lte")
@@ -46,7 +47,7 @@ class SizingOutcomeFilter(django_filters.FilterSet):
 
     class Meta:
         model = SizingOutcome
-        fields = ["yarn_outcome", "sizing", "warping", "outcome_type", "outcome_date", "set_no", "set_bill", "payment_status"]
+        fields = ["yarn_outcome", "sizing", "warping", "outcome_type", "outcome_date", "set_no", "set_bill", "bill_number", "payment_status"]
 
     def filter_search(self, queryset, name, value):
         return queryset.filter(
@@ -58,6 +59,7 @@ class SizingOutcomeFilter(django_filters.FilterSet):
             | Q(sizing_name__icontains=value)
             | Q(set_no__icontains=value)
             | Q(set_bill__icontains=value)
+            | Q(bill_number__icontains=value)
             | Q(remarks__icontains=value)
         )
 

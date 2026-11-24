@@ -100,6 +100,20 @@ class SizingOutcome(models.Model):
         help_text="Set bill / invoice number"
     )
 
+    bill_number = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        help_text="Bill number for the sizing/warping outcome"
+    )
+
+    bill_receipt = models.FileField(
+        upload_to="sizing_outcome_receipts/",
+        null=True,
+        blank=True,
+        help_text="Optional bill receipt photo or PDF"
+    )
+
     outcome_date = models.DateField()
 
     set_no = models.CharField(
