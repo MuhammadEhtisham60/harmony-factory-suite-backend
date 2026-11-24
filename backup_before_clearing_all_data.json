@@ -1,0 +1,5808 @@
+[
+{
+  "model": "auth.permission",
+  "pk": 1,
+  "fields": {
+    "name": "Can add log entry",
+    "content_type": 1,
+    "codename": "add_logentry"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 2,
+  "fields": {
+    "name": "Can change log entry",
+    "content_type": 1,
+    "codename": "change_logentry"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 3,
+  "fields": {
+    "name": "Can delete log entry",
+    "content_type": 1,
+    "codename": "delete_logentry"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 4,
+  "fields": {
+    "name": "Can view log entry",
+    "content_type": 1,
+    "codename": "view_logentry"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 5,
+  "fields": {
+    "name": "Can add permission",
+    "content_type": 2,
+    "codename": "add_permission"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 6,
+  "fields": {
+    "name": "Can change permission",
+    "content_type": 2,
+    "codename": "change_permission"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 7,
+  "fields": {
+    "name": "Can delete permission",
+    "content_type": 2,
+    "codename": "delete_permission"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 8,
+  "fields": {
+    "name": "Can view permission",
+    "content_type": 2,
+    "codename": "view_permission"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 9,
+  "fields": {
+    "name": "Can add group",
+    "content_type": 3,
+    "codename": "add_group"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 10,
+  "fields": {
+    "name": "Can change group",
+    "content_type": 3,
+    "codename": "change_group"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 11,
+  "fields": {
+    "name": "Can delete group",
+    "content_type": 3,
+    "codename": "delete_group"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 12,
+  "fields": {
+    "name": "Can view group",
+    "content_type": 3,
+    "codename": "view_group"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 13,
+  "fields": {
+    "name": "Can add content type",
+    "content_type": 4,
+    "codename": "add_contenttype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 14,
+  "fields": {
+    "name": "Can change content type",
+    "content_type": 4,
+    "codename": "change_contenttype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 15,
+  "fields": {
+    "name": "Can delete content type",
+    "content_type": 4,
+    "codename": "delete_contenttype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 16,
+  "fields": {
+    "name": "Can view content type",
+    "content_type": 4,
+    "codename": "view_contenttype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 17,
+  "fields": {
+    "name": "Can add session",
+    "content_type": 5,
+    "codename": "add_session"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 18,
+  "fields": {
+    "name": "Can change session",
+    "content_type": 5,
+    "codename": "change_session"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 19,
+  "fields": {
+    "name": "Can delete session",
+    "content_type": 5,
+    "codename": "delete_session"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 20,
+  "fields": {
+    "name": "Can view session",
+    "content_type": 5,
+    "codename": "view_session"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 21,
+  "fields": {
+    "name": "Can add role",
+    "content_type": 6,
+    "codename": "add_role"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 22,
+  "fields": {
+    "name": "Can change role",
+    "content_type": 6,
+    "codename": "change_role"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 23,
+  "fields": {
+    "name": "Can delete role",
+    "content_type": 6,
+    "codename": "delete_role"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 24,
+  "fields": {
+    "name": "Can view role",
+    "content_type": 6,
+    "codename": "view_role"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 25,
+  "fields": {
+    "name": "Can add user",
+    "content_type": 7,
+    "codename": "add_user"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 26,
+  "fields": {
+    "name": "Can change user",
+    "content_type": 7,
+    "codename": "change_user"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 27,
+  "fields": {
+    "name": "Can delete user",
+    "content_type": 7,
+    "codename": "delete_user"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 28,
+  "fields": {
+    "name": "Can view user",
+    "content_type": 7,
+    "codename": "view_user"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 29,
+  "fields": {
+    "name": "Can add activity log",
+    "content_type": 8,
+    "codename": "add_activitylog"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 30,
+  "fields": {
+    "name": "Can change activity log",
+    "content_type": 8,
+    "codename": "change_activitylog"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 31,
+  "fields": {
+    "name": "Can delete activity log",
+    "content_type": 8,
+    "codename": "delete_activitylog"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 32,
+  "fields": {
+    "name": "Can view activity log",
+    "content_type": 8,
+    "codename": "view_activitylog"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 33,
+  "fields": {
+    "name": "Can add Supplier",
+    "content_type": 9,
+    "codename": "add_supplier"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 34,
+  "fields": {
+    "name": "Can change Supplier",
+    "content_type": 9,
+    "codename": "change_supplier"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 35,
+  "fields": {
+    "name": "Can delete Supplier",
+    "content_type": 9,
+    "codename": "delete_supplier"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 36,
+  "fields": {
+    "name": "Can view Supplier",
+    "content_type": 9,
+    "codename": "view_supplier"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 37,
+  "fields": {
+    "name": "Can add Supplier Bank Account",
+    "content_type": 10,
+    "codename": "add_supplierbankaccount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 38,
+  "fields": {
+    "name": "Can change Supplier Bank Account",
+    "content_type": 10,
+    "codename": "change_supplierbankaccount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 39,
+  "fields": {
+    "name": "Can delete Supplier Bank Account",
+    "content_type": 10,
+    "codename": "delete_supplierbankaccount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 40,
+  "fields": {
+    "name": "Can view Supplier Bank Account",
+    "content_type": 10,
+    "codename": "view_supplierbankaccount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 41,
+  "fields": {
+    "name": "Can add Customer",
+    "content_type": 11,
+    "codename": "add_customer"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 42,
+  "fields": {
+    "name": "Can change Customer",
+    "content_type": 11,
+    "codename": "change_customer"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 43,
+  "fields": {
+    "name": "Can delete Customer",
+    "content_type": 11,
+    "codename": "delete_customer"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 44,
+  "fields": {
+    "name": "Can view Customer",
+    "content_type": 11,
+    "codename": "view_customer"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 45,
+  "fields": {
+    "name": "Can add Customer Bank Account",
+    "content_type": 12,
+    "codename": "add_customerbankaccount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 46,
+  "fields": {
+    "name": "Can change Customer Bank Account",
+    "content_type": 12,
+    "codename": "change_customerbankaccount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 47,
+  "fields": {
+    "name": "Can delete Customer Bank Account",
+    "content_type": 12,
+    "codename": "delete_customerbankaccount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 48,
+  "fields": {
+    "name": "Can view Customer Bank Account",
+    "content_type": 12,
+    "codename": "view_customerbankaccount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 49,
+  "fields": {
+    "name": "Can add Loom",
+    "content_type": 13,
+    "codename": "add_loom"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 50,
+  "fields": {
+    "name": "Can change Loom",
+    "content_type": 13,
+    "codename": "change_loom"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 51,
+  "fields": {
+    "name": "Can delete Loom",
+    "content_type": 13,
+    "codename": "delete_loom"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 52,
+  "fields": {
+    "name": "Can view Loom",
+    "content_type": 13,
+    "codename": "view_loom"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 53,
+  "fields": {
+    "name": "Can add Beam",
+    "content_type": 14,
+    "codename": "add_beam"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 54,
+  "fields": {
+    "name": "Can change Beam",
+    "content_type": 14,
+    "codename": "change_beam"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 55,
+  "fields": {
+    "name": "Can delete Beam",
+    "content_type": 14,
+    "codename": "delete_beam"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 56,
+  "fields": {
+    "name": "Can view Beam",
+    "content_type": 14,
+    "codename": "view_beam"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 57,
+  "fields": {
+    "name": "Can add Yarn Buyer",
+    "content_type": 15,
+    "codename": "add_yarnbuyer"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 58,
+  "fields": {
+    "name": "Can change Yarn Buyer",
+    "content_type": 15,
+    "codename": "change_yarnbuyer"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 59,
+  "fields": {
+    "name": "Can delete Yarn Buyer",
+    "content_type": 15,
+    "codename": "delete_yarnbuyer"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 60,
+  "fields": {
+    "name": "Can view Yarn Buyer",
+    "content_type": 15,
+    "codename": "view_yarnbuyer"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 61,
+  "fields": {
+    "name": "Can add Yarn Intake",
+    "content_type": 16,
+    "codename": "add_yarnintake"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 62,
+  "fields": {
+    "name": "Can change Yarn Intake",
+    "content_type": 16,
+    "codename": "change_yarnintake"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 63,
+  "fields": {
+    "name": "Can delete Yarn Intake",
+    "content_type": 16,
+    "codename": "delete_yarnintake"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 64,
+  "fields": {
+    "name": "Can view Yarn Intake",
+    "content_type": 16,
+    "codename": "view_yarnintake"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 65,
+  "fields": {
+    "name": "Can add Yarn Outcome",
+    "content_type": 17,
+    "codename": "add_yarnoutcome"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 66,
+  "fields": {
+    "name": "Can change Yarn Outcome",
+    "content_type": 17,
+    "codename": "change_yarnoutcome"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 67,
+  "fields": {
+    "name": "Can delete Yarn Outcome",
+    "content_type": 17,
+    "codename": "delete_yarnoutcome"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 68,
+  "fields": {
+    "name": "Can view Yarn Outcome",
+    "content_type": 17,
+    "codename": "view_yarnoutcome"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 69,
+  "fields": {
+    "name": "Can add Sizing",
+    "content_type": 18,
+    "codename": "add_sizing"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 70,
+  "fields": {
+    "name": "Can change Sizing",
+    "content_type": 18,
+    "codename": "change_sizing"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 71,
+  "fields": {
+    "name": "Can delete Sizing",
+    "content_type": 18,
+    "codename": "delete_sizing"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 72,
+  "fields": {
+    "name": "Can view Sizing",
+    "content_type": 18,
+    "codename": "view_sizing"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 73,
+  "fields": {
+    "name": "Can add Sizing Outcome",
+    "content_type": 19,
+    "codename": "add_sizingoutcome"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 74,
+  "fields": {
+    "name": "Can change Sizing Outcome",
+    "content_type": 19,
+    "codename": "change_sizingoutcome"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 75,
+  "fields": {
+    "name": "Can delete Sizing Outcome",
+    "content_type": 19,
+    "codename": "delete_sizingoutcome"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 76,
+  "fields": {
+    "name": "Can view Sizing Outcome",
+    "content_type": 19,
+    "codename": "view_sizingoutcome"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 77,
+  "fields": {
+    "name": "Can add Sizing Beam Assignment",
+    "content_type": 20,
+    "codename": "add_sizingbeamassignment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 78,
+  "fields": {
+    "name": "Can change Sizing Beam Assignment",
+    "content_type": 20,
+    "codename": "change_sizingbeamassignment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 79,
+  "fields": {
+    "name": "Can delete Sizing Beam Assignment",
+    "content_type": 20,
+    "codename": "delete_sizingbeamassignment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 80,
+  "fields": {
+    "name": "Can view Sizing Beam Assignment",
+    "content_type": 20,
+    "codename": "view_sizingbeamassignment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 81,
+  "fields": {
+    "name": "Can add Beam Loading",
+    "content_type": 21,
+    "codename": "add_beamloading"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 82,
+  "fields": {
+    "name": "Can change Beam Loading",
+    "content_type": 21,
+    "codename": "change_beamloading"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 83,
+  "fields": {
+    "name": "Can delete Beam Loading",
+    "content_type": 21,
+    "codename": "delete_beamloading"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 84,
+  "fields": {
+    "name": "Can view Beam Loading",
+    "content_type": 21,
+    "codename": "view_beamloading"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 85,
+  "fields": {
+    "name": "Can add Production",
+    "content_type": 22,
+    "codename": "add_production"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 86,
+  "fields": {
+    "name": "Can change Production",
+    "content_type": 22,
+    "codename": "change_production"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 87,
+  "fields": {
+    "name": "Can delete Production",
+    "content_type": 22,
+    "codename": "delete_production"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 88,
+  "fields": {
+    "name": "Can view Production",
+    "content_type": 22,
+    "codename": "view_production"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 89,
+  "fields": {
+    "name": "Can add Yarn Stock",
+    "content_type": 23,
+    "codename": "add_yarnstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 90,
+  "fields": {
+    "name": "Can change Yarn Stock",
+    "content_type": 23,
+    "codename": "change_yarnstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 91,
+  "fields": {
+    "name": "Can delete Yarn Stock",
+    "content_type": 23,
+    "codename": "delete_yarnstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 92,
+  "fields": {
+    "name": "Can view Yarn Stock",
+    "content_type": 23,
+    "codename": "view_yarnstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 93,
+  "fields": {
+    "name": "Can add Yarn Name",
+    "content_type": 24,
+    "codename": "add_yarnname"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 94,
+  "fields": {
+    "name": "Can change Yarn Name",
+    "content_type": 24,
+    "codename": "change_yarnname"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 95,
+  "fields": {
+    "name": "Can delete Yarn Name",
+    "content_type": 24,
+    "codename": "delete_yarnname"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 96,
+  "fields": {
+    "name": "Can view Yarn Name",
+    "content_type": 24,
+    "codename": "view_yarnname"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 97,
+  "fields": {
+    "name": "Can add Yarn Type",
+    "content_type": 25,
+    "codename": "add_yarntype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 98,
+  "fields": {
+    "name": "Can change Yarn Type",
+    "content_type": 25,
+    "codename": "change_yarntype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 99,
+  "fields": {
+    "name": "Can delete Yarn Type",
+    "content_type": 25,
+    "codename": "delete_yarntype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 100,
+  "fields": {
+    "name": "Can view Yarn Type",
+    "content_type": 25,
+    "codename": "view_yarntype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 101,
+  "fields": {
+    "name": "Can add Yarn Count",
+    "content_type": 26,
+    "codename": "add_yarncount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 102,
+  "fields": {
+    "name": "Can change Yarn Count",
+    "content_type": 26,
+    "codename": "change_yarncount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 103,
+  "fields": {
+    "name": "Can delete Yarn Count",
+    "content_type": 26,
+    "codename": "delete_yarncount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 104,
+  "fields": {
+    "name": "Can view Yarn Count",
+    "content_type": 26,
+    "codename": "view_yarncount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 105,
+  "fields": {
+    "name": "Can add Beam Dismount Reconciliation",
+    "content_type": 27,
+    "codename": "add_beamdismountreconciliation"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 106,
+  "fields": {
+    "name": "Can change Beam Dismount Reconciliation",
+    "content_type": 27,
+    "codename": "change_beamdismountreconciliation"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 107,
+  "fields": {
+    "name": "Can delete Beam Dismount Reconciliation",
+    "content_type": 27,
+    "codename": "delete_beamdismountreconciliation"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 108,
+  "fields": {
+    "name": "Can view Beam Dismount Reconciliation",
+    "content_type": 27,
+    "codename": "view_beamdismountreconciliation"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 109,
+  "fields": {
+    "name": "Can add Cloth Name",
+    "content_type": 28,
+    "codename": "add_clothname"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 110,
+  "fields": {
+    "name": "Can change Cloth Name",
+    "content_type": 28,
+    "codename": "change_clothname"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 111,
+  "fields": {
+    "name": "Can delete Cloth Name",
+    "content_type": 28,
+    "codename": "delete_clothname"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 112,
+  "fields": {
+    "name": "Can view Cloth Name",
+    "content_type": 28,
+    "codename": "view_clothname"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 113,
+  "fields": {
+    "name": "Can add Cloth Patch",
+    "content_type": 29,
+    "codename": "add_clothpatch"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 114,
+  "fields": {
+    "name": "Can change Cloth Patch",
+    "content_type": 29,
+    "codename": "change_clothpatch"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 115,
+  "fields": {
+    "name": "Can delete Cloth Patch",
+    "content_type": 29,
+    "codename": "delete_clothpatch"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 116,
+  "fields": {
+    "name": "Can view Cloth Patch",
+    "content_type": 29,
+    "codename": "view_clothpatch"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 117,
+  "fields": {
+    "name": "Can add Cloth Stock",
+    "content_type": 30,
+    "codename": "add_clothstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 118,
+  "fields": {
+    "name": "Can change Cloth Stock",
+    "content_type": 30,
+    "codename": "change_clothstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 119,
+  "fields": {
+    "name": "Can delete Cloth Stock",
+    "content_type": 30,
+    "codename": "delete_clothstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 120,
+  "fields": {
+    "name": "Can view Cloth Stock",
+    "content_type": 30,
+    "codename": "view_clothstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 121,
+  "fields": {
+    "name": "Can add Clean Cloth Stock",
+    "content_type": 31,
+    "codename": "add_cleanclothstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 122,
+  "fields": {
+    "name": "Can change Clean Cloth Stock",
+    "content_type": 31,
+    "codename": "change_cleanclothstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 123,
+  "fields": {
+    "name": "Can delete Clean Cloth Stock",
+    "content_type": 31,
+    "codename": "delete_cleanclothstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 124,
+  "fields": {
+    "name": "Can view Clean Cloth Stock",
+    "content_type": 31,
+    "codename": "view_cleanclothstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 125,
+  "fields": {
+    "name": "Can add Defected Cloth Stock",
+    "content_type": 32,
+    "codename": "add_defectedclothstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 126,
+  "fields": {
+    "name": "Can change Defected Cloth Stock",
+    "content_type": 32,
+    "codename": "change_defectedclothstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 127,
+  "fields": {
+    "name": "Can delete Defected Cloth Stock",
+    "content_type": 32,
+    "codename": "delete_defectedclothstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 128,
+  "fields": {
+    "name": "Can view Defected Cloth Stock",
+    "content_type": 32,
+    "codename": "view_defectedclothstock"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 129,
+  "fields": {
+    "name": "Can add Yarn Outcome Item",
+    "content_type": 33,
+    "codename": "add_yarnoutcomeitem"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 130,
+  "fields": {
+    "name": "Can change Yarn Outcome Item",
+    "content_type": 33,
+    "codename": "change_yarnoutcomeitem"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 131,
+  "fields": {
+    "name": "Can delete Yarn Outcome Item",
+    "content_type": 33,
+    "codename": "delete_yarnoutcomeitem"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 132,
+  "fields": {
+    "name": "Can view Yarn Outcome Item",
+    "content_type": 33,
+    "codename": "view_yarnoutcomeitem"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 133,
+  "fields": {
+    "name": "Can add Warping",
+    "content_type": 34,
+    "codename": "add_warping"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 134,
+  "fields": {
+    "name": "Can change Warping",
+    "content_type": 34,
+    "codename": "change_warping"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 135,
+  "fields": {
+    "name": "Can delete Warping",
+    "content_type": 34,
+    "codename": "delete_warping"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 136,
+  "fields": {
+    "name": "Can view Warping",
+    "content_type": 34,
+    "codename": "view_warping"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 137,
+  "fields": {
+    "name": "Can add B-Grade Yarn",
+    "content_type": 35,
+    "codename": "add_bgradeyarn"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 138,
+  "fields": {
+    "name": "Can change B-Grade Yarn",
+    "content_type": 35,
+    "codename": "change_bgradeyarn"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 139,
+  "fields": {
+    "name": "Can delete B-Grade Yarn",
+    "content_type": 35,
+    "codename": "delete_bgradeyarn"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 140,
+  "fields": {
+    "name": "Can view B-Grade Yarn",
+    "content_type": 35,
+    "codename": "view_bgradeyarn"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 141,
+  "fields": {
+    "name": "Can add Bank Account",
+    "content_type": 36,
+    "codename": "add_bankaccount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 142,
+  "fields": {
+    "name": "Can change Bank Account",
+    "content_type": 36,
+    "codename": "change_bankaccount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 143,
+  "fields": {
+    "name": "Can delete Bank Account",
+    "content_type": 36,
+    "codename": "delete_bankaccount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 144,
+  "fields": {
+    "name": "Can view Bank Account",
+    "content_type": 36,
+    "codename": "view_bankaccount"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 145,
+  "fields": {
+    "name": "Can add Bank Transaction",
+    "content_type": 37,
+    "codename": "add_banktransaction"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 146,
+  "fields": {
+    "name": "Can change Bank Transaction",
+    "content_type": 37,
+    "codename": "change_banktransaction"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 147,
+  "fields": {
+    "name": "Can delete Bank Transaction",
+    "content_type": 37,
+    "codename": "delete_banktransaction"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 148,
+  "fields": {
+    "name": "Can view Bank Transaction",
+    "content_type": 37,
+    "codename": "view_banktransaction"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 149,
+  "fields": {
+    "name": "Can add Yarn Outcome B-Grade Item",
+    "content_type": 38,
+    "codename": "add_yarnoutcomebgradeitem"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 150,
+  "fields": {
+    "name": "Can change Yarn Outcome B-Grade Item",
+    "content_type": 38,
+    "codename": "change_yarnoutcomebgradeitem"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 151,
+  "fields": {
+    "name": "Can delete Yarn Outcome B-Grade Item",
+    "content_type": 38,
+    "codename": "delete_yarnoutcomebgradeitem"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 152,
+  "fields": {
+    "name": "Can view Yarn Outcome B-Grade Item",
+    "content_type": 38,
+    "codename": "view_yarnoutcomebgradeitem"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 153,
+  "fields": {
+    "name": "Can add Yarn Supplier Payment",
+    "content_type": 39,
+    "codename": "add_yarnsupplierpayment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 154,
+  "fields": {
+    "name": "Can change Yarn Supplier Payment",
+    "content_type": 39,
+    "codename": "change_yarnsupplierpayment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 155,
+  "fields": {
+    "name": "Can delete Yarn Supplier Payment",
+    "content_type": 39,
+    "codename": "delete_yarnsupplierpayment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 156,
+  "fields": {
+    "name": "Can view Yarn Supplier Payment",
+    "content_type": 39,
+    "codename": "view_yarnsupplierpayment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 157,
+  "fields": {
+    "name": "Can add Cloth Stock Movement",
+    "content_type": 40,
+    "codename": "add_clothstockmovement"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 158,
+  "fields": {
+    "name": "Can change Cloth Stock Movement",
+    "content_type": 40,
+    "codename": "change_clothstockmovement"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 159,
+  "fields": {
+    "name": "Can delete Cloth Stock Movement",
+    "content_type": 40,
+    "codename": "delete_clothstockmovement"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 160,
+  "fields": {
+    "name": "Can view Cloth Stock Movement",
+    "content_type": 40,
+    "codename": "view_clothstockmovement"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 161,
+  "fields": {
+    "name": "Can add Cloth Sale",
+    "content_type": 41,
+    "codename": "add_clothsale"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 162,
+  "fields": {
+    "name": "Can change Cloth Sale",
+    "content_type": 41,
+    "codename": "change_clothsale"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 163,
+  "fields": {
+    "name": "Can delete Cloth Sale",
+    "content_type": 41,
+    "codename": "delete_clothsale"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 164,
+  "fields": {
+    "name": "Can view Cloth Sale",
+    "content_type": 41,
+    "codename": "view_clothsale"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 165,
+  "fields": {
+    "name": "Can add Cloth Customer Payment",
+    "content_type": 42,
+    "codename": "add_clothcustomerpayment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 166,
+  "fields": {
+    "name": "Can change Cloth Customer Payment",
+    "content_type": 42,
+    "codename": "change_clothcustomerpayment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 167,
+  "fields": {
+    "name": "Can delete Cloth Customer Payment",
+    "content_type": 42,
+    "codename": "delete_clothcustomerpayment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 168,
+  "fields": {
+    "name": "Can view Cloth Customer Payment",
+    "content_type": 42,
+    "codename": "view_clothcustomerpayment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 169,
+  "fields": {
+    "name": "Can add Inventory Unit",
+    "content_type": 43,
+    "codename": "add_inventoryunit"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 170,
+  "fields": {
+    "name": "Can change Inventory Unit",
+    "content_type": 43,
+    "codename": "change_inventoryunit"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 171,
+  "fields": {
+    "name": "Can delete Inventory Unit",
+    "content_type": 43,
+    "codename": "delete_inventoryunit"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 172,
+  "fields": {
+    "name": "Can view Inventory Unit",
+    "content_type": 43,
+    "codename": "view_inventoryunit"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 173,
+  "fields": {
+    "name": "Can add Inventory Purchase",
+    "content_type": 44,
+    "codename": "add_inventorypurchase"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 174,
+  "fields": {
+    "name": "Can change Inventory Purchase",
+    "content_type": 44,
+    "codename": "change_inventorypurchase"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 175,
+  "fields": {
+    "name": "Can delete Inventory Purchase",
+    "content_type": 44,
+    "codename": "delete_inventorypurchase"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 176,
+  "fields": {
+    "name": "Can view Inventory Purchase",
+    "content_type": 44,
+    "codename": "view_inventorypurchase"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 177,
+  "fields": {
+    "name": "Can add Inventory Ledger",
+    "content_type": 45,
+    "codename": "add_inventoryledger"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 178,
+  "fields": {
+    "name": "Can change Inventory Ledger",
+    "content_type": 45,
+    "codename": "change_inventoryledger"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 179,
+  "fields": {
+    "name": "Can delete Inventory Ledger",
+    "content_type": 45,
+    "codename": "delete_inventoryledger"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 180,
+  "fields": {
+    "name": "Can view Inventory Ledger",
+    "content_type": 45,
+    "codename": "view_inventoryledger"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 181,
+  "fields": {
+    "name": "Can add Inventory Transaction",
+    "content_type": 46,
+    "codename": "add_inventorytransaction"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 182,
+  "fields": {
+    "name": "Can change Inventory Transaction",
+    "content_type": 46,
+    "codename": "change_inventorytransaction"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 183,
+  "fields": {
+    "name": "Can delete Inventory Transaction",
+    "content_type": 46,
+    "codename": "delete_inventorytransaction"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 184,
+  "fields": {
+    "name": "Can view Inventory Transaction",
+    "content_type": 46,
+    "codename": "view_inventorytransaction"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 185,
+  "fields": {
+    "name": "Can add Inventory Item",
+    "content_type": 47,
+    "codename": "add_inventoryitem"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 186,
+  "fields": {
+    "name": "Can change Inventory Item",
+    "content_type": 47,
+    "codename": "change_inventoryitem"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 187,
+  "fields": {
+    "name": "Can delete Inventory Item",
+    "content_type": 47,
+    "codename": "delete_inventoryitem"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 188,
+  "fields": {
+    "name": "Can view Inventory Item",
+    "content_type": 47,
+    "codename": "view_inventoryitem"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 189,
+  "fields": {
+    "name": "Can add Inventory Category",
+    "content_type": 48,
+    "codename": "add_inventorycategory"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 190,
+  "fields": {
+    "name": "Can change Inventory Category",
+    "content_type": 48,
+    "codename": "change_inventorycategory"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 191,
+  "fields": {
+    "name": "Can delete Inventory Category",
+    "content_type": 48,
+    "codename": "delete_inventorycategory"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 192,
+  "fields": {
+    "name": "Can view Inventory Category",
+    "content_type": 48,
+    "codename": "view_inventorycategory"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 193,
+  "fields": {
+    "name": "Can add Inventory Purchase Item",
+    "content_type": 49,
+    "codename": "add_inventorypurchaseitem"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 194,
+  "fields": {
+    "name": "Can change Inventory Purchase Item",
+    "content_type": 49,
+    "codename": "change_inventorypurchaseitem"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 195,
+  "fields": {
+    "name": "Can delete Inventory Purchase Item",
+    "content_type": 49,
+    "codename": "delete_inventorypurchaseitem"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 196,
+  "fields": {
+    "name": "Can view Inventory Purchase Item",
+    "content_type": 49,
+    "codename": "view_inventorypurchaseitem"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 197,
+  "fields": {
+    "name": "Can add Inventory Payment",
+    "content_type": 50,
+    "codename": "add_inventorypayment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 198,
+  "fields": {
+    "name": "Can change Inventory Payment",
+    "content_type": 50,
+    "codename": "change_inventorypayment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 199,
+  "fields": {
+    "name": "Can delete Inventory Payment",
+    "content_type": 50,
+    "codename": "delete_inventorypayment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 200,
+  "fields": {
+    "name": "Can view Inventory Payment",
+    "content_type": 50,
+    "codename": "view_inventorypayment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 201,
+  "fields": {
+    "name": "Can add worker",
+    "content_type": 51,
+    "codename": "add_worker"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 202,
+  "fields": {
+    "name": "Can change worker",
+    "content_type": 51,
+    "codename": "change_worker"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 203,
+  "fields": {
+    "name": "Can delete worker",
+    "content_type": 51,
+    "codename": "delete_worker"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 204,
+  "fields": {
+    "name": "Can view worker",
+    "content_type": 51,
+    "codename": "view_worker"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 205,
+  "fields": {
+    "name": "Can add power loom salary period",
+    "content_type": 52,
+    "codename": "add_powerloomsalaryperiod"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 206,
+  "fields": {
+    "name": "Can change power loom salary period",
+    "content_type": 52,
+    "codename": "change_powerloomsalaryperiod"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 207,
+  "fields": {
+    "name": "Can delete power loom salary period",
+    "content_type": 52,
+    "codename": "delete_powerloomsalaryperiod"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 208,
+  "fields": {
+    "name": "Can view power loom salary period",
+    "content_type": 52,
+    "codename": "view_powerloomsalaryperiod"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 209,
+  "fields": {
+    "name": "Can add worker advance",
+    "content_type": 53,
+    "codename": "add_workeradvance"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 210,
+  "fields": {
+    "name": "Can change worker advance",
+    "content_type": 53,
+    "codename": "change_workeradvance"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 211,
+  "fields": {
+    "name": "Can delete worker advance",
+    "content_type": 53,
+    "codename": "delete_workeradvance"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 212,
+  "fields": {
+    "name": "Can view worker advance",
+    "content_type": 53,
+    "codename": "view_workeradvance"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 213,
+  "fields": {
+    "name": "Can add worker attendance",
+    "content_type": 54,
+    "codename": "add_workerattendance"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 214,
+  "fields": {
+    "name": "Can change worker attendance",
+    "content_type": 54,
+    "codename": "change_workerattendance"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 215,
+  "fields": {
+    "name": "Can delete worker attendance",
+    "content_type": 54,
+    "codename": "delete_workerattendance"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 216,
+  "fields": {
+    "name": "Can view worker attendance",
+    "content_type": 54,
+    "codename": "view_workerattendance"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 217,
+  "fields": {
+    "name": "Can add worker salary payment",
+    "content_type": 55,
+    "codename": "add_workersalarypayment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 218,
+  "fields": {
+    "name": "Can change worker salary payment",
+    "content_type": 55,
+    "codename": "change_workersalarypayment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 219,
+  "fields": {
+    "name": "Can delete worker salary payment",
+    "content_type": 55,
+    "codename": "delete_workersalarypayment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 220,
+  "fields": {
+    "name": "Can view worker salary payment",
+    "content_type": 55,
+    "codename": "view_workersalarypayment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 221,
+  "fields": {
+    "name": "Can add worker salary ledger",
+    "content_type": 56,
+    "codename": "add_workersalaryledger"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 222,
+  "fields": {
+    "name": "Can change worker salary ledger",
+    "content_type": 56,
+    "codename": "change_workersalaryledger"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 223,
+  "fields": {
+    "name": "Can delete worker salary ledger",
+    "content_type": 56,
+    "codename": "delete_workersalaryledger"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 224,
+  "fields": {
+    "name": "Can view worker salary ledger",
+    "content_type": 56,
+    "codename": "view_workersalaryledger"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 1,
+  "fields": {
+    "app_label": "admin",
+    "model": "logentry"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 2,
+  "fields": {
+    "app_label": "auth",
+    "model": "permission"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 3,
+  "fields": {
+    "app_label": "auth",
+    "model": "group"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 4,
+  "fields": {
+    "app_label": "contenttypes",
+    "model": "contenttype"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 5,
+  "fields": {
+    "app_label": "sessions",
+    "model": "session"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 6,
+  "fields": {
+    "app_label": "accounts",
+    "model": "role"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 7,
+  "fields": {
+    "app_label": "accounts",
+    "model": "user"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 8,
+  "fields": {
+    "app_label": "audit_logs",
+    "model": "activitylog"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 9,
+  "fields": {
+    "app_label": "factory",
+    "model": "supplier"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 10,
+  "fields": {
+    "app_label": "factory",
+    "model": "supplierbankaccount"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 11,
+  "fields": {
+    "app_label": "factory",
+    "model": "customer"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 12,
+  "fields": {
+    "app_label": "factory",
+    "model": "customerbankaccount"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 13,
+  "fields": {
+    "app_label": "factory",
+    "model": "loom"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 14,
+  "fields": {
+    "app_label": "factory",
+    "model": "beam"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 15,
+  "fields": {
+    "app_label": "factory",
+    "model": "yarnbuyer"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 16,
+  "fields": {
+    "app_label": "factory",
+    "model": "yarnintake"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 17,
+  "fields": {
+    "app_label": "factory",
+    "model": "yarnoutcome"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 18,
+  "fields": {
+    "app_label": "factory",
+    "model": "sizing"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 19,
+  "fields": {
+    "app_label": "factory",
+    "model": "sizingoutcome"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 20,
+  "fields": {
+    "app_label": "factory",
+    "model": "sizingbeamassignment"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 21,
+  "fields": {
+    "app_label": "factory",
+    "model": "beamloading"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 22,
+  "fields": {
+    "app_label": "factory",
+    "model": "production"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 23,
+  "fields": {
+    "app_label": "factory",
+    "model": "yarnstock"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 24,
+  "fields": {
+    "app_label": "factory",
+    "model": "yarnname"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 25,
+  "fields": {
+    "app_label": "factory",
+    "model": "yarntype"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 26,
+  "fields": {
+    "app_label": "factory",
+    "model": "yarncount"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 27,
+  "fields": {
+    "app_label": "factory",
+    "model": "beamdismountreconciliation"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 28,
+  "fields": {
+    "app_label": "factory",
+    "model": "clothname"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 29,
+  "fields": {
+    "app_label": "factory",
+    "model": "clothpatch"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 30,
+  "fields": {
+    "app_label": "factory",
+    "model": "clothstock"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 31,
+  "fields": {
+    "app_label": "factory",
+    "model": "cleanclothstock"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 32,
+  "fields": {
+    "app_label": "factory",
+    "model": "defectedclothstock"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 33,
+  "fields": {
+    "app_label": "factory",
+    "model": "yarnoutcomeitem"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 34,
+  "fields": {
+    "app_label": "factory",
+    "model": "warping"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 35,
+  "fields": {
+    "app_label": "factory",
+    "model": "bgradeyarn"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 36,
+  "fields": {
+    "app_label": "factory",
+    "model": "bankaccount"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 37,
+  "fields": {
+    "app_label": "factory",
+    "model": "banktransaction"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 38,
+  "fields": {
+    "app_label": "factory",
+    "model": "yarnoutcomebgradeitem"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 39,
+  "fields": {
+    "app_label": "factory",
+    "model": "yarnsupplierpayment"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 40,
+  "fields": {
+    "app_label": "factory",
+    "model": "clothstockmovement"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 41,
+  "fields": {
+    "app_label": "factory",
+    "model": "clothsale"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 42,
+  "fields": {
+    "app_label": "factory",
+    "model": "clothcustomerpayment"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 43,
+  "fields": {
+    "app_label": "factory",
+    "model": "inventoryunit"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 44,
+  "fields": {
+    "app_label": "factory",
+    "model": "inventorypurchase"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 45,
+  "fields": {
+    "app_label": "factory",
+    "model": "inventoryledger"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 46,
+  "fields": {
+    "app_label": "factory",
+    "model": "inventorytransaction"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 47,
+  "fields": {
+    "app_label": "factory",
+    "model": "inventoryitem"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 48,
+  "fields": {
+    "app_label": "factory",
+    "model": "inventorycategory"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 49,
+  "fields": {
+    "app_label": "factory",
+    "model": "inventorypurchaseitem"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 50,
+  "fields": {
+    "app_label": "factory",
+    "model": "inventorypayment"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 51,
+  "fields": {
+    "app_label": "factory",
+    "model": "worker"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 52,
+  "fields": {
+    "app_label": "factory",
+    "model": "powerloomsalaryperiod"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 53,
+  "fields": {
+    "app_label": "factory",
+    "model": "workeradvance"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 54,
+  "fields": {
+    "app_label": "factory",
+    "model": "workerattendance"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 55,
+  "fields": {
+    "app_label": "factory",
+    "model": "workersalarypayment"
+  }
+},
+{
+  "model": "contenttypes.contenttype",
+  "pk": 56,
+  "fields": {
+    "app_label": "factory",
+    "model": "workersalaryledger"
+  }
+},
+{
+  "model": "accounts.role",
+  "pk": 1,
+  "fields": {
+    "name": "Super Admin",
+    "slug": "super_admin",
+    "description": "Unrestricted system access across all ERP modules.",
+    "status": "Active",
+    "is_system": true,
+    "permissions": [
+      "dashboard.view",
+      "dashboard.export",
+      "users.view",
+      "users.add",
+      "users.edit",
+      "users.delete",
+      "users.status",
+      "users.reset_pwd",
+      "roles.manage",
+      "activity.view",
+      "mfg.view",
+      "mfg.add",
+      "mfg.edit",
+      "mfg.delete",
+      "mfg.assign",
+      "mfg.status",
+      "yarn.view",
+      "yarn.add",
+      "yarn.edit",
+      "yarn.delete",
+      "yarn_buyer.view",
+      "yarn_buyer.add",
+      "yarn_buyer.edit",
+      "yarn_buyer.delete",
+      "sizing.view",
+      "sizing.add",
+      "sizing.edit",
+      "sizing.delete",
+      "warping.view",
+      "warping.add",
+      "warping.edit",
+      "warping.delete",
+      "yarn_stock.view",
+      "yarn_stock.edit",
+      "b_grade_yarn.view",
+      "b_grade_yarn.add",
+      "b_grade_yarn.edit",
+      "b_grade_yarn.delete",
+      "yarn_intake.view",
+      "yarn_intake.add",
+      "yarn_intake.edit",
+      "yarn_intake.delete",
+      "yarn_outcome.view",
+      "yarn_outcome.add",
+      "yarn_outcome.edit",
+      "yarn_outcome.delete",
+      "sizing.view",
+      "sizing.add",
+      "sizing.edit",
+      "sizing.delete",
+      "beams.view",
+      "beams.add",
+      "beams.edit",
+      "beams.delete",
+      "beams.assign",
+      "looms.view",
+      "looms.add",
+      "looms.edit",
+      "looms.delete",
+      "looms.assign_beam",
+      "looms.production",
+      "cloth.view",
+      "cloth.add",
+      "cloth.edit",
+      "cloth.delete",
+      "stock.view",
+      "stock.manage",
+      "cloth.dismount",
+      "po.view",
+      "po.add",
+      "po.edit",
+      "po.delete",
+      "po.approve",
+      "sale.view",
+      "sale.add",
+      "sale.edit",
+      "sale.delete",
+      "sale.dispatch",
+      "bank.view",
+      "bank.add",
+      "bank.edit",
+      "bank.delete",
+      "bank.transaction",
+      "inv.view",
+      "inv.add",
+      "inv.edit",
+      "inv.delete",
+      "inv.adjust",
+      "emp.view",
+      "emp.add",
+      "emp.edit",
+      "emp.delete",
+      "payroll.process",
+      "att.view",
+      "att.mark",
+      "att.edit",
+      "att.export",
+      "rep.view",
+      "rep.generate",
+      "rep.export",
+      "settings.view",
+      "settings.company",
+      "settings.security"
+    ],
+    "created_at": "2026-11-11T08:25:34.725Z",
+    "updated_at": "2026-11-11T08:25:34.725Z"
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 1,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$CdfMlx2F2TmWbrak2pfBGo$PzCIBMcxbE7b/Gs/+vdAElzmb4gbs7TNzRTtwdMRZew=",
+    "last_login": "2026-11-11T08:25:18.090Z",
+    "is_superuser": true,
+    "username": "admin",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-11-11T08:23:10.035Z",
+    "email": "admin@harmonymills.com",
+    "phone": "+923211212222",
+    "address": "sdasdasd",
+    "gender": "Male",
+    "designation": "System Administrator",
+    "role": 1,
+    "status": "Active",
+    "two_factor_enabled": false,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 2,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$QprAST8a23U4N0uWU0HM1b$Qe8TAiKqophr919IV7ESFfr8tosIP6w0F+5hv/t27+k=",
+    "last_login": "2026-11-24T10:41:53.230Z",
+    "is_superuser": true,
+    "username": "superadmin",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-11-11T08:25:35.615Z",
+    "email": "superadmin@admin.com",
+    "phone": "",
+    "address": "",
+    "gender": "Male",
+    "designation": "Super Administrator",
+    "role": 1,
+    "status": "Active",
+    "two_factor_enabled": false,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 1,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Created Worker",
+    "description": "Created worker Test Manual Worker (WRK-0006) - Manual Loom",
+    "module": "HR & Workforce",
+    "ip_address": "127.0.0.1",
+    "device": "",
+    "status": "Success",
+    "created_at": "2026-11-11T20:03:50.429Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 2,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Created Worker",
+    "description": "Created worker asdasd (WRK-0006) - Manual Loom",
+    "module": "HR & Workforce",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-11T20:08:59.212Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 3,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Logout",
+    "description": "@superadmin logged out.",
+    "module": "Authentication",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-11T20:17:37.529Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 4,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Login",
+    "description": "@superadmin logged in successfully.",
+    "module": "Authentication",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-11T20:18:45.068Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 5,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Login",
+    "description": "@superadmin logged in successfully.",
+    "module": "Authentication",
+    "ip_address": "127.0.0.1",
+    "device": "",
+    "status": "Success",
+    "created_at": "2026-11-11T20:22:51.351Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 6,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Login",
+    "description": "@superadmin logged in successfully.",
+    "module": "Authentication",
+    "ip_address": "127.0.0.1",
+    "device": "",
+    "status": "Success",
+    "created_at": "2026-11-11T20:23:31.005Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 7,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Created Worker",
+    "description": "Created worker Ali Manual Weaver (WRK-0008) - Manual Loom",
+    "module": "HR & Workforce",
+    "ip_address": "127.0.0.1",
+    "device": "",
+    "status": "Success",
+    "created_at": "2026-11-11T20:23:33.506Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 8,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Created Worker",
+    "description": "Created worker Bilal Power Weaver (WRK-0011) - Power Loom",
+    "module": "HR & Workforce",
+    "ip_address": "127.0.0.1",
+    "device": "",
+    "status": "Success",
+    "created_at": "2026-11-11T20:23:35.159Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 9,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Login",
+    "description": "@superadmin logged in successfully.",
+    "module": "Authentication",
+    "ip_address": "127.0.0.1",
+    "device": "",
+    "status": "Success",
+    "created_at": "2026-11-11T20:24:29.048Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 10,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Created Worker",
+    "description": "Created worker Ali Manual Weaver (WRK-0008) - Manual Loom",
+    "module": "HR & Workforce",
+    "ip_address": "127.0.0.1",
+    "device": "",
+    "status": "Success",
+    "created_at": "2026-11-11T20:24:31.676Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 11,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Created Worker",
+    "description": "Created worker Bilal Power Weaver (WRK-0013) - Power Loom",
+    "module": "HR & Workforce",
+    "ip_address": "127.0.0.1",
+    "device": "",
+    "status": "Success",
+    "created_at": "2026-11-11T20:24:33.467Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 12,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "CREATE",
+    "description": "Created bank account Ann Chandler - Veritatis rem laboru (724) with opening balance 78",
+    "module": "Bank Accounts",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-11T22:09:40.601Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 13,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Login",
+    "description": "@superadmin logged in successfully.",
+    "module": "Authentication",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-14T07:18:08.020Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 14,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Logout",
+    "description": "@superadmin logged out.",
+    "module": "Authentication",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-16T10:31:02.036Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 15,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Login",
+    "description": "@superadmin logged in successfully.",
+    "module": "Authentication",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-16T10:37:05.621Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 16,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Login",
+    "description": "@superadmin logged in successfully.",
+    "module": "Authentication",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T09:12:41.388Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 17,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Inventory Category",
+    "description": "Created inventory category 'test'.",
+    "module": "Inventory – Categories",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T09:15:59.708Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 18,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Inventory Item",
+    "description": "Created inventory item 'Fleur Powell' (INV-0002).",
+    "module": "Inventory – Items",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T09:16:06.104Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 19,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Record Inventory Ledger Payment",
+    "description": "Updated payment for 'OPEN-INV-0002' (Status: Paid, Paid: Rs. 37642.00).",
+    "module": "Inventory – Ledger",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T09:18:06.305Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 20,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Record Inventory Ledger Payment",
+    "description": "Updated payment for 'OPEN-INV-0001' (Status: Partially Paid, Paid: Rs. 5000.00).",
+    "module": "Inventory – Ledger",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T09:18:25.713Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 21,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Created Worker",
+    "description": "Created worker dgdfg (WRK-0008) - Manual Loom",
+    "module": "HR & Workforce",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T09:21:09.948Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 22,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "CREATE",
+    "description": "Recorded Credit of 100 in Ann Chandler (724)",
+    "module": "Bank Transactions",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T09:28:05.014Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 23,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Yarn Name",
+    "description": "Created yarn name 'pv36'.",
+    "module": "Yarn – Setup",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T09:34:27.208Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 24,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Yarn Type",
+    "description": "Created yarn type 'cotton'.",
+    "module": "Yarn – Setup",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T09:34:34.691Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 25,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Yarn Count",
+    "description": "Created yarn count '12'.",
+    "module": "Yarn – Setup",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T09:34:41.078Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 26,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Yarn Intake",
+    "description": "Created yarn intake 'pv36' Set: BATCH-01, 100 bags.",
+    "module": "Yarn – Intake",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T09:35:18.143Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 27,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Sizing",
+    "description": "Created sizing 'madina'.",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T09:41:38.636Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 28,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Yarn Outcome",
+    "description": "Created Sizing outcome of 20 bags from stock pool 'pv36'.",
+    "module": "Yarn – Outcome",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T09:42:07.638Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 29,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Delete Yarn Outcome",
+    "description": "Deleted Sizing outcome of 20 bags from stock pool 'pv36'. Stock restored.",
+    "module": "Yarn – Outcome",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T09:45:35.243Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 30,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Yarn Intake",
+    "description": "Created yarn intake 'pv36' Set: BATCH-02, 100 bags.",
+    "module": "Yarn – Intake",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T10:19:52.001Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 31,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Send Beams to Sizing",
+    "description": "Marked 3 beam(s) [BEAM-01, BEAM-02, BEAM-03] as Sizing for Yarn Outcome #2.",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T10:20:45.326Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 32,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Yarn Outcome",
+    "description": "Created Sizing outcome of 10 bags from stock pool 'pv36'.",
+    "module": "Yarn – Outcome",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T10:20:46.027Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 33,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Delete Yarn Outcome",
+    "description": "Deleted Sizing outcome of 10 bags from stock pool 'pv36'. Stock restored.",
+    "module": "Yarn – Outcome",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T15:04:46.143Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 34,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Send Beams to Sizing",
+    "description": "Marked 2 beam(s) [BEAM-01, BEAM-02] as Sizing for Yarn Outcome #3.",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T15:05:47.516Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 35,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Yarn Outcome",
+    "description": "Created Sizing outcome of 12 bags from stock pool 'pv36'.",
+    "module": "Yarn – Outcome",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T15:05:48.516Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 36,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Warping",
+    "description": "Created warping 'asd'.",
+    "module": "Yarn – Warping",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T15:09:11.472Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 37,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Yarn Outcome",
+    "description": "Created Warping outcome of 10 bags from stock pool 'pv36'.",
+    "module": "Yarn – Outcome",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T15:09:35.848Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 38,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Send Beams to Warping",
+    "description": "Marked 1 beam(s) [BEAM-03] as Warping for Yarn Outcome #5.",
+    "module": "Yarn – Warping",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T15:18:45.022Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 39,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Yarn Outcome",
+    "description": "Created Warping outcome of 12 bags from stock pool 'pv36'.",
+    "module": "Yarn – Outcome",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T15:18:45.769Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 40,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Receive Beams from Sizing Outcome",
+    "description": "Recorded 2 beam(s) [BEAM-01, BEAM-02] in Outcome #3 (Sizing: madina) with status 'RECEIVED'.",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T15:23:09.220Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 41,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Sizing Outcome",
+    "description": "Created Sizing Outcome #1 for sizing 'madina' with 1 initial beam assignment(s).",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T15:23:09.710Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 42,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Cloth Name",
+    "description": "Created ClothName '72x80' (ID: 1).",
+    "module": "Factory – Cloth Master",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T15:27:33.475Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 43,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Yarn Intake",
+    "description": "Created yarn intake 'pv36' Set: BATCH-01, 100 bags.",
+    "module": "Yarn – Intake",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T16:29:12.072Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 44,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Send Beams to Sizing",
+    "description": "Marked 2 beam(s) [BEAM-01, BEAM-02] as Sizing for Yarn Outcome #6.",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T16:29:42.146Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 45,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Yarn Outcome",
+    "description": "Created Sizing outcome of 1 bags from stock pool 'pv36'.",
+    "module": "Yarn – Outcome",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T16:29:42.795Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 46,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Receive Beams from Sizing Outcome",
+    "description": "Recorded 1 beam(s) [BEAM-01] in Outcome #6 (Sizing: madina) with status 'RECEIVED'.",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T16:32:24.924Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 47,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Sizing Outcome",
+    "description": "Created Sizing Outcome #2 for sizing 'madina' with 1 initial beam assignment(s).",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T16:32:25.405Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 48,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Cloth Name",
+    "description": "Created ClothName '2323' (ID: 2).",
+    "module": "Factory – Cloth Master",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T16:45:15.133Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 49,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Cloth Name",
+    "description": "Created ClothName 'qwe' (ID: 3).",
+    "module": "Factory – Cloth Master",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-17T16:46:22.615Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 50,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Load Beam",
+    "description": "Loaded Beam 'BEAM-01' onto Loom 'LOOM-01' for Sizing Outcome #2 (Set #SET-6).",
+    "module": "Factory – Beam Loading",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-18T15:13:31.191Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 51,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Load Beam Onto Loom",
+    "description": "Loaded Beam 'BEAM-01' onto Loom 'LOOM-01' for SizingOutcome #2 (Set No: SET-6).",
+    "module": "Factory – Beam Loading",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-18T15:13:31.680Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 52,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Cloth Patch",
+    "description": "Recorded ClothPatch 'patch-set-6-l-01---Bm-01--0001' (qwe, 123.000000m) on Loom 'LOOM-01' from Beam 'BEAM-01' (Loading #1).",
+    "module": "Factory – Cloth Production",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-18T15:14:20.625Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 53,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Cloth Patch",
+    "description": "Recorded ClothPatch 'patch-set-6-l-01---Bm-01--0002' (qwe, 244.000000m) on Loom 'LOOM-01' from Beam 'BEAM-01' (Loading #1).",
+    "module": "Factory – Cloth Production",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-18T15:14:39.264Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 54,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Add Clean Cloth Stock",
+    "description": "Allocated 244.000000m clean cloth to stock for 'qwe' from Patch #patch-set-6-l-01---Bm-01--0002.",
+    "module": "Factory – Cloth Stock",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-18T15:15:08.447Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 55,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Add Defected Cloth Stock",
+    "description": "Recorded defect 'Other' (12.000000m) for 'qwe' from Patch #patch-set-6-l-01---Bm-01--0001.",
+    "module": "Factory – Defected Stock",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-18T15:15:15.955Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 56,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Add Clean Cloth Stock",
+    "description": "Allocated 111.000000m clean cloth to stock for 'qwe' from Patch #patch-set-6-l-01---Bm-01--0001.",
+    "module": "Factory – Cloth Stock",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-18T15:15:20.712Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 57,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Yarn Intake",
+    "description": "Created yarn intake 'pv36' Set: BATCH-02, 120 bags.",
+    "module": "Yarn – Intake",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-21T16:47:11.905Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 58,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Yarn Outcome",
+    "description": "Created Sizing outcome of 10 bags from stock pool 'pv36'.",
+    "module": "Yarn – Outcome",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-21T16:47:50.079Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 59,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Receive Beams from Sizing Outcome",
+    "description": "Recorded 1 beam(s) [BEAM-02] in Outcome #7 (Sizing: madina) with status 'RECEIVED'.",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-21T16:49:39.986Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 60,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Sizing Outcome",
+    "description": "Created Sizing Outcome #3 for sizing 'madina' with 1 initial beam assignment(s).",
+    "module": "Yarn – Sizing",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-21T16:49:40.444Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 61,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Cloth Patch",
+    "description": "Recorded ClothPatch 'patch-set-6-l-01---Bm-01--0003' (qwe, 120.000000m) on Loom 'LOOM-01' from Beam 'BEAM-01' (Loading #1).",
+    "module": "Factory – Cloth Production",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-21T16:59:52.509Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 62,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Create Cloth Patch",
+    "description": "Recorded ClothPatch 'patch-set-6-l-01---Bm-01--0004' (qwe, 140.000000m) on Loom 'LOOM-01' from Beam 'BEAM-01' (Loading #1).",
+    "module": "Factory – Cloth Production",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-21T17:00:22.822Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 63,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Login",
+    "description": "@superadmin logged in successfully.",
+    "module": "Authentication",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-24T08:39:26.326Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 64,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Logout",
+    "description": "@superadmin logged out.",
+    "module": "Authentication",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-24T09:37:47.758Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 65,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Login",
+    "description": "@superadmin logged in successfully.",
+    "module": "Authentication",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-24T09:41:02.248Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 66,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Logout",
+    "description": "@superadmin logged out.",
+    "module": "Authentication",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-24T09:43:04.715Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 67,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Login",
+    "description": "@superadmin logged in successfully.",
+    "module": "Authentication",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-24T09:43:15.955Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 68,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Logout",
+    "description": "@superadmin logged out.",
+    "module": "Authentication",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Linux; Android 16; Pixel 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-24T09:43:22.723Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 69,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Login",
+    "description": "@superadmin logged in successfully.",
+    "module": "Authentication",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-24T09:43:57.810Z"
+  }
+},
+{
+  "model": "audit_logs.activitylog",
+  "pk": 70,
+  "fields": {
+    "user": 2,
+    "username": "superadmin",
+    "user_full_name": "superadmin",
+    "action": "Login",
+    "description": "@superadmin logged in successfully.",
+    "module": "Authentication",
+    "ip_address": "127.0.0.1",
+    "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+    "status": "Success",
+    "created_at": "2026-11-24T10:41:53.474Z"
+  }
+},
+{
+  "model": "factory.supplier",
+  "pk": 1,
+  "fields": {
+    "supplier_code": "SUP-0001",
+    "supplier_name": "Universal Loom Spares Co.",
+    "company_name": "",
+    "address": "",
+    "phone": "0300-1234567",
+    "contact_person": "",
+    "email": "",
+    "status": "Active",
+    "supplier_type": "Spare Parts",
+    "registration_number": "",
+    "created_at": "2026-11-14T16:05:24.099Z",
+    "updated_at": "2026-11-14T16:05:24.099Z",
+    "created_by": null,
+    "updated_by": null
+  }
+},
+{
+  "model": "factory.loom",
+  "pk": 1,
+  "fields": {
+    "loom_code": "LOOM-01",
+    "loom_name": "Airjet Loom 01",
+    "model_number": "Toyota JAT710",
+    "width": "60.000000",
+    "installation_date": "2024-01-01",
+    "location": "Hall A - Bay 1",
+    "status": "Production",
+    "notes": "Standard production loom #01",
+    "created_at": "2026-11-17T09:45:34.095Z",
+    "updated_at": "2026-11-18T15:13:30.945Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.loom",
+  "pk": 2,
+  "fields": {
+    "loom_code": "LOOM-02",
+    "loom_name": "Airjet Loom 02",
+    "model_number": "Toyota JAT810",
+    "width": "63.000000",
+    "installation_date": "2024-01-02",
+    "location": "Hall A - Bay 1",
+    "status": "Available",
+    "notes": "Standard production loom #02",
+    "created_at": "2026-11-17T09:45:34.976Z",
+    "updated_at": "2026-11-17T09:45:34.976Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.loom",
+  "pk": 3,
+  "fields": {
+    "loom_code": "LOOM-03",
+    "loom_name": "Airjet Loom 03",
+    "model_number": "Tsudakoma ZAX9100",
+    "width": "66.000000",
+    "installation_date": "2024-01-03",
+    "location": "Hall A - Bay 1",
+    "status": "Available",
+    "notes": "Standard production loom #03",
+    "created_at": "2026-11-17T09:45:35.854Z",
+    "updated_at": "2026-11-17T09:45:35.854Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.loom",
+  "pk": 4,
+  "fields": {
+    "loom_code": "LOOM-04",
+    "loom_name": "Airjet Loom 04",
+    "model_number": "Picanol OmniPlus",
+    "width": "72.000000",
+    "installation_date": "2024-01-04",
+    "location": "Hall A - Bay 1",
+    "status": "Available",
+    "notes": "Standard production loom #04",
+    "created_at": "2026-11-17T09:45:36.733Z",
+    "updated_at": "2026-11-17T09:45:36.733Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.loom",
+  "pk": 5,
+  "fields": {
+    "loom_code": "LOOM-05",
+    "loom_name": "Airjet Loom 05",
+    "model_number": "Somet Thema 11",
+    "width": "110.000000",
+    "installation_date": "2024-01-05",
+    "location": "Hall A - Bay 1",
+    "status": "Available",
+    "notes": "Standard production loom #05",
+    "created_at": "2026-11-17T09:45:37.612Z",
+    "updated_at": "2026-11-17T09:45:37.612Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.loom",
+  "pk": 6,
+  "fields": {
+    "loom_code": "LOOM-06",
+    "loom_name": "Power Loom 06",
+    "model_number": "Toyota JAT710",
+    "width": "60.000000",
+    "installation_date": "2024-01-06",
+    "location": "Hall A - Bay 2",
+    "status": "Available",
+    "notes": "Standard production loom #06",
+    "created_at": "2026-11-17T09:45:38.494Z",
+    "updated_at": "2026-11-17T09:45:38.494Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.loom",
+  "pk": 7,
+  "fields": {
+    "loom_code": "LOOM-07",
+    "loom_name": "Power Loom 07",
+    "model_number": "Toyota JAT810",
+    "width": "63.000000",
+    "installation_date": "2024-01-07",
+    "location": "Hall A - Bay 2",
+    "status": "Available",
+    "notes": "Standard production loom #07",
+    "created_at": "2026-11-17T09:45:39.372Z",
+    "updated_at": "2026-11-17T09:45:39.373Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.loom",
+  "pk": 8,
+  "fields": {
+    "loom_code": "LOOM-08",
+    "loom_name": "Power Loom 08",
+    "model_number": "Tsudakoma ZAX9100",
+    "width": "66.000000",
+    "installation_date": "2024-01-08",
+    "location": "Hall A - Bay 2",
+    "status": "Available",
+    "notes": "Standard production loom #08",
+    "created_at": "2026-11-17T09:45:40.256Z",
+    "updated_at": "2026-11-17T09:45:40.256Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.loom",
+  "pk": 9,
+  "fields": {
+    "loom_code": "LOOM-09",
+    "loom_name": "Power Loom 09",
+    "model_number": "Picanol OmniPlus",
+    "width": "72.000000",
+    "installation_date": "2024-01-09",
+    "location": "Hall A - Bay 2",
+    "status": "Available",
+    "notes": "Standard production loom #09",
+    "created_at": "2026-11-17T09:45:41.152Z",
+    "updated_at": "2026-11-17T09:45:41.152Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.loom",
+  "pk": 10,
+  "fields": {
+    "loom_code": "LOOM-10",
+    "loom_name": "Power Loom 10",
+    "model_number": "Somet Thema 11",
+    "width": "110.000000",
+    "installation_date": "2024-01-10",
+    "location": "Hall A - Bay 2",
+    "status": "Available",
+    "notes": "Standard production loom #10",
+    "created_at": "2026-11-17T09:45:42.456Z",
+    "updated_at": "2026-11-17T09:45:42.456Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.beam",
+  "pk": 1,
+  "fields": {
+    "beam_name": "Warp Beam 01",
+    "beam_number": "BEAM-01",
+    "yarn_count": "20/1",
+    "warp_count": 20,
+    "total_ends": 3320,
+    "length": "2250.000000",
+    "width": "60.000000",
+    "weight": "192.000000",
+    "production_order": "PO-2026-001",
+    "status": "In Production",
+    "notes": "Ready warp beam #01",
+    "created_at": "2026-11-17T09:45:43.338Z",
+    "updated_at": "2026-11-18T15:13:30.693Z",
+    "created_by": 2,
+    "updated_by": 2,
+    "dispatched_yarn_outcome": null
+  }
+},
+{
+  "model": "factory.beam",
+  "pk": 2,
+  "fields": {
+    "beam_name": "Warp Beam 02",
+    "beam_number": "BEAM-02",
+    "yarn_count": "30/1",
+    "warp_count": 30,
+    "total_ends": 3440,
+    "length": "2500.000000",
+    "width": "63.000000",
+    "weight": "204.000000",
+    "production_order": "PO-2026-002",
+    "status": "Loaded",
+    "notes": "Ready warp beam #02",
+    "created_at": "2026-11-17T09:45:44.217Z",
+    "updated_at": "2026-11-21T16:49:39.527Z",
+    "created_by": 2,
+    "updated_by": 2,
+    "dispatched_yarn_outcome": null
+  }
+},
+{
+  "model": "factory.beam",
+  "pk": 3,
+  "fields": {
+    "beam_name": "Warp Beam 03",
+    "beam_number": "BEAM-03",
+    "yarn_count": "40/1",
+    "warp_count": 40,
+    "total_ends": 3560,
+    "length": "2750.000000",
+    "width": "66.000000",
+    "weight": "216.000000",
+    "production_order": "PO-2026-003",
+    "status": "Available",
+    "notes": "Ready warp beam #03",
+    "created_at": "2026-11-17T09:45:45.098Z",
+    "updated_at": "2026-11-17T15:18:44.745Z",
+    "created_by": 2,
+    "updated_by": 2,
+    "dispatched_yarn_outcome": null
+  }
+},
+{
+  "model": "factory.beam",
+  "pk": 4,
+  "fields": {
+    "beam_name": "Warp Beam 04",
+    "beam_number": "BEAM-04",
+    "yarn_count": "20/2",
+    "warp_count": 20,
+    "total_ends": 3680,
+    "length": "3000.000000",
+    "width": "72.000000",
+    "weight": "228.000000",
+    "production_order": "PO-2026-004",
+    "status": "Available",
+    "notes": "Ready warp beam #04",
+    "created_at": "2026-11-17T09:45:45.977Z",
+    "updated_at": "2026-11-17T09:45:45.977Z",
+    "created_by": 2,
+    "updated_by": 2,
+    "dispatched_yarn_outcome": null
+  }
+},
+{
+  "model": "factory.beam",
+  "pk": 5,
+  "fields": {
+    "beam_name": "Warp Beam 05",
+    "beam_number": "BEAM-05",
+    "yarn_count": "60/1",
+    "warp_count": 30,
+    "total_ends": 3800,
+    "length": "3250.000000",
+    "width": "110.000000",
+    "weight": "240.000000",
+    "production_order": "PO-2026-005",
+    "status": "Available",
+    "notes": "Ready warp beam #05",
+    "created_at": "2026-11-17T09:45:47.160Z",
+    "updated_at": "2026-11-17T09:45:47.160Z",
+    "created_by": 2,
+    "updated_by": 2,
+    "dispatched_yarn_outcome": null
+  }
+},
+{
+  "model": "factory.beam",
+  "pk": 6,
+  "fields": {
+    "beam_name": "Warp Beam 06",
+    "beam_number": "BEAM-06",
+    "yarn_count": "20/1",
+    "warp_count": 40,
+    "total_ends": 3920,
+    "length": "3500.000000",
+    "width": "60.000000",
+    "weight": "252.000000",
+    "production_order": "PO-2026-006",
+    "status": "Available",
+    "notes": "Ready warp beam #06",
+    "created_at": "2026-11-17T09:45:48.040Z",
+    "updated_at": "2026-11-17T09:45:48.040Z",
+    "created_by": 2,
+    "updated_by": 2,
+    "dispatched_yarn_outcome": null
+  }
+},
+{
+  "model": "factory.beam",
+  "pk": 7,
+  "fields": {
+    "beam_name": "Warp Beam 07",
+    "beam_number": "BEAM-07",
+    "yarn_count": "30/1",
+    "warp_count": 20,
+    "total_ends": 4040,
+    "length": "3750.000000",
+    "width": "63.000000",
+    "weight": "264.000000",
+    "production_order": "PO-2026-007",
+    "status": "Available",
+    "notes": "Ready warp beam #07",
+    "created_at": "2026-11-17T09:45:48.916Z",
+    "updated_at": "2026-11-17T09:45:48.916Z",
+    "created_by": 2,
+    "updated_by": 2,
+    "dispatched_yarn_outcome": null
+  }
+},
+{
+  "model": "factory.beam",
+  "pk": 8,
+  "fields": {
+    "beam_name": "Warp Beam 08",
+    "beam_number": "BEAM-08",
+    "yarn_count": "40/1",
+    "warp_count": 30,
+    "total_ends": 4160,
+    "length": "4000.000000",
+    "width": "66.000000",
+    "weight": "276.000000",
+    "production_order": "PO-2026-008",
+    "status": "Available",
+    "notes": "Ready warp beam #08",
+    "created_at": "2026-11-17T09:45:49.793Z",
+    "updated_at": "2026-11-17T09:45:49.793Z",
+    "created_by": 2,
+    "updated_by": 2,
+    "dispatched_yarn_outcome": null
+  }
+},
+{
+  "model": "factory.beam",
+  "pk": 9,
+  "fields": {
+    "beam_name": "Warp Beam 09",
+    "beam_number": "BEAM-09",
+    "yarn_count": "20/2",
+    "warp_count": 40,
+    "total_ends": 4280,
+    "length": "4250.000000",
+    "width": "72.000000",
+    "weight": "288.000000",
+    "production_order": "PO-2026-009",
+    "status": "Available",
+    "notes": "Ready warp beam #09",
+    "created_at": "2026-11-17T09:45:50.689Z",
+    "updated_at": "2026-11-17T09:45:50.689Z",
+    "created_by": 2,
+    "updated_by": 2,
+    "dispatched_yarn_outcome": null
+  }
+},
+{
+  "model": "factory.beam",
+  "pk": 10,
+  "fields": {
+    "beam_name": "Warp Beam 10",
+    "beam_number": "BEAM-10",
+    "yarn_count": "60/1",
+    "warp_count": 20,
+    "total_ends": 4400,
+    "length": "4500.000000",
+    "width": "110.000000",
+    "weight": "300.000000",
+    "production_order": "PO-2026-010",
+    "status": "Available",
+    "notes": "Ready warp beam #10",
+    "created_at": "2026-11-17T09:45:51.626Z",
+    "updated_at": "2026-11-17T09:45:51.626Z",
+    "created_by": 2,
+    "updated_by": 2,
+    "dispatched_yarn_outcome": null
+  }
+},
+{
+  "model": "factory.beamloading",
+  "pk": 1,
+  "fields": {
+    "sizing_outcome": 2,
+    "beam": 1,
+    "loom": 1,
+    "cloth_name": 3,
+    "shortage": "5.000000",
+    "lakhai": "450.000000",
+    "warping_sizing_cost_per_meter": "12.000000",
+    "warp_rate_per_meter": "29.439900",
+    "warp_weight_per_meter": "0.084114",
+    "production_per_day": "291.1765",
+    "loom_rpm": "550.00",
+    "working_hours": "24.00",
+    "installation_date": "2026-11-18",
+    "status": "In Production",
+    "expected_length": null,
+    "dismount_date": null,
+    "dismounted_by": null,
+    "created_at": "2026-11-18T15:13:30.442Z",
+    "updated_at": "2026-11-18T15:14:19.647Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.yarnname",
+  "pk": 1,
+  "fields": {
+    "name": "pv36",
+    "description": "",
+    "status": "Active",
+    "created_at": "2026-11-17T09:34:26.983Z",
+    "updated_at": "2026-11-17T09:34:26.983Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.yarntype",
+  "pk": 1,
+  "fields": {
+    "name": "cotton",
+    "description": "",
+    "status": "Active",
+    "created_at": "2026-11-17T09:34:34.470Z",
+    "updated_at": "2026-11-17T09:34:34.470Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.yarncount",
+  "pk": 1,
+  "fields": {
+    "name": "12",
+    "description": "",
+    "status": "Active",
+    "created_at": "2026-11-17T09:34:40.858Z",
+    "updated_at": "2026-11-17T09:34:40.858Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.yarnstock",
+  "pk": 2,
+  "fields": {
+    "yarn_name": 1,
+    "yarn_type": 1,
+    "yarn_count": 1,
+    "production_type": "Self",
+    "price": "44599.916444",
+    "total_price": "9811981.617570",
+    "remaining_bags": 213,
+    "remaining_cones": 5010,
+    "remaining_weight_kg": "13926.015504",
+    "remaining_weight_lb": "30701.608786",
+    "remaining_total_price": "9499782.202572",
+    "total_boxes": 213,
+    "cones": 5010,
+    "total_weight_kg": "13926.015504",
+    "total_weight_lb": "30701.608786",
+    "created_at": "2026-11-17T16:29:05.775Z",
+    "updated_at": "2026-11-21T16:49:36.546Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.sizing",
+  "pk": 1,
+  "fields": {
+    "sizing_name": "madina",
+    "contact_person": "",
+    "phone_no": "03211212222",
+    "email": "test@gmail.com",
+    "address": "sdasdasd",
+    "status": "Active",
+    "notes": "",
+    "created_at": "2026-11-17T09:41:38.394Z",
+    "updated_at": "2026-11-17T09:41:38.394Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.sizingoutcome",
+  "pk": 2,
+  "fields": {
+    "yarn_outcome": 6,
+    "set_bill": "",
+    "outcome_date": "2026-11-17",
+    "set_no": "SET-6",
+    "sizing_name": "madina",
+    "total_bags_on_sizing": 1,
+    "bag_packing_cone": 24,
+    "total_cones": 24,
+    "b_grade_cones": 0,
+    "consumed_b_grade_cones": 0,
+    "return_b_grade_cones": 0,
+    "remaining_b_grade_cones": 0,
+    "remaining_bags_on_sizing_stock": 0,
+    "remaining_cones_on_sizing_stock": 0,
+    "merged_sizing_bags": 0,
+    "merged_sizing_cones": 0,
+    "merged_b_grade_cones": 0,
+    "merged_from_set_nos": "",
+    "return_bags": "0.000000",
+    "return_cones": "0.000000",
+    "lagat_bags": "1.000000",
+    "lagat_cones": "0.000000",
+    "brand": "",
+    "width": "65.000000",
+    "set_length_meter": "2000.000000",
+    "set_length_gaz": "2187.230000",
+    "total_tarr": 5666,
+    "yarn_beam": "",
+    "back_beam": "",
+    "count": "12",
+    "total_set_lumbai": "2000.000000",
+    "total_set_shortage": "5.000000",
+    "rate_per_kg": "300.000000",
+    "net_weight_kg": "100.000000",
+    "total_rate": "30000.000000",
+    "amount_paid": "0.000000",
+    "amount_due": "30000.000000",
+    "payment_status": "Unpaid",
+    "remarks": "",
+    "created_at": "2026-11-17T16:32:02.826Z",
+    "updated_at": "2026-11-17T16:32:02.826Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.sizingoutcome",
+  "pk": 3,
+  "fields": {
+    "yarn_outcome": 7,
+    "set_bill": "",
+    "outcome_date": "2026-11-21",
+    "set_no": "SET-7",
+    "sizing_name": "madina",
+    "total_bags_on_sizing": 10,
+    "bag_packing_cone": 23,
+    "total_cones": 230,
+    "b_grade_cones": 0,
+    "consumed_b_grade_cones": 0,
+    "return_b_grade_cones": 0,
+    "remaining_b_grade_cones": 0,
+    "remaining_bags_on_sizing_stock": 0,
+    "remaining_cones_on_sizing_stock": 0,
+    "merged_sizing_bags": 0,
+    "merged_sizing_cones": 0,
+    "merged_b_grade_cones": 0,
+    "merged_from_set_nos": "",
+    "return_bags": "4.000000",
+    "return_cones": "11.000000",
+    "lagat_bags": "5.000000",
+    "lagat_cones": "12.000000",
+    "brand": "",
+    "width": "53.000000",
+    "set_length_meter": "5000.000000",
+    "set_length_gaz": "5468.070000",
+    "total_tarr": 4399,
+    "yarn_beam": "",
+    "back_beam": "",
+    "count": "12",
+    "total_set_lumbai": "5000.000000",
+    "total_set_shortage": "5.000000",
+    "rate_per_kg": "340.000000",
+    "net_weight_kg": "340.000000",
+    "total_rate": "115600.000000",
+    "amount_paid": "0.000000",
+    "amount_due": "115600.000000",
+    "payment_status": "Unpaid",
+    "remarks": "",
+    "created_at": "2026-11-21T16:49:18.423Z",
+    "updated_at": "2026-11-21T16:49:18.423Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.sizingbeamassignment",
+  "pk": 2,
+  "fields": {
+    "yarn_outcome": 6,
+    "beam_yarn_length": {
+      "1": 2000
+    },
+    "status": "RECEIVED",
+    "assigned_at": "2026-11-17T16:32:23.732Z",
+    "released_at": null,
+    "created_at": "2026-11-17T16:32:23.732Z",
+    "updated_at": "2026-11-17T16:32:24.214Z",
+    "created_by": 2,
+    "updated_by": 2,
+    "beam": [
+      1
+    ]
+  }
+},
+{
+  "model": "factory.sizingbeamassignment",
+  "pk": 3,
+  "fields": {
+    "yarn_outcome": 7,
+    "beam_yarn_length": {
+      "2": 5000
+    },
+    "status": "RECEIVED",
+    "assigned_at": "2026-11-21T16:49:38.853Z",
+    "released_at": null,
+    "created_at": "2026-11-21T16:49:38.853Z",
+    "updated_at": "2026-11-21T16:49:39.305Z",
+    "created_by": 2,
+    "updated_by": 2,
+    "beam": [
+      2
+    ]
+  }
+},
+{
+  "model": "factory.warping",
+  "pk": 1,
+  "fields": {
+    "warping_name": "asd",
+    "contact_person": "asd",
+    "phone_no": "234234234",
+    "email": "muhammadehtisham618@gmail.com",
+    "address": "sdasdasd\npunjab",
+    "status": "Active",
+    "notes": "",
+    "created_at": "2026-11-17T15:09:11.240Z",
+    "updated_at": "2026-11-17T15:09:11.240Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.yarnintake",
+  "pk": 3,
+  "fields": {
+    "yarn_name": 1,
+    "yarn_type": 1,
+    "yarn_count": 1,
+    "set_no": "BATCH-01",
+    "intake_date": "2026-11-17",
+    "supplier": 1,
+    "stock": 2,
+    "production_type": "Self",
+    "bags": 100,
+    "cones_per_bag": 24,
+    "rate_per_lb": "350.000000",
+    "weight_per_bag_kg": "100.000000",
+    "total_cones": 2400,
+    "total_rate": "7639017.378300",
+    "net_weight_kg": "10000.000000",
+    "net_weight_lb": "22046.226200",
+    "outcome_bags": 1,
+    "outcome_weight_kg": "100.000000",
+    "outcome_weight_lb": "220.462262",
+    "outcome_total_rate": "77161.791700",
+    "return_bags": "0.000000",
+    "return_cones": "0.000000",
+    "return_weight_kg": "0.000000",
+    "return_weight_lb": "0.000000",
+    "return_total_rate": "0.000000",
+    "remaining_bags": 99,
+    "remaining_cones": 2376,
+    "remaining_weight_kg": "9900.000000",
+    "remaining_weight_lb": "21825.763938",
+    "remaining_total_rate": "7639017.378300",
+    "amount_paid": "0.000000",
+    "amount_due": "7716179.170000",
+    "payment_status": "Unpaid",
+    "created_at": "2026-11-17T16:29:06.887Z",
+    "updated_at": "2026-11-17T16:29:06.887Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.yarnintake",
+  "pk": 4,
+  "fields": {
+    "yarn_name": 1,
+    "yarn_type": 1,
+    "yarn_count": 1,
+    "set_no": "BATCH-02",
+    "intake_date": "2026-11-21",
+    "supplier": 1,
+    "stock": 2,
+    "production_type": "Self",
+    "bags": 120,
+    "cones_per_bag": 23,
+    "rate_per_lb": "233.000000",
+    "weight_per_bag_kg": "34.000000",
+    "total_cones": 2760,
+    "total_rate": "1999365.160944",
+    "net_weight_kg": "4080.000000",
+    "net_weight_lb": "8994.860290",
+    "outcome_bags": 10,
+    "outcome_weight_kg": "340.000000",
+    "outcome_weight_lb": "749.571691",
+    "outcome_total_rate": "174650.204003",
+    "return_bags": "4.000000",
+    "return_cones": "11.000000",
+    "return_weight_kg": "152.260870",
+    "return_weight_lb": "335.677757",
+    "return_total_rate": "78212.917424",
+    "remaining_bags": 114,
+    "remaining_cones": 2633,
+    "remaining_weight_kg": "3892.260870",
+    "remaining_weight_lb": "8580.966356",
+    "remaining_total_rate": "1999365.160944",
+    "amount_paid": "0.000000",
+    "amount_due": "2095802.447477",
+    "payment_status": "Unpaid",
+    "created_at": "2026-11-21T16:47:06.526Z",
+    "updated_at": "2026-11-21T16:47:06.526Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.yarnoutcome",
+  "pk": 6,
+  "fields": {
+    "stock": 2,
+    "outcome_type": "Sizing",
+    "outcome_bags": 1,
+    "outcome_cones_per_bag": 24,
+    "outcome_weight_per_bag_kg": "100.000000",
+    "outcome_weight_kg": "100.000000",
+    "outcome_weight_lb": "220.462262",
+    "yarn_buyer": null,
+    "sizing": 1,
+    "warping": null,
+    "total_price": "77161.790000",
+    "status": "Received",
+    "outcome_date": "2026-11-17",
+    "notes": "",
+    "merged_sizing_bags": 0,
+    "merged_sizing_cones": 0,
+    "merged_b_grade_cones": 0,
+    "b_grade_cones": 0,
+    "b_grade_weight_kg": "0.000000",
+    "b_grade_weight_lb": "0.000000",
+    "created_at": "2026-11-17T16:29:32.564Z",
+    "updated_at": "2026-11-17T16:32:13.557Z",
+    "created_by": 2,
+    "updated_by": 2,
+    "merged_from_sizing_outcomes": []
+  }
+},
+{
+  "model": "factory.yarnoutcome",
+  "pk": 7,
+  "fields": {
+    "stock": 2,
+    "outcome_type": "Sizing",
+    "outcome_bags": 10,
+    "outcome_cones_per_bag": 23,
+    "outcome_weight_per_bag_kg": "34.000000",
+    "outcome_weight_kg": "340.000000",
+    "outcome_weight_lb": "749.571691",
+    "yarn_buyer": null,
+    "sizing": 1,
+    "warping": null,
+    "total_price": "237547.190000",
+    "status": "Partially Received",
+    "outcome_date": "2026-11-21",
+    "notes": "",
+    "merged_sizing_bags": 0,
+    "merged_sizing_cones": 0,
+    "merged_b_grade_cones": 0,
+    "b_grade_cones": 0,
+    "b_grade_weight_kg": "0.000000",
+    "b_grade_weight_lb": "0.000000",
+    "created_at": "2026-11-21T16:47:41.154Z",
+    "updated_at": "2026-11-21T16:49:29.071Z",
+    "created_by": 2,
+    "updated_by": 2,
+    "merged_from_sizing_outcomes": []
+  }
+},
+{
+  "model": "factory.yarnoutcomeitem",
+  "pk": 6,
+  "fields": {
+    "yarn_outcome": 6,
+    "yarn_intake": 3,
+    "bags": 1,
+    "cones_per_bag": 24,
+    "weight_per_bag_kg": "100.000000",
+    "weight_kg": "100.000000",
+    "weight_lb": "220.462262",
+    "created_at": "2026-11-17T16:29:33.015Z",
+    "updated_at": "2026-11-17T16:29:33.015Z"
+  }
+},
+{
+  "model": "factory.yarnoutcomeitem",
+  "pk": 7,
+  "fields": {
+    "yarn_outcome": 7,
+    "yarn_intake": 4,
+    "bags": 10,
+    "cones_per_bag": 23,
+    "weight_per_bag_kg": "34.000000",
+    "weight_kg": "340.000000",
+    "weight_lb": "749.571691",
+    "created_at": "2026-11-21T16:47:41.600Z",
+    "updated_at": "2026-11-21T16:47:41.600Z"
+  }
+},
+{
+  "model": "factory.clothname",
+  "pk": 1,
+  "fields": {
+    "name": "72x80",
+    "warp_count": "12",
+    "weft_count": "40/1",
+    "reed_count": "72.000000",
+    "pick_count": "68.000000",
+    "reed_width": "64.000000",
+    "description": "",
+    "created_at": "2026-11-17T15:27:32.350Z",
+    "updated_at": "2026-11-17T15:27:32.350Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.clothname",
+  "pk": 2,
+  "fields": {
+    "name": "2323",
+    "warp_count": "4600",
+    "weft_count": "40/1",
+    "reed_count": "72.000000",
+    "pick_count": "68.000000",
+    "reed_width": "65.000000",
+    "description": "",
+    "created_at": "2026-11-17T16:45:13.086Z",
+    "updated_at": "2026-11-17T16:45:13.086Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.clothname",
+  "pk": 3,
+  "fields": {
+    "name": "qwe",
+    "warp_count": "78",
+    "weft_count": "40/1",
+    "reed_count": "4800.000000",
+    "pick_count": "68.000000",
+    "reed_width": "63.000000",
+    "description": "",
+    "created_at": "2026-11-17T16:46:21.183Z",
+    "updated_at": "2026-11-17T16:46:21.183Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.clothpatch",
+  "pk": 1,
+  "fields": {
+    "loom": 1,
+    "beam": 1,
+    "beam_loading": 1,
+    "patch_number": "patch-set-6-l-01---Bm-01--0001",
+    "cloth_name": 3,
+    "patch_date": "2026-11-18",
+    "bundle_count": 1,
+    "productive_length": "123.000000",
+    "remarks": "",
+    "created_at": "2026-11-18T15:14:20.135Z",
+    "updated_at": "2026-11-18T15:14:20.135Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.clothpatch",
+  "pk": 2,
+  "fields": {
+    "loom": 1,
+    "beam": 1,
+    "beam_loading": 1,
+    "patch_number": "patch-set-6-l-01---Bm-01--0002",
+    "cloth_name": 3,
+    "patch_date": "2026-11-18",
+    "bundle_count": 1,
+    "productive_length": "244.000000",
+    "remarks": "",
+    "created_at": "2026-11-18T15:14:38.778Z",
+    "updated_at": "2026-11-18T15:14:38.778Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.clothpatch",
+  "pk": 3,
+  "fields": {
+    "loom": 1,
+    "beam": 1,
+    "beam_loading": 1,
+    "patch_number": "patch-set-6-l-01---Bm-01--0003",
+    "cloth_name": 3,
+    "patch_date": "2026-11-21",
+    "bundle_count": 1,
+    "productive_length": "120.000000",
+    "remarks": "",
+    "created_at": "2026-11-21T16:59:52.058Z",
+    "updated_at": "2026-11-21T16:59:52.058Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.clothpatch",
+  "pk": 4,
+  "fields": {
+    "loom": 1,
+    "beam": 1,
+    "beam_loading": 1,
+    "patch_number": "patch-set-6-l-01---Bm-01--0004",
+    "cloth_name": 3,
+    "patch_date": "2026-11-21",
+    "bundle_count": 1,
+    "productive_length": "140.000000",
+    "remarks": "",
+    "created_at": "2026-11-21T17:00:22.340Z",
+    "updated_at": "2026-11-21T17:00:22.340Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.clothstock",
+  "pk": 2,
+  "fields": {
+    "cloth_name": 2,
+    "total_length": "0.000000",
+    "created_at": "2026-11-17T16:45:13.905Z",
+    "updated_at": "2026-11-17T16:45:13.905Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.clothstock",
+  "pk": 3,
+  "fields": {
+    "cloth_name": 3,
+    "total_length": "355.000000",
+    "created_at": "2026-11-17T16:46:21.694Z",
+    "updated_at": "2026-11-18T15:15:20.283Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.cleanclothstock",
+  "pk": 1,
+  "fields": {
+    "cloth_stock": 3,
+    "cloth_patch": 2,
+    "total_length": "244.000000",
+    "stock_date": "2026-11-18",
+    "remarks": "Marked clean from raw stock",
+    "created_at": "2026-11-18T15:15:07.114Z",
+    "updated_at": "2026-11-18T15:15:07.114Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.cleanclothstock",
+  "pk": 2,
+  "fields": {
+    "cloth_stock": 3,
+    "cloth_patch": 1,
+    "total_length": "111.000000",
+    "stock_date": "2026-11-18",
+    "remarks": "Remaining after 12m defect cut",
+    "created_at": "2026-11-18T15:15:19.423Z",
+    "updated_at": "2026-11-18T15:15:19.423Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.defectedclothstock",
+  "pk": 1,
+  "fields": {
+    "cloth_stock": 3,
+    "cloth_patch": 1,
+    "defect_type": "Other",
+    "defect_description": "",
+    "total_length": "12.000000",
+    "stock_date": "2026-11-18",
+    "remarks": "",
+    "created_at": "2026-11-18T15:15:15.692Z",
+    "updated_at": "2026-11-18T15:15:15.692Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.bankaccount",
+  "pk": 1,
+  "fields": {
+    "bank_name": "Ann Chandler",
+    "account_title": "Veritatis rem laboru",
+    "account_number": "724",
+    "iban": "Aliquam quo esse vol",
+    "branch_name": "Justin Riddle",
+    "branch_code": "Quia reprehenderit",
+    "swift_code": "",
+    "account_type": "Other",
+    "currency": "PKR",
+    "opening_balance": "78.00",
+    "opening_date": "1997-02-03",
+    "current_balance": "178.00",
+    "total_credit": "100.00",
+    "total_debit": "0.00",
+    "status": "Frozen",
+    "notes": "Labore eiusmod volup",
+    "created_at": "2026-11-11T22:09:39.582Z",
+    "updated_at": "2026-11-17T09:28:04.548Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.banktransaction",
+  "pk": 1,
+  "fields": {
+    "account": 1,
+    "transaction_type": "Credit",
+    "amount": "100.00",
+    "date": "2026-11-17",
+    "payment_method": "Cheque",
+    "reference_number": "78",
+    "party_name": "yiytityui",
+    "description": "kghkjh",
+    "running_balance": "178.00",
+    "created_at": "2026-11-17T09:28:03.828Z",
+    "updated_at": "2026-11-17T09:28:03.828Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.inventorycategory",
+  "pk": 1,
+  "fields": {
+    "name": "Spare Parts Test",
+    "description": "Mechanical and electrical loom spare parts",
+    "is_active": true,
+    "created_at": "2026-11-14T16:05:20.963Z",
+    "updated_at": "2026-11-14T16:05:20.963Z",
+    "created_by": null
+  }
+},
+{
+  "model": "factory.inventorycategory",
+  "pk": 2,
+  "fields": {
+    "name": "test",
+    "description": "",
+    "is_active": true,
+    "created_at": "2026-11-17T09:15:59.473Z",
+    "updated_at": "2026-11-17T09:15:59.473Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventoryunit",
+  "pk": 1,
+  "fields": {
+    "name": "Piece",
+    "abbreviation": "Pcs",
+    "is_active": true,
+    "created_at": "2026-11-14T16:05:21.893Z"
+  }
+},
+{
+  "model": "factory.inventoryunit",
+  "pk": 2,
+  "fields": {
+    "name": "Kilogram",
+    "abbreviation": "Kg",
+    "is_active": true,
+    "created_at": "2026-11-14T16:05:22.776Z"
+  }
+},
+{
+  "model": "factory.inventoryitem",
+  "pk": 1,
+  "fields": {
+    "item_name": "Rapier Gripper Right Hand Test",
+    "item_code": "INV-0001",
+    "category": 1,
+    "unit": 1,
+    "description": "",
+    "storage_location": "Bin A-12",
+    "opening_stock": "10.0000",
+    "minimum_stock_level": "5.0000",
+    "current_stock": "2.0000",
+    "purchase_price": "1500.00",
+    "preferred_supplier": 1,
+    "status": "Active",
+    "created_at": "2026-11-14T16:05:24.762Z",
+    "updated_at": "2026-11-14T16:05:24.762Z",
+    "created_by": 2,
+    "updated_by": null
+  }
+},
+{
+  "model": "factory.inventoryitem",
+  "pk": 2,
+  "fields": {
+    "item_name": "Fleur Powell",
+    "item_code": "INV-0002",
+    "category": 2,
+    "unit": 1,
+    "description": "Voluptate commodi iu",
+    "storage_location": "Similique nulla labo",
+    "opening_stock": "59.0000",
+    "minimum_stock_level": "85.0000",
+    "current_stock": "59.0000",
+    "purchase_price": "638.00",
+    "preferred_supplier": null,
+    "status": "Active",
+    "created_at": "2026-11-17T09:16:04.933Z",
+    "updated_at": "2026-11-17T09:16:04.933Z",
+    "created_by": 2,
+    "updated_by": 2
+  }
+},
+{
+  "model": "factory.inventoryitem",
+  "pk": 3,
+  "fields": {
+    "item_name": "Rapier Gripper Right Hand Test",
+    "item_code": "INV-0003",
+    "category": 1,
+    "unit": 1,
+    "description": "",
+    "storage_location": "Bin A-12",
+    "opening_stock": "10.0000",
+    "minimum_stock_level": "5.0000",
+    "current_stock": "2.0000",
+    "purchase_price": "1500.00",
+    "preferred_supplier": 1,
+    "status": "Active",
+    "created_at": "2026-11-17T16:51:27.673Z",
+    "updated_at": "2026-11-17T16:51:27.673Z",
+    "created_by": 2,
+    "updated_by": null
+  }
+},
+{
+  "model": "factory.inventoryitem",
+  "pk": 4,
+  "fields": {
+    "item_name": "Rapier Gripper Right Hand Test",
+    "item_code": "INV-0004",
+    "category": 1,
+    "unit": 1,
+    "description": "",
+    "storage_location": "Bin A-12",
+    "opening_stock": "10.0000",
+    "minimum_stock_level": "5.0000",
+    "current_stock": "2.0000",
+    "purchase_price": "1500.00",
+    "preferred_supplier": 1,
+    "status": "Active",
+    "created_at": "2026-11-17T17:32:04.585Z",
+    "updated_at": "2026-11-17T17:32:04.585Z",
+    "created_by": 2,
+    "updated_by": null
+  }
+},
+{
+  "model": "factory.inventoryitem",
+  "pk": 5,
+  "fields": {
+    "item_name": "Rapier Gripper Right Hand Test",
+    "item_code": "INV-0005",
+    "category": 1,
+    "unit": 1,
+    "description": "",
+    "storage_location": "Bin A-12",
+    "opening_stock": "10.0000",
+    "minimum_stock_level": "5.0000",
+    "current_stock": "18.0000",
+    "purchase_price": "1500.00",
+    "preferred_supplier": 1,
+    "status": "Active",
+    "created_at": "2026-11-17T17:33:11.241Z",
+    "updated_at": "2026-11-17T17:33:11.242Z",
+    "created_by": 2,
+    "updated_by": null
+  }
+},
+{
+  "model": "factory.inventorypurchase",
+  "pk": 1,
+  "fields": {
+    "purchase_number": "INVPO-0001",
+    "supplier": 1,
+    "purchase_date": "2026-11-11",
+    "reference_number": "BILL-9901",
+    "notes": "Test delivery of 15 rapier grippers",
+    "total_amount": "0.00",
+    "amount_paid": "0.00",
+    "amount_due": "0.00",
+    "payment_status": "Pending",
+    "status": "Confirmed",
+    "created_at": "2026-11-14T16:05:26.089Z",
+    "updated_at": "2026-11-14T16:05:27.895Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventorypurchase",
+  "pk": 2,
+  "fields": {
+    "purchase_number": "INVPO-0002",
+    "supplier": 1,
+    "purchase_date": "2026-11-11",
+    "reference_number": "BILL-9901",
+    "notes": "Test delivery of 15 rapier grippers",
+    "total_amount": "0.00",
+    "amount_paid": "0.00",
+    "amount_due": "0.00",
+    "payment_status": "Pending",
+    "status": "Confirmed",
+    "created_at": "2026-11-17T16:51:29.413Z",
+    "updated_at": "2026-11-17T16:51:31.768Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventorypurchase",
+  "pk": 3,
+  "fields": {
+    "purchase_number": "INVPO-0003",
+    "supplier": 1,
+    "purchase_date": "2026-11-11",
+    "reference_number": "BILL-9901",
+    "notes": "Test delivery of 15 rapier grippers",
+    "total_amount": "0.00",
+    "amount_paid": "0.00",
+    "amount_due": "0.00",
+    "payment_status": "Pending",
+    "status": "Confirmed",
+    "created_at": "2026-11-17T17:32:06.090Z",
+    "updated_at": "2026-11-17T17:32:08.606Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventorypurchase",
+  "pk": 4,
+  "fields": {
+    "purchase_number": "INVPO-0004",
+    "supplier": 1,
+    "purchase_date": "2026-11-17",
+    "reference_number": "BILL-9901",
+    "notes": "Test delivery of 15 rapier grippers",
+    "total_amount": "0.00",
+    "amount_paid": "0.00",
+    "amount_due": "0.00",
+    "payment_status": "Pending",
+    "status": "Confirmed",
+    "created_at": "2026-11-17T17:33:12.562Z",
+    "updated_at": "2026-11-17T17:33:14.502Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventorypurchaseitem",
+  "pk": 1,
+  "fields": {
+    "purchase": 1,
+    "inventory_item": 1,
+    "quantity": "15.0000",
+    "unit_price": "1450.00",
+    "total_price": "21750.00"
+  }
+},
+{
+  "model": "factory.inventorypurchaseitem",
+  "pk": 2,
+  "fields": {
+    "purchase": 2,
+    "inventory_item": 3,
+    "quantity": "15.0000",
+    "unit_price": "1450.00",
+    "total_price": "21750.00"
+  }
+},
+{
+  "model": "factory.inventorypurchaseitem",
+  "pk": 3,
+  "fields": {
+    "purchase": 3,
+    "inventory_item": 4,
+    "quantity": "15.0000",
+    "unit_price": "1450.00",
+    "total_price": "21750.00"
+  }
+},
+{
+  "model": "factory.inventorypurchaseitem",
+  "pk": 4,
+  "fields": {
+    "purchase": 4,
+    "inventory_item": 5,
+    "quantity": "15.0000",
+    "unit_price": "1450.00",
+    "total_price": "21750.00"
+  }
+},
+{
+  "model": "factory.inventorytransaction",
+  "pk": 1,
+  "fields": {
+    "transaction_number": "INVT-0001",
+    "transaction_date": "2026-11-11",
+    "inventory_item": 1,
+    "transaction_type": "Stock Out",
+    "quantity": "8.0000",
+    "notes": "Replaced worn out right gripper on Loom L-04",
+    "issued_to": "Weaver Master Aslam",
+    "related_area": "Loom Shed #1",
+    "created_at": "2026-11-14T16:05:29.285Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventorytransaction",
+  "pk": 2,
+  "fields": {
+    "transaction_number": "INVT-0002",
+    "transaction_date": "2026-11-11",
+    "inventory_item": 3,
+    "transaction_type": "Stock Out",
+    "quantity": "8.0000",
+    "notes": "Replaced worn out right gripper on Loom L-04",
+    "issued_to": "Weaver Master Aslam",
+    "related_area": "Loom Shed #1",
+    "created_at": "2026-11-17T16:51:33.888Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventorytransaction",
+  "pk": 3,
+  "fields": {
+    "transaction_number": "INVT-0003",
+    "transaction_date": "2026-11-11",
+    "inventory_item": 4,
+    "transaction_type": "Stock Out",
+    "quantity": "8.0000",
+    "notes": "Replaced worn out right gripper on Loom L-04",
+    "issued_to": "Weaver Master Aslam",
+    "related_area": "Loom Shed #1",
+    "created_at": "2026-11-17T17:32:10.158Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventorytransaction",
+  "pk": 4,
+  "fields": {
+    "transaction_number": "INVT-0004",
+    "transaction_date": "2026-11-17",
+    "inventory_item": 5,
+    "transaction_type": "Stock Out",
+    "quantity": "8.0000",
+    "notes": "Replaced worn out right gripper on Loom L-04",
+    "issued_to": "Weaver Master Aslam",
+    "related_area": "Loom Shed #1",
+    "created_at": "2026-11-17T17:33:15.948Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventorytransaction",
+  "pk": 5,
+  "fields": {
+    "transaction_number": "INVT-0005",
+    "transaction_date": "2026-11-17",
+    "inventory_item": 5,
+    "transaction_type": "Stock Out",
+    "quantity": "100.0000",
+    "notes": "",
+    "issued_to": "",
+    "related_area": "",
+    "created_at": "2026-11-17T17:33:18.838Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventorytransaction",
+  "pk": 6,
+  "fields": {
+    "transaction_number": "INVT-0006",
+    "transaction_date": "2026-11-17",
+    "inventory_item": 5,
+    "transaction_type": "Adjustment In",
+    "quantity": "3.0000",
+    "notes": "Physical stock audit found 3 extra unopened units",
+    "issued_to": "",
+    "related_area": "",
+    "created_at": "2026-11-17T17:33:20.205Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventorytransaction",
+  "pk": 7,
+  "fields": {
+    "transaction_number": "INVT-0007",
+    "transaction_date": "2026-11-17",
+    "inventory_item": 5,
+    "transaction_type": "Adjustment Out",
+    "quantity": "2.0000",
+    "notes": "Damaged in shelf drop during audit",
+    "issued_to": "",
+    "related_area": "",
+    "created_at": "2026-11-17T17:33:22.802Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventoryledger",
+  "pk": 1,
+  "fields": {
+    "inventory_item": 1,
+    "transaction_date": "2026-11-14",
+    "transaction_number": "OPEN-INV-0001",
+    "transaction_type": "Opening Stock",
+    "quantity_in": "10.0000",
+    "quantity_out": "0.0000",
+    "running_balance": "10.0000",
+    "unit_price": "1500.00",
+    "total_amount": "15000.00",
+    "amount_paid": "5000.00",
+    "amount_due": "10000.00",
+    "payment_status": "Partially Paid",
+    "reference_id": null,
+    "reference_type": "opening",
+    "supplier": 1,
+    "notes": "Opening stock for Rapier Gripper Right Hand Test",
+    "created_at": "2026-11-14T16:05:24.981Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventoryledger",
+  "pk": 2,
+  "fields": {
+    "inventory_item": 1,
+    "transaction_date": "2026-11-11",
+    "transaction_number": "INVPO-0001-1",
+    "transaction_type": "Stock In",
+    "quantity_in": "15.0000",
+    "quantity_out": "0.0000",
+    "running_balance": "25.0000",
+    "unit_price": "1450.00",
+    "total_amount": "21750.00",
+    "amount_paid": "0.00",
+    "amount_due": "21750.00",
+    "payment_status": "Pending",
+    "reference_id": 1,
+    "reference_type": "purchase",
+    "supplier": 1,
+    "notes": "Purchase INVPO-0001 - BILL-9901",
+    "created_at": "2026-11-14T16:05:27.435Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventoryledger",
+  "pk": 3,
+  "fields": {
+    "inventory_item": 1,
+    "transaction_date": "2026-11-11",
+    "transaction_number": "INVT-0001",
+    "transaction_type": "Stock Out",
+    "quantity_in": "0.0000",
+    "quantity_out": "8.0000",
+    "running_balance": "2.0000",
+    "unit_price": "1500.00",
+    "total_amount": "12000.00",
+    "amount_paid": "0.00",
+    "amount_due": "12000.00",
+    "payment_status": "Pending",
+    "reference_id": 1,
+    "reference_type": "transaction",
+    "supplier": 1,
+    "notes": "Replaced worn out right gripper on Loom L-04",
+    "created_at": "2026-11-14T16:05:30.409Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventoryledger",
+  "pk": 4,
+  "fields": {
+    "inventory_item": 2,
+    "transaction_date": "2026-11-17",
+    "transaction_number": "OPEN-INV-0002",
+    "transaction_type": "Opening Stock",
+    "quantity_in": "59.0000",
+    "quantity_out": "0.0000",
+    "running_balance": "59.0000",
+    "unit_price": "638.00",
+    "total_amount": "37642.00",
+    "amount_paid": "37642.00",
+    "amount_due": "0.00",
+    "payment_status": "Paid",
+    "reference_id": null,
+    "reference_type": "opening",
+    "supplier": null,
+    "notes": "Opening stock for Fleur Powell",
+    "created_at": "2026-11-17T09:16:05.637Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventoryledger",
+  "pk": 5,
+  "fields": {
+    "inventory_item": 3,
+    "transaction_date": "2026-11-17",
+    "transaction_number": "OPEN-INV-0003",
+    "transaction_type": "Opening Stock",
+    "quantity_in": "10.0000",
+    "quantity_out": "0.0000",
+    "running_balance": "10.0000",
+    "unit_price": "1500.00",
+    "total_amount": "15000.00",
+    "amount_paid": "0.00",
+    "amount_due": "15000.00",
+    "payment_status": "Pending",
+    "reference_id": null,
+    "reference_type": "opening",
+    "supplier": 1,
+    "notes": "Opening stock for Rapier Gripper Right Hand Test",
+    "created_at": "2026-11-17T16:51:27.979Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventoryledger",
+  "pk": 6,
+  "fields": {
+    "inventory_item": 3,
+    "transaction_date": "2026-11-11",
+    "transaction_number": "INVPO-0002-2",
+    "transaction_type": "Stock In",
+    "quantity_in": "15.0000",
+    "quantity_out": "0.0000",
+    "running_balance": "25.0000",
+    "unit_price": "1450.00",
+    "total_amount": "21750.00",
+    "amount_paid": "0.00",
+    "amount_due": "21750.00",
+    "payment_status": "Pending",
+    "reference_id": 2,
+    "reference_type": "purchase",
+    "supplier": 1,
+    "notes": "Purchase INVPO-0002 - BILL-9901",
+    "created_at": "2026-11-17T16:51:31.129Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventoryledger",
+  "pk": 7,
+  "fields": {
+    "inventory_item": 3,
+    "transaction_date": "2026-11-11",
+    "transaction_number": "INVT-0002",
+    "transaction_type": "Stock Out",
+    "quantity_in": "0.0000",
+    "quantity_out": "8.0000",
+    "running_balance": "2.0000",
+    "unit_price": "1500.00",
+    "total_amount": "12000.00",
+    "amount_paid": "0.00",
+    "amount_due": "12000.00",
+    "payment_status": "Pending",
+    "reference_id": 2,
+    "reference_type": "transaction",
+    "supplier": 1,
+    "notes": "Replaced worn out right gripper on Loom L-04",
+    "created_at": "2026-11-17T16:51:35.148Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventoryledger",
+  "pk": 8,
+  "fields": {
+    "inventory_item": 4,
+    "transaction_date": "2026-11-17",
+    "transaction_number": "OPEN-INV-0004",
+    "transaction_type": "Opening Stock",
+    "quantity_in": "10.0000",
+    "quantity_out": "0.0000",
+    "running_balance": "10.0000",
+    "unit_price": "1500.00",
+    "total_amount": "15000.00",
+    "amount_paid": "0.00",
+    "amount_due": "15000.00",
+    "payment_status": "Pending",
+    "reference_id": null,
+    "reference_type": "opening",
+    "supplier": 1,
+    "notes": "Opening stock for Rapier Gripper Right Hand Test",
+    "created_at": "2026-11-17T17:32:04.830Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventoryledger",
+  "pk": 9,
+  "fields": {
+    "inventory_item": 4,
+    "transaction_date": "2026-11-11",
+    "transaction_number": "INVPO-0003-3",
+    "transaction_type": "Stock In",
+    "quantity_in": "15.0000",
+    "quantity_out": "0.0000",
+    "running_balance": "25.0000",
+    "unit_price": "1450.00",
+    "total_amount": "21750.00",
+    "amount_paid": "0.00",
+    "amount_due": "21750.00",
+    "payment_status": "Pending",
+    "reference_id": 3,
+    "reference_type": "purchase",
+    "supplier": 1,
+    "notes": "Purchase INVPO-0003 - BILL-9901",
+    "created_at": "2026-11-17T17:32:08.139Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventoryledger",
+  "pk": 10,
+  "fields": {
+    "inventory_item": 4,
+    "transaction_date": "2026-11-11",
+    "transaction_number": "INVT-0003",
+    "transaction_type": "Stock Out",
+    "quantity_in": "0.0000",
+    "quantity_out": "8.0000",
+    "running_balance": "2.0000",
+    "unit_price": "1500.00",
+    "total_amount": "12000.00",
+    "amount_paid": "0.00",
+    "amount_due": "12000.00",
+    "payment_status": "Pending",
+    "reference_id": 3,
+    "reference_type": "transaction",
+    "supplier": 1,
+    "notes": "Replaced worn out right gripper on Loom L-04",
+    "created_at": "2026-11-17T17:32:11.620Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventoryledger",
+  "pk": 11,
+  "fields": {
+    "inventory_item": 5,
+    "transaction_date": "2026-11-17",
+    "transaction_number": "OPEN-INV-0005",
+    "transaction_type": "Opening Stock",
+    "quantity_in": "10.0000",
+    "quantity_out": "0.0000",
+    "running_balance": "10.0000",
+    "unit_price": "1500.00",
+    "total_amount": "15000.00",
+    "amount_paid": "0.00",
+    "amount_due": "15000.00",
+    "payment_status": "Pending",
+    "reference_id": null,
+    "reference_type": "opening",
+    "supplier": 1,
+    "notes": "Opening stock for Rapier Gripper Right Hand Test",
+    "created_at": "2026-11-17T17:33:11.459Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventoryledger",
+  "pk": 12,
+  "fields": {
+    "inventory_item": 5,
+    "transaction_date": "2026-11-17",
+    "transaction_number": "INVPO-0004-4",
+    "transaction_type": "Stock In",
+    "quantity_in": "15.0000",
+    "quantity_out": "0.0000",
+    "running_balance": "25.0000",
+    "unit_price": "1450.00",
+    "total_amount": "21750.00",
+    "amount_paid": "0.00",
+    "amount_due": "21750.00",
+    "payment_status": "Pending",
+    "reference_id": 4,
+    "reference_type": "purchase",
+    "supplier": 1,
+    "notes": "Purchase INVPO-0004 - BILL-9901",
+    "created_at": "2026-11-17T17:33:13.947Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventoryledger",
+  "pk": 13,
+  "fields": {
+    "inventory_item": 5,
+    "transaction_date": "2026-11-17",
+    "transaction_number": "INVT-0004",
+    "transaction_type": "Stock Out",
+    "quantity_in": "0.0000",
+    "quantity_out": "8.0000",
+    "running_balance": "17.0000",
+    "unit_price": "1500.00",
+    "total_amount": "12000.00",
+    "amount_paid": "0.00",
+    "amount_due": "12000.00",
+    "payment_status": "Pending",
+    "reference_id": 4,
+    "reference_type": "transaction",
+    "supplier": 1,
+    "notes": "Replaced worn out right gripper on Loom L-04",
+    "created_at": "2026-11-17T17:33:17.464Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventoryledger",
+  "pk": 14,
+  "fields": {
+    "inventory_item": 5,
+    "transaction_date": "2026-11-17",
+    "transaction_number": "INVT-0006",
+    "transaction_type": "Adjustment In",
+    "quantity_in": "3.0000",
+    "quantity_out": "0.0000",
+    "running_balance": "20.0000",
+    "unit_price": "1500.00",
+    "total_amount": "4500.00",
+    "amount_paid": "0.00",
+    "amount_due": "4500.00",
+    "payment_status": "Pending",
+    "reference_id": 6,
+    "reference_type": "transaction",
+    "supplier": 1,
+    "notes": "Physical stock audit found 3 extra unopened units",
+    "created_at": "2026-11-17T17:33:21.303Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventoryledger",
+  "pk": 15,
+  "fields": {
+    "inventory_item": 5,
+    "transaction_date": "2026-11-17",
+    "transaction_number": "INVT-0007",
+    "transaction_type": "Adjustment Out",
+    "quantity_in": "0.0000",
+    "quantity_out": "2.0000",
+    "running_balance": "18.0000",
+    "unit_price": "1500.00",
+    "total_amount": "3000.00",
+    "amount_paid": "0.00",
+    "amount_due": "3000.00",
+    "payment_status": "Pending",
+    "reference_id": 7,
+    "reference_type": "transaction",
+    "supplier": 1,
+    "notes": "Damaged in shelf drop during audit",
+    "created_at": "2026-11-17T17:33:24.204Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventorypayment",
+  "pk": 1,
+  "fields": {
+    "ledger_entry": 4,
+    "purchase": null,
+    "supplier": null,
+    "bank_account": null,
+    "bank_transaction": null,
+    "amount": "37642.00",
+    "payment_date": "2026-11-17",
+    "payment_method": "Cash",
+    "reference_number": "",
+    "notes": "",
+    "created_at": "2026-11-17T09:18:05.842Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.inventorypayment",
+  "pk": 2,
+  "fields": {
+    "ledger_entry": 1,
+    "purchase": null,
+    "supplier": 1,
+    "bank_account": null,
+    "bank_transaction": null,
+    "amount": "5000.00",
+    "payment_date": "2026-11-17",
+    "payment_method": "Cash",
+    "reference_number": "",
+    "notes": "",
+    "created_at": "2026-11-17T09:18:25.257Z",
+    "created_by": 2
+  }
+},
+{
+  "model": "factory.worker",
+  "pk": 4,
+  "fields": {
+    "worker_code": "WRK-0001",
+    "name": "sdf",
+    "cnic": "234234234234",
+    "phone": "234234234",
+    "photo": "",
+    "loom_type": "Manual Loom",
+    "daily_wage_rate": "0.00",
+    "per_meter_rate": "23.00",
+    "preferred_payment_cycle": "15 Days",
+    "designation": "Manual Loom Weaver",
+    "status": "Active",
+    "joining_date": "2026-11-12",
+    "address": "",
+    "emergency_contact": "",
+    "total_earned_amount": "0.00",
+    "total_advance_amount": "0.00",
+    "total_paid_amount": "0.00",
+    "current_balance": "0.00",
+    "created_by": 2,
+    "created_at": "2026-11-11T20:01:22.501Z",
+    "updated_at": "2026-11-11T20:01:22.501Z"
+  }
+},
+{
+  "model": "factory.worker",
+  "pk": 5,
+  "fields": {
+    "worker_code": "WRK-0005",
+    "name": "sdf",
+    "cnic": "234234234234",
+    "phone": "234234234",
+    "photo": "",
+    "loom_type": "Manual Loom",
+    "daily_wage_rate": "0.00",
+    "per_meter_rate": "23.00",
+    "preferred_payment_cycle": "15 Days",
+    "designation": "Manual Loom Weaver",
+    "status": "Active",
+    "joining_date": "2026-11-12",
+    "address": "",
+    "emergency_contact": "",
+    "total_earned_amount": "0.00",
+    "total_advance_amount": "0.00",
+    "total_paid_amount": "0.00",
+    "current_balance": "0.00",
+    "created_by": 2,
+    "created_at": "2026-11-11T20:01:33.986Z",
+    "updated_at": "2026-11-11T20:01:33.986Z"
+  }
+},
+{
+  "model": "factory.worker",
+  "pk": 7,
+  "fields": {
+    "worker_code": "WRK-0006",
+    "name": "asdasd",
+    "cnic": "",
+    "phone": "234234",
+    "photo": "",
+    "loom_type": "Manual Loom",
+    "daily_wage_rate": "0.00",
+    "per_meter_rate": "23.00",
+    "preferred_payment_cycle": "15 Days",
+    "designation": "Manual Loom Weaver",
+    "status": "Active",
+    "joining_date": "2026-11-12",
+    "address": "",
+    "emergency_contact": "",
+    "total_earned_amount": "0.00",
+    "total_advance_amount": "0.00",
+    "total_paid_amount": "0.00",
+    "current_balance": "0.00",
+    "created_by": 2,
+    "created_at": "2026-11-11T20:08:58.859Z",
+    "updated_at": "2026-11-11T20:08:58.859Z"
+  }
+},
+{
+  "model": "factory.worker",
+  "pk": 14,
+  "fields": {
+    "worker_code": "WRK-0008",
+    "name": "dgdfg",
+    "cnic": "",
+    "phone": "",
+    "photo": "",
+    "loom_type": "Manual Loom",
+    "daily_wage_rate": "1000.00",
+    "per_meter_rate": "20.00",
+    "preferred_payment_cycle": "15 Days",
+    "designation": "Manual Loom Weaver",
+    "status": "Active",
+    "joining_date": "2026-11-04",
+    "address": "",
+    "emergency_contact": "",
+    "total_earned_amount": "100000.00",
+    "total_advance_amount": "0.00",
+    "total_paid_amount": "0.00",
+    "current_balance": "100000.00",
+    "created_by": 2,
+    "created_at": "2026-11-17T09:21:09.721Z",
+    "updated_at": "2026-11-17T09:21:09.721Z"
+  }
+},
+{
+  "model": "factory.powerloomsalaryperiod",
+  "pk": 7,
+  "fields": {
+    "calculation_number": "SAL-0001",
+    "worker": 14,
+    "worker_name": "dgdfg",
+    "loom_type": "Manual Loom",
+    "daily_wage_rate": "1000.00",
+    "per_meter_rate": "20.00",
+    "total_meters_produced": "5000.00",
+    "start_date": "2026-11-17",
+    "end_date": "2026-11-17",
+    "payment_cycle": "15 Days",
+    "total_working_days": "0.00",
+    "present_days": "0.00",
+    "half_days": "0.00",
+    "absent_days": "0.00",
+    "leave_days": "0.00",
+    "base_earned_salary": "100000.00",
+    "overtime_amount": "0.00",
+    "other_earnings": "0.00",
+    "total_earned_salary": "100000.00",
+    "advance_payments": "0.00",
+    "other_deductions": "0.00",
+    "total_paid_amount": "0.00",
+    "net_payable_balance": "100000.00",
+    "payment_status": "Unpaid",
+    "notes": "",
+    "created_by": 2,
+    "created_at": "2026-11-17T09:21:52.113Z",
+    "updated_at": "2026-11-17T09:21:52.113Z"
+  }
+},
+{
+  "model": "factory.workersalaryledger",
+  "pk": 24,
+  "fields": {
+    "entry_number": "WSL-0001",
+    "worker": 14,
+    "worker_name": "dgdfg",
+    "date": "2026-11-17",
+    "entry_type": "Fabric Production",
+    "daily_wage_rate": "0.00",
+    "per_meter_rate": "20.00",
+    "meters_produced": "5000.00",
+    "attendance_status": "",
+    "daily_earned_amount": "100000.00",
+    "advance_amount": "0.00",
+    "payment_amount": "0.00",
+    "deduction_amount": "0.00",
+    "running_balance": "100000.00",
+    "payment_cycle": "15 Days",
+    "payment_status": "",
+    "reference_id": "SAL-0001",
+    "description": "Fabric Production: 5000.0m @ Rs. 20.00/m (SAL-0001)",
+    "salary_period": 7,
+    "attendance_record": null,
+    "advance_record": null,
+    "payment_record": null,
+    "created_by": 2,
+    "created_at": "2026-11-17T09:21:52.586Z"
+  }
+}
+]
