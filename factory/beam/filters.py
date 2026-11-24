@@ -33,6 +33,14 @@ class BeamFilter(django_filters.FilterSet):
         field_name="dispatched_yarn_outcome_id"
     )
 
+    sizing = django_filters.NumberFilter(
+        field_name="sizing_id"
+    )
+
+    warping = django_filters.NumberFilter(
+        field_name="warping_id"
+    )
+
     production_order = django_filters.CharFilter(
         field_name="production_order",
         lookup_expr="icontains"

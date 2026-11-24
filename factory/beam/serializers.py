@@ -86,6 +86,8 @@ class BeamListSerializer(serializers.ModelSerializer):
     )
     ratePerLb = serializers.SerializerMethodField()
     rate_per_lb = serializers.SerializerMethodField()
+    sizingName = serializers.CharField(source="sizing.sizing_name", read_only=True, default="")
+    warpingName = serializers.CharField(source="warping.warping_name", read_only=True, default="")
     createdAt = serializers.DateTimeField(source="created_at", read_only=True)
     updatedAt = serializers.DateTimeField(source="updated_at", read_only=True)
     createdBy = serializers.SerializerMethodField()
@@ -106,6 +108,10 @@ class BeamListSerializer(serializers.ModelSerializer):
             "productionOrder",
             "ratePerLb",
             "rate_per_lb",
+            "sizing",
+            "sizingName",
+            "warping",
+            "warpingName",
             "status",
             "createdBy",
             "updatedBy",
@@ -170,6 +176,8 @@ class BeamDetailSerializer(serializers.ModelSerializer):
     )
     ratePerLb = serializers.SerializerMethodField()
     rate_per_lb = serializers.SerializerMethodField()
+    sizingName = serializers.CharField(source="sizing.sizing_name", read_only=True, default="")
+    warpingName = serializers.CharField(source="warping.warping_name", read_only=True, default="")
     createdAt = serializers.DateTimeField(source="created_at", read_only=True)
     updatedAt = serializers.DateTimeField(source="updated_at", read_only=True)
     createdBy = serializers.SerializerMethodField()
@@ -190,6 +198,10 @@ class BeamDetailSerializer(serializers.ModelSerializer):
             "productionOrder",
             "ratePerLb",
             "rate_per_lb",
+            "sizing",
+            "sizingName",
+            "warping",
+            "warpingName",
             "status",
             "notes",
             "createdBy",

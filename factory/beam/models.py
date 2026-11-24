@@ -120,6 +120,24 @@ class Beam(models.Model):
         help_text="Yarn outcome (sizing dispatch) this beam is currently out at sizing for"
     )
 
+    sizing = models.ForeignKey(
+        "factory.Sizing",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="beams",
+        help_text="Sizing unit this beam is currently sent to"
+    )
+
+    warping = models.ForeignKey(
+        "factory.Warping",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="beams",
+        help_text="Warping unit this beam is currently sent to"
+    )
+
     class Meta:
         ordering = ["beam_number"]
         verbose_name = "Beam"
