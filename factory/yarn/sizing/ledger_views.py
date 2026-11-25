@@ -50,7 +50,7 @@ from .ledger_serializers import (
 
 class SizingLedgerViewSet(ViewSet):
     permission_classes = [IsAuthenticated, HasERPModulePermission]
-    permission_map = {"GET": "sizing.view"}
+    permission_map = {"GET": "sizing.view", "POST": "sizing.change"}
 
     # ── helpers ────────────────────────────────────────────────────────────
 
@@ -356,3 +356,124 @@ class SizingLedgerViewSet(ViewSet):
         for item in sizing_items:
             writer.writerow([csv_value(item.get(key)) for _header, key in MAIN_CSV_COLUMNS])
         return response
+
+    @action(detail=True, methods=["post"], url_path="pay-payables")
+    def pay_payables(self, request, pk=None):
+        """
+        Pay combined sizing payables for a sizing facility (allocated FIFO across
+        unpaid/partially-paid SizingOutcome records) and deduct the paid amount
+        from the selected BankAccount if provided.
+        """
+        from decimal import Decimal, InvalidOperation
+        from django.db import transaction
+        from django.utils import timezone
+        from factory.yarn.sizing.models import SizingOutcome
+        from factory.bank_account.models import BankAccount, BankTransaction
+
+        sizing = get_object_or_404(Sizing, pk=pk)
+        raw_amount = request.data.get("amount") or request.data.get("paymentAmount") or request.data.get("payment_amount")
+        try:
+            pay_amount = Decimal(str(raw_amount))
+        except (InvalidOperation, TypeError, ValueError):
+            raise ValidationError({"amount": "Enter a valid numeric payment amount."})
+
+        if pay_amount <= Decimal("0"):
+            raise ValidationError({"amount": "Payment amount must be greater than 0."})
+
+        bank_id = (
+            request.data.get("bank_account")
+            or request.data.get("bankAccountId")
+            or request.data.get("bank_account_id")
+        )
+        payment_method = (
+            request.data.get("payment_method")
+            or request.data.get("paymentMethod")
+            or BankTransaction.PaymentMethod.ONLINE_TRANSFER
+        )
+        reference_number = (
+            request.data.get("reference_number")
+            or request.data.get("referenceNumber")
+            or ""
+        )
+        notes = (request.data.get("notes") or "").strip()
+        raw_date = request.data.get("date") or request.data.get("payment_date") or request.data.get("paymentDate")
+        pay_date = parse_date(str(raw_date)) if raw_date else timezone.localdate()
+        if not pay_date:
+            pay_date = timezone.localdate()
+
+        with transaction.atomic():
+            unpaid_qs = (
+                SizingOutcome.objects.select_for_update()
+                .filter(yarn_outcome__sizing=sizing, amount_due__gt=Decimal("0"))
+                .order_by("outcome_date", "id")
+            )
+            unpaid_list = list(unpaid_qs)
+            total_due = sum((Decimal(str(so.amount_due or 0)) for so in unpaid_list), Decimal("0"))
+
+            if total_due <= Decimal("0"):
+                raise ValidationError({"amount": "No outstanding payables due for this sizing facility."})
+
+            if pay_amount > total_due:
+                raise ValidationError({
+                    "amount": f"Payment amount ({pay_amount}) cannot exceed total payables due ({total_due})."
+                })
+
+            bank_obj = None
+            if bank_id not in (None, ""):
+                try:
+                    bank_obj = BankAccount.objects.select_for_update().get(pk=int(bank_id))
+                except (BankAccount.DoesNotExist, ValueError, TypeError):
+                    raise ValidationError({"bankAccountId": "Selected bank account does not exist."})
+
+                if bank_obj.current_balance < pay_amount:
+                    raise ValidationError({
+                        "bankAccountId": f"Insufficient balance in {bank_obj.bank_name} ({bank_obj.account_title}). Available: Rs {bank_obj.current_balance}."
+                    })
+
+            remaining_to_apply = pay_amount
+            settled_sets = []
+            for so in unpaid_list:
+                if remaining_to_apply <= Decimal("0"):
+                    break
+                so_due = Decimal(str(so.amount_due or 0))
+                if so_due <= Decimal("0"):
+                    continue
+                applied = min(so_due, remaining_to_apply)
+                so.amount_paid = (Decimal(str(so.amount_paid or 0)) + applied).quantize(Decimal("0.000001"))
+                so.save()
+                remaining_to_apply -= applied
+                settled_sets.append(so.set_no or f"SET-{so.id}")
+
+            bank_balance = None
+            if bank_obj is not None:
+                user = request.user if request.user and request.user.is_authenticated else None
+                desc = notes or f"Sizing payables payment to {sizing.sizing_name}"
+                if settled_sets:
+                    desc = f"{desc} (Sets: {', '.join(settled_sets)})"
+                valid_methods = {c[0] for c in BankTransaction.PaymentMethod.choices}
+                method_val = payment_method if payment_method in valid_methods else BankTransaction.PaymentMethod.OTHER
+                BankTransaction.objects.create(
+                    account=bank_obj,
+                    transaction_type=BankTransaction.TransactionType.DEBIT,
+                    amount=pay_amount.quantize(Decimal("0.01")),
+                    date=pay_date,
+                    payment_method=method_val,
+                    reference_number=str(reference_number).strip(),
+                    party_name=sizing.sizing_name,
+                    description=desc,
+                    created_by=user,
+                    updated_by=user,
+                )
+                bank_obj.refresh_from_db()
+                bank_balance = str(bank_obj.current_balance)
+
+            new_remaining = (total_due - pay_amount).quantize(Decimal("0.000001"))
+
+        return Response({
+            "success": True,
+            "message": f"Paid Rs {pay_amount} to {sizing.sizing_name}.",
+            "amountPaid": str(pay_amount),
+            "remainingPayables": str(new_remaining),
+            "bankBalance": bank_balance,
+            "settledSets": settled_sets,
+        })
