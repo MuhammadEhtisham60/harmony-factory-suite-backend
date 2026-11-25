@@ -362,6 +362,7 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
     )
     outcomeDate = serializers.DateField(source="outcome_date")
     notes = serializers.CharField(required=False, allow_blank=True, default="")
+    receipt = serializers.FileField(required=False, allow_null=True)
 
     # ── Multi-intake breakdown ────────────────────────────────────────────
     intakes = YarnOutcomeItemSerializer(source="items", many=True, read_only=True)
@@ -510,6 +511,7 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
             "isPartiallyReceived",
             "outcomeDate",
             "notes",
+            "receipt",
             "beamIds",
             "beamId",
             "beam",
@@ -812,13 +814,48 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
 
     # ── Validation ────────────────────────────────────────────────────────
 
+    def to_internal_value(self, data):
+        import json as _json
+        if hasattr(data, "getlist"):
+            plain = {}
+            for k in data.keys():
+                vals = data.getlist(k)
+                plain[k] = vals[-1] if len(vals) == 1 else vals
+            data = plain
+        else:
+            data = data.copy() if hasattr(data, "copy") else dict(data)
+        for json_key in (
+            "intakes",
+            "items",
+            "bGradeItems",
+            "b_grade_items",
+            "beamIds",
+            "beam_ids",
+            "mergedFromSizingOutcomeIds",
+            "merged_from_sizing_outcome_ids",
+        ):
+            if json_key in data and isinstance(data[json_key], str):
+                raw_str = data[json_key].strip()
+                if raw_str:
+                    try:
+                        data[json_key] = _json.loads(raw_str)
+                    except (ValueError, TypeError):
+                        pass
+                else:
+                    data.pop(json_key, None)
+        # Keep parsed JSON available on initial_data for validate()
+        if hasattr(self, "initial_data") and isinstance(self.initial_data, dict):
+            self._parsed_multipart_data = data
+        return super().to_internal_value(data)
+
     def validate(self, attrs):
+        raw_input = getattr(self, "_parsed_multipart_data", None) or self.initial_data
         # ── Parse B-grade items if provided ─────────────────────────────────
         raw_bg_items = (
-            self.initial_data.get("bGradeItems")
-            or self.initial_data.get("b_grade_items")
-            or self.initial_data.get("bGradeBatches")
-            or self.initial_data.get("b_grade_batches")
+            raw_input.get("bGradeItems")
+            or raw_input.get("b_grade_items")
+            or raw_input.get("bGradeBatches")
+            or raw_input.get("b_grade_batches")
         )
         parsed_bg_items = []
         if raw_bg_items is not None:
@@ -901,10 +938,10 @@ class YarnOutcomeSerializer(serializers.ModelSerializer):
         attrs["_parsed_bg_items"] = parsed_bg_items
 
         raw_items = (
-            self.initial_data.get("intakes")
-            or self.initial_data.get("items")
-            or self.initial_data.get("yarn_intakes")
-            or self.initial_data.get("yarnIntakes")
+            raw_input.get("intakes")
+            or raw_input.get("items")
+            or raw_input.get("yarn_intakes")
+            or raw_input.get("yarnIntakes")
         )
 
         parsed_items = []

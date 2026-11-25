@@ -559,6 +559,13 @@ class YarnOutcome(models.Model):
 
     notes = models.TextField(blank=True, default="")
 
+    receipt = models.FileField(
+        upload_to="yarn_outcome_receipts/",
+        null=True,
+        blank=True,
+        help_text="Optional dispatch receipt photo or PDF"
+    )
+
     # ── Merged Sizing Mill Stock ──────────────────────────────────────────
     merged_sizing_bags = models.PositiveIntegerField(
         default=0,

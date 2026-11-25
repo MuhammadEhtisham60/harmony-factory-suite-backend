@@ -34,6 +34,12 @@ class InventoryPurchase(models.Model):
     purchase_date = models.DateField()
     reference_number = models.CharField(max_length=100, blank=True, default="")
     notes = models.TextField(blank=True, default="")
+    receipt = models.FileField(
+        upload_to="inventory_purchase_receipts/",
+        null=True,
+        blank=True,
+        help_text="Optional purchase receipt / invoice file",
+    )
     total_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     amount_paid = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     amount_due = models.DecimalField(max_digits=15, decimal_places=2, default=0)

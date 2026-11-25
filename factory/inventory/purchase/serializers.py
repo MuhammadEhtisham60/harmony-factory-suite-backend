@@ -42,7 +42,24 @@ class InventoryPurchaseItemSerializer(serializers.ModelSerializer):
         }
 
     def to_internal_value(self, data):
-        data = data.copy() if hasattr(data, "copy") else dict(data)
+        import json as _json
+        if hasattr(data, "getlist"):
+            plain = {}
+            for k in data.keys():
+                vals = data.getlist(k)
+                plain[k] = vals[-1] if len(vals) == 1 else vals
+            data = plain
+        else:
+            data = data.copy() if hasattr(data, "copy") else dict(data)
+        if "items" in data and isinstance(data["items"], str):
+            raw_items = data["items"].strip()
+            if raw_items:
+                try:
+                    data["items"] = _json.loads(raw_items)
+                except (ValueError, TypeError):
+                    pass
+            else:
+                data.pop("items", None)
         mapping = {
             "inventory_item": "inventoryItemId",
             "inventory_item_id": "inventoryItemId",
@@ -77,6 +94,7 @@ class InventoryPurchaseSerializer(serializers.ModelSerializer):
     referenceNumber = serializers.CharField(
         source="reference_number", required=False, allow_blank=True
     )
+    receipt = serializers.FileField(required=False, allow_null=True)
     totalAmount = serializers.DecimalField(
         source="total_amount", max_digits=15, decimal_places=2, required=False
     )
@@ -104,6 +122,7 @@ class InventoryPurchaseSerializer(serializers.ModelSerializer):
             "purchaseDate",
             "referenceNumber",
             "notes",
+            "receipt",
             "totalAmount",
             "amountPaid",
             "amountDue",
@@ -119,7 +138,24 @@ class InventoryPurchaseSerializer(serializers.ModelSerializer):
         ]
 
     def to_internal_value(self, data):
-        data = data.copy() if hasattr(data, "copy") else dict(data)
+        import json as _json
+        if hasattr(data, "getlist"):
+            plain = {}
+            for k in data.keys():
+                vals = data.getlist(k)
+                plain[k] = vals[-1] if len(vals) == 1 else vals
+            data = plain
+        else:
+            data = data.copy() if hasattr(data, "copy") else dict(data)
+        if "items" in data and isinstance(data["items"], str):
+            raw_items = data["items"].strip()
+            if raw_items:
+                try:
+                    data["items"] = _json.loads(raw_items)
+                except (ValueError, TypeError):
+                    pass
+            else:
+                data.pop("items", None)
         mapping = {
             "supplier": "supplierId",
             "supplier_id": "supplierId",
