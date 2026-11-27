@@ -3,6 +3,10 @@ Views for the Customer module – full CRUD via ModelViewSet.
 Bank accounts are handled inline through the serializer.
 """
 
+from decimal import Decimal
+
+from django.db.models.deletion import ProtectedError
+
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -170,11 +174,73 @@ class CustomerViewSet(ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
+
+        # 1. Only Inactive customers can be deleted
+        if instance.status != Customer.StatusChoices.INACTIVE:
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Only Inactive customers can be deleted. "
+                        f"'{instance.customer_name}' is currently '{instance.status}'. "
+                        f"Please mark the customer as Inactive first."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 2. Check Customer Cloth Ledger receivables / payables
+        from factory.sales.customer_ledger.ledger import (
+            build_customer_cloth_ledger,
+            exact_str,
+        )
+
+        customer_ledger = build_customer_cloth_ledger(instance)
+        ledger_balance = (
+            customer_ledger["summary"].get("total_receivables") or Decimal("0")
+        )
+        if ledger_balance > Decimal("0"):
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Cannot delete '{instance.customer_name}': "
+                        f"uncleared ledger receivables of PKR {exact_str(ledger_balance)} remain. "
+                        f"Please clear all receivables before deleting."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if ledger_balance < Decimal("0"):
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Cannot delete '{instance.customer_name}': "
+                        f"uncleared ledger payables/credit of PKR {exact_str(abs(ledger_balance))} remain. "
+                        f"Please settle all payables before deleting."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         customer_code = instance.customer_code
         customer_name = instance.customer_name
         bank_count = instance.bank_accounts.count()
-        # CASCADE on FK deletes bank accounts automatically
-        instance.delete()
+        try:
+            # CASCADE on FK deletes bank accounts automatically
+            instance.delete()
+        except ProtectedError:
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Cannot delete '{customer_name}' because it has linked "
+                        f"transaction history (e.g., cloth sales or payments)."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         log_activity(
             request=request,

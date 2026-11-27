@@ -3,6 +3,11 @@ Views for the Supplier module – full CRUD via ModelViewSet.
 Bank accounts are handled inline through the serializer.
 """
 
+from decimal import Decimal
+
+from django.db.models import Sum
+from django.db.models.deletion import ProtectedError
+
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -164,11 +169,91 @@ class SupplierViewSet(ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
+
+        # 1. Only Inactive suppliers can be deleted
+        if instance.status != Supplier.StatusChoices.INACTIVE:
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Only Inactive suppliers can be deleted. "
+                        f"'{instance.supplier_name}' is currently '{instance.status}'. "
+                        f"Please mark the supplier as Inactive first."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 2. Check Yarn Supplier Ledger payables / receivables
+        from factory.yarn.supplier_ledger.ledger import build_yarn_supplier_ledger, exact_str
+
+        yarn_ledger = build_yarn_supplier_ledger(instance)
+        yarn_balance = yarn_ledger["summary"].get("total_payables") or Decimal("0")
+        if yarn_balance > Decimal("0"):
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Cannot delete '{instance.supplier_name}': "
+                        f"uncleared ledger payables of PKR {exact_str(yarn_balance)} remain. "
+                        f"Please clear all payables before deleting."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if yarn_balance < Decimal("0"):
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Cannot delete '{instance.supplier_name}': "
+                        f"uncleared ledger receivables/advance of PKR {exact_str(abs(yarn_balance))} remain. "
+                        f"Please settle all receivables before deleting."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 3. Check Inventory Purchases & Inventory Ledger dues
+        inv_purchase_due = (
+            instance.inventory_purchases.aggregate(total=Sum("amount_due")).get("total")
+            or Decimal("0")
+        )
+        inv_ledger_due = (
+            instance.inventory_ledger_entries.aggregate(total=Sum("amount_due")).get("total")
+            or Decimal("0")
+        )
+        if inv_purchase_due != Decimal("0") or inv_ledger_due != Decimal("0"):
+            due_val = inv_purchase_due if inv_purchase_due != Decimal("0") else inv_ledger_due
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Cannot delete '{instance.supplier_name}': "
+                        f"uncleared inventory ledger balance of PKR {exact_str(abs(due_val))} remains. "
+                        f"Please clear all payables and receivables before deleting."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         supplier_code = instance.supplier_code
         supplier_name = instance.supplier_name
         bank_count = instance.bank_accounts.count()
-        # CASCADE on FK deletes bank accounts automatically
-        instance.delete()
+        try:
+            # CASCADE on FK deletes bank accounts automatically
+            instance.delete()
+        except ProtectedError:
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Cannot delete '{supplier_name}' because it has linked "
+                        f"transaction history (e.g., yarn intakes or inventory purchases)."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         log_activity(
             request=request,

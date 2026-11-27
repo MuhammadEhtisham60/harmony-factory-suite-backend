@@ -15,7 +15,10 @@ from accounts.pagination import StandardResultsSetPagination
 from accounts.permissions import HasERPModulePermission
 from audit_logs.utils import log_activity
 
+from decimal import Decimal
+
 from django.db import models
+from django.db.models.deletion import ProtectedError
 from rest_framework.exceptions import PermissionDenied
 
 from factory.yarn.sizing.models import SizingOutcome
@@ -114,7 +117,103 @@ class WarpingViewSet(ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         name = instance.warping_name
-        instance.delete()
+
+        # 1. Only Inactive warping units can be deleted
+        if instance.status != "Inactive":
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Only Inactive warping units can be deleted. "
+                        f"'{name}' is currently '{instance.status}'. "
+                        f"Please mark the warping unit as Inactive first."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 2. Check if any active/unreturned yarn sets or beams are currently at this warping unit
+        from factory.yarn.yarn_outcome.models import YarnOutcome
+        from factory.beam.models import Beam
+        from .ledger import get_individual_warping_ledger_summary, exact_str
+
+        active_sets_count = (
+            YarnOutcome.objects.filter(warping=instance)
+            .exclude(status__in=["Completed", "Returned"])
+            .count()
+        )
+        if active_sets_count > 0:
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Cannot delete '{name}': {active_sets_count} active/pending "
+                        f"yarn set(s) are currently sent to this warping unit."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        assigned_beams_count = Beam.objects.filter(
+            warping=instance, status="Warping"
+        ).count()
+        if assigned_beams_count > 0:
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Cannot delete '{name}': {assigned_beams_count} beam(s) "
+                        f"are currently assigned at this warping unit."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 3. Check Warping Ledger (payables/receivables and yarn balance at warping)
+        summary = get_individual_warping_ledger_summary(instance.id)
+        payables = summary.get("total_payables") or Decimal("0")
+        if payables != Decimal("0"):
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Cannot delete '{name}': uncleared ledger balance of "
+                        f"PKR {exact_str(abs(payables))} remains. "
+                        f"Please clear the ledger before deleting."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        bal_bags = summary.get("balance_bags") or Decimal("0")
+        bal_cones = summary.get("balance_cones") or Decimal("0")
+        bal_kg = summary.get("balance_weight_kg") or Decimal("0")
+        if bal_bags != Decimal("0") or bal_cones != Decimal("0") or bal_kg != Decimal("0"):
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Cannot delete '{name}': yarn balance still remains at this "
+                        f"warping unit ({exact_str(bal_bags)} bags, {exact_str(bal_cones)} cones, "
+                        f"{exact_str(bal_kg)} kg). Please settle all yarn stock first."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            instance.delete()
+        except ProtectedError:
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Cannot delete '{name}' because it has linked "
+                        f"warping transaction history."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         log_activity(
             request=request,

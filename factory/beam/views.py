@@ -2,6 +2,8 @@
 Views for the Beam module – full CRUD via ModelViewSet.
 """
 
+from django.db.models.deletion import ProtectedError
+
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -174,7 +176,34 @@ class BeamViewSet(ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         beam_number = instance.beam_number
-        instance.delete()
+
+        # Only Inactive beams can be deleted
+        if instance.status != "Inactive":
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Only Inactive beams can be deleted. "
+                        f"Beam '{beam_number}' is currently '{instance.status}'. "
+                        f"Please change the beam status to Inactive first."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            instance.delete()
+        except ProtectedError:
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Cannot delete beam '{beam_number}' because it has linked "
+                        f"production, sizing, or loom loading history."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         log_activity(
             request=request,

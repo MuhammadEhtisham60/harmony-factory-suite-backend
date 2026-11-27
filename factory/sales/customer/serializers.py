@@ -71,7 +71,6 @@ class CustomerListSerializer(serializers.ModelSerializer):
     companyName = serializers.CharField(
         source="company_name", required=False, allow_blank=True
     )
-    contactPerson = serializers.CharField(source="contact_person")
     customerType = serializers.ChoiceField(
         source="customer_type",
         choices=Customer.CustomerType.choices,
@@ -95,7 +94,6 @@ class CustomerListSerializer(serializers.ModelSerializer):
             "companyName",
             "phone",
             "email",
-            "contactPerson",
             "customerType",
             "status",
             "registrationNumber",
@@ -153,7 +151,6 @@ class CustomerDetailSerializer(serializers.ModelSerializer):
         source="company_name", required=False, allow_blank=True, default=""
     )
     address = serializers.CharField(required=False, allow_blank=True, default="")
-    contactPerson = serializers.CharField(source="contact_person")
     customerType = serializers.ChoiceField(
         source="customer_type",
         choices=Customer.CustomerType.choices,
@@ -185,7 +182,6 @@ class CustomerDetailSerializer(serializers.ModelSerializer):
             "address",
             "phone",
             "email",
-            "contactPerson",
             "customerType",
             "status",
             "registrationNumber",

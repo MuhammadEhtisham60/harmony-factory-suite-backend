@@ -36,7 +36,10 @@ from .services import (
     sync_sizing_outcome_to_intake,
     revert_returned_beams_to_sizing,
 )
+from decimal import Decimal
+
 from django.db import transaction
+from django.db.models.deletion import ProtectedError
 
 
 class SizingViewSet(ModelViewSet):
@@ -126,7 +129,102 @@ class SizingViewSet(ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         name = instance.sizing_name
-        instance.delete()
+
+        # 1. Only Inactive sizing units can be deleted
+        if instance.status != "Inactive":
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Only Inactive sizing units can be deleted. "
+                        f"'{name}' is currently '{instance.status}'. "
+                        f"Please mark the sizing unit as Inactive first."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 2. Check if any active/unreturned yarn sets or beams are currently at this sizing unit
+        from factory.yarn.yarn_outcome.models import YarnOutcome
+        from .ledger import get_individual_sizing_ledger_summary, exact_str
+
+        active_sets_count = (
+            YarnOutcome.objects.filter(sizing=instance)
+            .exclude(status__in=["Completed", "Returned"])
+            .count()
+        )
+        if active_sets_count > 0:
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Cannot delete '{name}': {active_sets_count} active/pending "
+                        f"yarn set(s) are currently sent to this sizing unit."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        assigned_beams_count = Beam.objects.filter(
+            sizing=instance, status="Sizing"
+        ).count()
+        if assigned_beams_count > 0:
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Cannot delete '{name}': {assigned_beams_count} beam(s) "
+                        f"are currently assigned at this sizing unit."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 3. Check Sizing Ledger (payables/receivables and yarn balance at sizing)
+        summary = get_individual_sizing_ledger_summary(instance.id)
+        payables = summary.get("total_payables") or Decimal("0")
+        if payables != Decimal("0"):
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Cannot delete '{name}': uncleared ledger balance of "
+                        f"PKR {exact_str(abs(payables))} remains. "
+                        f"Please clear the ledger before deleting."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        bal_bags = summary.get("balance_bags") or Decimal("0")
+        bal_cones = summary.get("balance_cones") or Decimal("0")
+        bal_kg = summary.get("balance_weight_kg") or Decimal("0")
+        if bal_bags != Decimal("0") or bal_cones != Decimal("0") or bal_kg != Decimal("0"):
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Cannot delete '{name}': yarn balance still remains at this "
+                        f"sizing unit ({exact_str(bal_bags)} bags, {exact_str(bal_cones)} cones, "
+                        f"{exact_str(bal_kg)} kg). Please settle all yarn stock first."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            instance.delete()
+        except ProtectedError:
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Cannot delete '{name}' because it has linked "
+                        f"sizing transaction history."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         log_activity(
             request=request,

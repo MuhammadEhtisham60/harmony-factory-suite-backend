@@ -2,6 +2,8 @@
 Views for the Loom module – full CRUD via ModelViewSet.
 """
 
+from django.db.models.deletion import ProtectedError
+
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -160,7 +162,34 @@ class LoomViewSet(ModelViewSet):
         instance = self.get_object()
         loom_code = instance.loom_code
         loom_name = instance.loom_name
-        instance.delete()
+
+        # Only Inactive looms can be deleted
+        if instance.status != "Inactive":
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Only Inactive looms can be deleted. "
+                        f"Loom '{loom_name}' (Code: {loom_code}) is currently '{instance.status}'. "
+                        f"Please change the loom status to Inactive first."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            instance.delete()
+        except ProtectedError:
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Cannot delete loom '{loom_name}' (Code: {loom_code}) because it has linked "
+                        f"production or beam loading history."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         log_activity(
             request=request,

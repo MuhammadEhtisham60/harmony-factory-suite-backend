@@ -48,7 +48,9 @@ class Customer(models.Model):
     )
 
     contact_person = models.CharField(
-        max_length=255
+        max_length=255,
+        blank=True,
+        default=""
     )
 
     email = models.EmailField(
