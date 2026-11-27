@@ -100,6 +100,47 @@ class WorkerViewSet(ModelViewSet):
             module="HR & Workforce",
         )
 
+    def destroy(self, request, *args, **kwargs):
+        from django.db.models.deletion import ProtectedError
+
+        instance = self.get_object()
+        if instance.status != Worker.StatusChoices.INACTIVE:
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Only Inactive workers can be deleted. "
+                        f"'{instance.name}' ({instance.worker_code}) is currently '{instance.status}'. "
+                        f"Please mark the worker as Inactive first."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        name = instance.name
+        code = instance.worker_code
+        try:
+            instance.delete()
+        except ProtectedError:
+            return Response(
+                {
+                    "success": False,
+                    "message": f"Cannot delete worker '{name}' ({code}) because it has linked salary or attendance history.",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        log_activity(
+            request,
+            action="Deleted Worker",
+            description=f"Deleted worker {name} ({code})",
+            module="HR & Workforce",
+        )
+        return Response(
+            {"success": True, "message": "Worker deleted successfully."},
+            status=status.HTTP_200_OK,
+        )
+
     def perform_destroy(self, instance):
         worker_name = instance.name
         worker_code = instance.worker_code
