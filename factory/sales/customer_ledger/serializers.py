@@ -186,6 +186,9 @@ class ClothCustomerPaymentSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True
     )
+    chequeDate = serializers.DateField(source="cheque_date", required=False, allow_null=True)
+    chequeStatus = serializers.CharField(source="cheque_status", read_only=True)
+    approvedAt = serializers.DateTimeField(source="approved_at", read_only=True)
 
     class Meta:
         model = ClothCustomerPayment
@@ -210,6 +213,12 @@ class ClothCustomerPaymentSerializer(serializers.ModelSerializer):
             "payment_method",
             "referenceNumber",
             "reference_number",
+            "chequeDate",
+            "cheque_date",
+            "chequeStatus",
+            "cheque_status",
+            "approvedAt",
+            "approved_at",
             "notes",
             "created_at",
             "updated_at",
@@ -218,6 +227,10 @@ class ClothCustomerPaymentSerializer(serializers.ModelSerializer):
             "id",
             "paymentNumber",
             "payment_number",
+            "chequeStatus",
+            "cheque_status",
+            "approvedAt",
+            "approved_at",
             "created_at",
             "updated_at",
         ]
@@ -227,7 +240,16 @@ class ClothCustomerPaymentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"customer": "Customer is required."})
         if not attrs.get("amount") or Decimal(str(attrs.get("amount"))) <= Decimal("0.00"):
             raise serializers.ValidationError({"amount": "Payment amount must be greater than zero."})
+        if attrs.get("payment_method") == ClothCustomerPayment.PaymentMethod.CHEQUE and not attrs.get("cheque_date"):
+            raise serializers.ValidationError({"chequeDate": "Cheque passing / due date is required when payment method is Cheque."})
         return attrs
+
+    def create(self, validated_data):
+        if validated_data.get("payment_method") == ClothCustomerPayment.PaymentMethod.CHEQUE:
+            validated_data["cheque_status"] = ClothCustomerPayment.ChequeStatus.PENDING
+        else:
+            validated_data["cheque_status"] = ClothCustomerPayment.ChequeStatus.APPROVED
+        return super().create(validated_data)
 
 
 class CustomerLedgerRowSerializer(serializers.Serializer):

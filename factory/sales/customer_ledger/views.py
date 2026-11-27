@@ -250,7 +250,11 @@ class CustomerClothLedgerViewSet(ViewSet):
             )
 
             return Response({
-                "message": "Customer payment recorded successfully.",
+                "message": (
+                    "Cheque recorded as Pending approval. Bank balance and party ledger will update once approved by admin."
+                    if payment.payment_method == ClothCustomerPayment.PaymentMethod.CHEQUE
+                    else "Customer payment recorded successfully."
+                ),
                 "data": ClothCustomerPaymentSerializer(payment).data,
             }, status=status.HTTP_201_CREATED)
 
@@ -259,10 +263,140 @@ class CustomerClothLedgerViewSet(ViewSet):
         cust_id = request.query_params.get("customer") or request.query_params.get("customer_id")
         if cust_id:
             qs = qs.filter(customer_id=cust_id)
+        cheque_status = request.query_params.get("cheque_status")
+        if cheque_status:
+            qs = qs.filter(cheque_status=cheque_status)
         paginator = StandardResultsSetPagination()
         page = paginator.paginate_queryset(qs, request)
         ser = ClothCustomerPaymentSerializer(page, many=True)
         return paginator.get_paginated_response(ser.data)
+
+    @action(detail=False, methods=["POST"], url_path=r"payments/(?P<payment_id>\d+)/approve-cheque")
+    def approve_cheque(self, request, payment_id=None):
+        """
+        Admin approves a pending customer cheque:
+        - Marks cheque_status = Approved
+        - Adds amount to linked BankAccount balance
+        - Deducts amount from customer's outstanding receivables
+        """
+        from django.utils import timezone
+
+        payment = get_object_or_404(ClothCustomerPayment, pk=payment_id)
+        if payment.payment_method != ClothCustomerPayment.PaymentMethod.CHEQUE:
+            return Response(
+                {"success": False, "message": "Only Cheque payments require approval."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if payment.cheque_status != ClothCustomerPayment.ChequeStatus.PENDING:
+            return Response(
+                {"success": False, "message": f"Cheque is already '{payment.cheque_status}'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        payment.cheque_status = ClothCustomerPayment.ChequeStatus.APPROVED
+        payment.approved_at = timezone.now()
+        payment.approved_by = request.user
+        payment.save()
+
+        c_name = payment.customer.customer_name if payment.customer else "Customer"
+        log_activity(
+            request=request,
+            action="Approve Customer Cheque",
+            description=(
+                f"Approved cheque #{payment.reference_number or payment.payment_number} "
+                f"of Rs. {payment.amount} from {c_name}"
+            ),
+            module="Sales – Customer Ledger",
+            status="Success",
+            user=request.user,
+        )
+
+        return Response(
+            {
+                "success": True,
+                "message": "Cheque approved! Bank balance and customer outstanding balance updated.",
+                "data": ClothCustomerPaymentSerializer(payment).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=False, methods=["POST"], url_path=r"payments/(?P<payment_id>\d+)/reject-cheque")
+    def reject_cheque(self, request, payment_id=None):
+        """
+        Admin rejects / bounces a pending customer cheque without affecting balances.
+        """
+        payment = get_object_or_404(ClothCustomerPayment, pk=payment_id)
+        if payment.cheque_status != ClothCustomerPayment.ChequeStatus.PENDING:
+            return Response(
+                {"success": False, "message": f"Cheque is already '{payment.cheque_status}'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        payment.cheque_status = ClothCustomerPayment.ChequeStatus.REJECTED
+        payment.save()
+
+        return Response(
+            {
+                "success": True,
+                "message": "Cheque marked as Rejected.",
+                "data": ClothCustomerPaymentSerializer(payment).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=False, methods=["GET"], url_path="due-cheques")
+    def due_cheques(self, request):
+        """
+        Returns all pending cheques whose cheque_date <= today (ready for admin approval).
+        """
+        from django.utils import timezone
+        from factory.bank_account.models import BankTransaction
+
+        today = timezone.localdate()
+        customer_due = (
+            ClothCustomerPayment.objects.filter(
+                payment_method=ClothCustomerPayment.PaymentMethod.CHEQUE,
+                cheque_status=ClothCustomerPayment.ChequeStatus.PENDING,
+                cheque_date__lte=today,
+            )
+            .select_related("customer", "bank_account")
+            .order_by("cheque_date", "id")
+        )
+        bank_due = (
+            BankTransaction.objects.filter(
+                payment_method=BankTransaction.PaymentMethod.CHEQUE,
+                cheque_status=BankTransaction.ChequeStatus.PENDING,
+                cheque_date__lte=today,
+                cloth_customer_payment__isnull=True,
+            )
+            .select_related("account")
+            .order_by("cheque_date", "id")
+        )
+
+        items = []
+        for p in customer_due:
+            items.append({
+                "id": p.id,
+                "source": "customer_payment",
+                "partyName": p.customer.customer_name if p.customer else "Customer",
+                "bankName": p.bank_account.bank_name if p.bank_account else "",
+                "referenceNumber": p.reference_number or p.payment_number,
+                "amount": str(p.amount),
+                "chequeDate": p.cheque_date.isoformat() if p.cheque_date else None,
+                "transactionType": "Credit",
+            })
+        for tx in bank_due:
+            items.append({
+                "id": tx.id,
+                "source": "bank_transaction",
+                "partyName": tx.party_name or tx.account.bank_name,
+                "bankName": tx.account.bank_name,
+                "referenceNumber": tx.reference_number or f"TX-{tx.id}",
+                "amount": str(tx.amount),
+                "chequeDate": tx.cheque_date.isoformat() if tx.cheque_date else None,
+                "transactionType": tx.transaction_type,
+            })
+
+        return Response({"success": True, "count": len(items), "results": items})
 
     @action(detail=False, methods=["GET", "POST"])
     def sales(self, request):

@@ -270,11 +270,43 @@ class ClothCustomerPayment(models.Model):
         default=PaymentMethod.ONLINE_TRANSFER
     )
 
+    class ChequeStatus(models.TextChoices):
+        APPROVED = "Approved", "Approved"
+        PENDING = "Pending", "Pending"
+        REJECTED = "Rejected", "Rejected"
+
     reference_number = models.CharField(
         max_length=100,
         blank=True,
         default="",
         help_text="Cheque number, IBFT transaction ID, or deposit slip number"
+    )
+
+    cheque_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Cheque passing / due date (when payment method is Cheque)"
+    )
+
+    cheque_status = models.CharField(
+        max_length=20,
+        choices=ChequeStatus.choices,
+        default=ChequeStatus.APPROVED,
+        help_text="Pending until admin approves cheque; Approved for immediate payments"
+    )
+
+    approved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Timestamp when admin approved the cheque"
+    )
+
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="approved_cloth_customer_payments"
     )
 
     notes = models.TextField(
@@ -331,6 +363,9 @@ class ClothCustomerPayment(models.Model):
                 tx.date = self.payment_date
                 tx.payment_method = bt_method
                 tx.reference_number = self.reference_number or ""
+                tx.cheque_date = self.cheque_date
+                tx.cheque_status = self.cheque_status
+                tx.approved_at = self.approved_at
                 tx.party_name = c_name
                 tx.description = desc
                 tx.save()
@@ -342,6 +377,9 @@ class ClothCustomerPayment(models.Model):
                     date=self.payment_date,
                     payment_method=bt_method,
                     reference_number=self.reference_number or "",
+                    cheque_date=self.cheque_date,
+                    cheque_status=self.cheque_status,
+                    approved_at=self.approved_at,
                     party_name=c_name,
                     description=desc,
                     created_by=self.created_by,
@@ -366,7 +404,11 @@ class ClothCustomerPayment(models.Model):
         self._sync_bank_transaction()
 
         if self.cloth_sale_id:
-            total_paid = self.cloth_sale.payments.aggregate(s=models.Sum("amount"))["s"] or Decimal("0.00")
+            total_paid = (
+                self.cloth_sale.payments.filter(cheque_status=self.ChequeStatus.APPROVED)
+                .aggregate(s=models.Sum("amount"))["s"]
+                or Decimal("0.00")
+            )
             self.cloth_sale.amount_paid = total_paid
             self.cloth_sale.amount_due = max(Decimal("0.00"), self.cloth_sale.total_amount - total_paid)
             if total_paid >= self.cloth_sale.total_amount and self.cloth_sale.total_amount > Decimal("0.00"):
@@ -384,7 +426,11 @@ class ClothCustomerPayment(models.Model):
         if tx:
             tx.delete()
         if sale:
-            total_paid = sale.payments.aggregate(s=models.Sum("amount"))["s"] or Decimal("0.00")
+            total_paid = (
+                sale.payments.filter(cheque_status=self.ChequeStatus.APPROVED)
+                .aggregate(s=models.Sum("amount"))["s"]
+                or Decimal("0.00")
+            )
             sale.amount_paid = total_paid
             sale.amount_due = max(Decimal("0.00"), sale.total_amount - total_paid)
             if total_paid >= sale.total_amount and sale.total_amount > Decimal("0.00"):

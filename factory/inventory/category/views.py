@@ -96,6 +96,18 @@ class InventoryCategoryViewSet(ModelViewSet):
         instance = self.get_object()
         name = instance.name
 
+        if instance.is_active:
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Only Inactive inventory categories can be deleted. "
+                        f"'{name}' is currently Active. Please mark it as Inactive first."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         if instance.items.exists():
             return Response(
                 {

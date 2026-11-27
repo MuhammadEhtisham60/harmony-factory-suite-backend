@@ -200,6 +200,8 @@ def _payment_row(cp):
         "invoice_number": cp.cloth_sale.invoice_number if cp.cloth_sale else "",
         "payment_method": cp.payment_method,
         "reference_number": cp.reference_number or "",
+        "cheque_date": cp.cheque_date,
+        "cheque_status": cp.cheque_status or "Approved",
         "bank_account_id": cp.bank_account_id,
         "bank_account_name": b_name,
         "payment_amount": amt,
@@ -238,7 +240,11 @@ def build_customer_cloth_ledger(customer, date_from=None, date_to=None, entry_ty
             opening_meters = _dec(sales_prior_aggr["meters"])
             opening_sales = _dec(sales_prior_aggr["total"])
 
-            payments_prior = ClothCustomerPayment.objects.filter(customer_id=cust_id, payment_date__lt=date_from)
+            payments_prior = ClothCustomerPayment.objects.filter(
+                customer_id=cust_id,
+                payment_date__lt=date_from,
+                cheque_status=ClothCustomerPayment.ChequeStatus.APPROVED,
+            )
             payments_prior_aggr = payments_prior.aggregate(
                 total=Sum("amount")
             )
@@ -285,9 +291,10 @@ def build_customer_cloth_ledger(customer, date_from=None, date_to=None, entry_ty
                 period_meters_sold += r["quantity_meters"]
                 period_sales += r["sale_amount"]
             elif r["entry_type"] == ENTRY_PAYMENT:
-                curr_paid += r["payment_amount"]
-                curr_receivables -= r["payment_amount"]
-                period_paid += r["payment_amount"]
+                if r.get("cheque_status", "Approved") == "Approved":
+                    curr_paid += r["payment_amount"]
+                    curr_receivables -= r["payment_amount"]
+                    period_paid += r["payment_amount"]
 
             r["balance_meters"] = curr_meters
             r["cumulative_sales"] = curr_sales
@@ -398,8 +405,11 @@ def get_main_customer_cloth_ledger(search=None, status=None, customer_type=None,
                 "count": row["cnt"],
             }
 
-        # Aggregate payments per customer
-        payments_qs = ClothCustomerPayment.objects.filter(customer_id__in=cust_ids)
+        # Aggregate approved payments per customer (pending/rejected cheques do not reduce outstanding balance)
+        payments_qs = ClothCustomerPayment.objects.filter(
+            customer_id__in=cust_ids,
+            cheque_status=ClothCustomerPayment.ChequeStatus.APPROVED,
+        )
         if date_from:
             payments_qs = payments_qs.filter(payment_date__gte=date_from)
         if date_to:
