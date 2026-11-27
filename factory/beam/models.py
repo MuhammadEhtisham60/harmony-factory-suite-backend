@@ -32,6 +32,12 @@ class Beam(models.Model):
         unique=True
     )
 
+    beam_code = models.CharField(
+        max_length=100,
+        blank=True,
+        default=""
+    )
+
     yarn_count = models.CharField(
         max_length=100,
         blank=True,

@@ -111,6 +111,20 @@ class YarnNameViewSet(ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         name = instance.name
+
+        if instance.status != "Inactive":
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Only Inactive yarn names can be deleted. "
+                        f"'{name}' is currently '{instance.status}'. "
+                        f"Please mark it as Inactive first."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         try:
             instance.delete()
         except ProtectedError:

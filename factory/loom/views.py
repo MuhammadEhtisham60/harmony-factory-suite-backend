@@ -128,6 +128,25 @@ class LoomViewSet(ModelViewSet):
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
+
+        # Block manual status change when loom is in Production
+        new_status = request.data.get("status")
+        if (
+            new_status is not None
+            and new_status != instance.status
+            and instance.status in {"Production", "In Production"}
+        ):
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Cannot change status of loom '{instance.loom_name}' "
+                        f"(Code: {instance.loom_code}) while it is in '{instance.status}' status."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         serializer = LoomDetailSerializer(
             instance, data=request.data, partial=partial, context={"request": request}
         )

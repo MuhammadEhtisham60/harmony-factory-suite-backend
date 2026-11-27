@@ -102,9 +102,64 @@ class SizingViewSet(ModelViewSet):
         serializer = SizingSerializer(instance, context={"request": request})
         return Response({"success": True, "data": serializer.data})
 
+    def _get_sizing_block_error(self, instance, action_label="change status of"):
+        from factory.yarn.yarn_outcome.models import YarnOutcome
+        from .ledger import get_individual_sizing_ledger_summary, exact_str
+
+        name = instance.sizing_name
+        active_sets_count = (
+            YarnOutcome.objects.filter(sizing=instance)
+            .exclude(status__in=["Completed", "Returned"])
+            .count()
+        )
+        if active_sets_count > 0:
+            return (
+                f"Cannot {action_label} '{name}': {active_sets_count} active/pending "
+                f"yarn set(s) are currently sent to this sizing unit."
+            )
+
+        assigned_beams_count = Beam.objects.filter(
+            sizing=instance, status="Sizing"
+        ).count()
+        if assigned_beams_count > 0:
+            return (
+                f"Cannot {action_label} '{name}': {assigned_beams_count} beam(s) "
+                f"are currently assigned at this sizing unit."
+            )
+
+        summary = get_individual_sizing_ledger_summary(instance.id)
+        payables = summary.get("total_payables") or Decimal("0")
+        if payables != Decimal("0"):
+            return (
+                f"Cannot {action_label} '{name}': uncleared ledger dues of "
+                f"PKR {exact_str(abs(payables))} remain. Please clear the ledger first."
+            )
+
+        bal_bags = summary.get("balance_bags") or Decimal("0")
+        bal_cones = summary.get("balance_cones") or Decimal("0")
+        bal_kg = summary.get("balance_weight_kg") or Decimal("0")
+        if bal_bags != Decimal("0") or bal_cones != Decimal("0") or bal_kg != Decimal("0"):
+            return (
+                f"Cannot {action_label} '{name}': yarn stock still remains at this "
+                f"sizing unit ({exact_str(bal_bags)} bags, {exact_str(bal_cones)} cones, "
+                f"{exact_str(bal_kg)} kg). Please settle all yarn stock first."
+            )
+        return None
+
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
+
+        # When changing status to Inactive, check ledger dues, active sets, and yarn at sizing
+        new_status = request.data.get("status")
+        if new_status == "Inactive" and instance.status != "Inactive":
+            block_err = self._get_sizing_block_error(instance, action_label="deactivate")
+            if block_err:
+                return Response(
+                    {"success": False, "message": block_err},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
         serializer = SizingSerializer(
             instance, data=request.data, partial=partial, context={"request": request}
         )

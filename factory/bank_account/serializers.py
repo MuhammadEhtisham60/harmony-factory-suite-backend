@@ -21,6 +21,9 @@ class BankTransactionSerializer(serializers.ModelSerializer):
     transactionType = serializers.CharField(source="transaction_type", required=False)
     paymentMethod = serializers.CharField(source="payment_method", required=False)
     referenceNumber = serializers.CharField(source="reference_number", required=False, allow_blank=True)
+    chequeDate = serializers.DateField(source="cheque_date", required=False, allow_null=True)
+    chequeStatus = serializers.CharField(source="cheque_status", read_only=True)
+    approvedAt = serializers.DateTimeField(source="approved_at", read_only=True)
     partyName = serializers.CharField(source="party_name", required=False, allow_blank=True)
     runningBalance = serializers.DecimalField(
         source="running_balance",
@@ -51,6 +54,12 @@ class BankTransactionSerializer(serializers.ModelSerializer):
             "paymentMethod",
             "reference_number",
             "referenceNumber",
+            "cheque_date",
+            "chequeDate",
+            "cheque_status",
+            "chequeStatus",
+            "approved_at",
+            "approvedAt",
             "party_name",
             "partyName",
             "description",
@@ -146,6 +155,18 @@ class BankTransactionSerializer(serializers.ModelSerializer):
         if ref is not None:
             ret["reference_number"] = str(ref).strip()
 
+        # Cheque date
+        cd = data.get("chequeDate") if "chequeDate" in data else data.get("cheque_date")
+        if cd is not None and cd != "":
+            if hasattr(cd, "date"):
+                ret["cheque_date"] = cd.date()
+            elif isinstance(cd, str) and "T" in cd:
+                ret["cheque_date"] = cd.split("T")[0]
+            else:
+                ret["cheque_date"] = cd
+        elif cd == "":
+            ret["cheque_date"] = None
+
         # Party name
         party = data.get("partyName") or data.get("party_name")
         if party is not None:
@@ -159,13 +180,29 @@ class BankTransactionSerializer(serializers.ModelSerializer):
         return ret
 
     def validate(self, attrs):
+        account = attrs.get("account") or self.context.get("account")
         if not self.instance:
-            if "account" not in attrs and "account" not in self.context:
+            if not account:
                 raise serializers.ValidationError({"account": "Account is required."})
+            if account.status != BankAccount.Status.ACTIVE:
+                raise serializers.ValidationError(
+                    {
+                        "account": (
+                            f"Deposits and withdrawals are only allowed on Active bank accounts. "
+                            f"This account is currently '{account.status}'."
+                        )
+                    }
+                )
             if "transaction_type" not in attrs:
                 raise serializers.ValidationError({"transactionType": "Transaction type (Credit / Debit) is required."})
             if "amount" not in attrs:
                 raise serializers.ValidationError({"amount": "Transaction amount is required."})
+
+        pm = attrs.get("payment_method") or (self.instance.payment_method if self.instance else None)
+        cd = attrs.get("cheque_date") if "cheque_date" in attrs else (self.instance.cheque_date if self.instance else None)
+        if pm == BankTransaction.PaymentMethod.CHEQUE and not cd:
+            raise serializers.ValidationError({"chequeDate": "Cheque date is required when payment method is Cheque."})
+
         return attrs
 
     def create(self, validated_data):
@@ -173,6 +210,10 @@ class BankTransactionSerializer(serializers.ModelSerializer):
         if request and request.user and request.user.is_authenticated:
             validated_data["created_by"] = request.user
             validated_data["updated_by"] = request.user
+        if validated_data.get("payment_method") == BankTransaction.PaymentMethod.CHEQUE:
+            validated_data["cheque_status"] = BankTransaction.ChequeStatus.PENDING
+        else:
+            validated_data["cheque_status"] = BankTransaction.ChequeStatus.APPROVED
         return super().create(validated_data)
 
     def update(self, instance, validated_data):

@@ -68,6 +68,7 @@ class BeamViewSet(ModelViewSet):
     search_fields = [
         "beam_name",
         "beam_number",
+        "beam_code",
         "yarn_count",
         "production_order",
     ]
@@ -143,6 +144,26 @@ class BeamViewSet(ModelViewSet):
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
+
+        # Block manual status change when beam is actively in Sizing, Warping, Loaded, or Production
+        locked_statuses = {"Sizing", "Warping", "Loaded", "In Production", "Production"}
+        new_status = request.data.get("status")
+        if (
+            new_status is not None
+            and new_status != instance.status
+            and instance.status in locked_statuses
+        ):
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Cannot change status of beam '{instance.beam_number}' "
+                        f"while it is in '{instance.status}' status."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         serializer = BeamDetailSerializer(
             instance, data=request.data, partial=partial, context={"request": request}
         )

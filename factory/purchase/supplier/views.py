@@ -131,9 +131,55 @@ class SupplierViewSet(ModelViewSet):
         serializer = SupplierDetailSerializer(instance, context={"request": request})
         return Response({"success": True, "data": serializer.data})
 
+    def _get_uncleared_dues_error(self, instance, action_label="perform this action on"):
+        from factory.yarn.supplier_ledger.ledger import build_yarn_supplier_ledger, exact_str
+
+        yarn_ledger = build_yarn_supplier_ledger(instance)
+        yarn_balance = yarn_ledger["summary"].get("total_payables") or Decimal("0")
+        if yarn_balance > Decimal("0"):
+            return (
+                f"Cannot {action_label} '{instance.supplier_name}': "
+                f"uncleared ledger payables of PKR {exact_str(yarn_balance)} remain. "
+                f"Please clear all dues first."
+            )
+        if yarn_balance < Decimal("0"):
+            return (
+                f"Cannot {action_label} '{instance.supplier_name}': "
+                f"uncleared ledger receivables/advance of PKR {exact_str(abs(yarn_balance))} remain. "
+                f"Please settle all dues first."
+            )
+
+        inv_purchase_due = (
+            instance.inventory_purchases.aggregate(total=Sum("amount_due")).get("total")
+            or Decimal("0")
+        )
+        inv_ledger_due = (
+            instance.inventory_ledger_entries.aggregate(total=Sum("amount_due")).get("total")
+            or Decimal("0")
+        )
+        if inv_purchase_due != Decimal("0") or inv_ledger_due != Decimal("0"):
+            due_val = inv_purchase_due if inv_purchase_due != Decimal("0") else inv_ledger_due
+            return (
+                f"Cannot {action_label} '{instance.supplier_name}': "
+                f"uncleared inventory ledger balance of PKR {exact_str(abs(due_val))} remains. "
+                f"Please clear all dues first."
+            )
+        return None
+
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
+
+        # Block status change if supplier has uncleared payables/receivables
+        new_status = request.data.get("status")
+        if new_status is not None and new_status != instance.status:
+            dues_err = self._get_uncleared_dues_error(instance, action_label="change status of")
+            if dues_err:
+                return Response(
+                    {"success": False, "message": dues_err},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
         serializer = SupplierDetailSerializer(
             instance, data=request.data, partial=partial, context={"request": request}
         )

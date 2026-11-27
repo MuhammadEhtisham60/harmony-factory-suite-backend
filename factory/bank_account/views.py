@@ -258,3 +258,103 @@ class BankTransactionViewSet(ModelViewSet):
             description=desc,
             module="Bank Transactions",
         )
+
+    @action(detail=True, methods=["post"], url_path="approve_cheque")
+    def approve_cheque(self, request, pk=None):
+        """
+        Approve a pending cheque transaction, which deducts/credits the bank account balance.
+        """
+        from django.utils import timezone
+
+        tx = self.get_object()
+        if tx.account.status != BankAccount.Status.ACTIVE:
+            return Response(
+                {
+                    "success": False,
+                    "message": (
+                        f"Cannot approve cheque: bank account '{tx.account.bank_name}' "
+                        f"is currently '{tx.account.status}'. Only Active accounts can process transactions."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if tx.payment_method != BankTransaction.PaymentMethod.CHEQUE:
+            return Response(
+                {"success": False, "message": "Only Cheque transactions require approval."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if tx.cheque_status != BankTransaction.ChequeStatus.PENDING:
+            return Response(
+                {"success": False, "message": f"Cheque is already '{tx.cheque_status}'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        tx.cheque_status = BankTransaction.ChequeStatus.APPROVED
+        tx.approved_at = timezone.now()
+        if request.user and request.user.is_authenticated:
+            tx.updated_by = request.user
+        tx.save()
+        tx.account.refresh_from_db()
+        tx.running_balance = tx.account.current_balance
+        tx.save(update_fields=["running_balance"])
+
+        log_activity(
+            request,
+            action="APPROVE_CHEQUE",
+            description=(
+                f"Approved {tx.transaction_type} cheque #{tx.reference_number or tx.id} "
+                f"of PKR {tx.amount} for {tx.account.bank_name} ({tx.account.account_number})"
+            ),
+            module="Bank Transactions",
+        )
+
+        return Response(
+            {
+                "success": True,
+                "message": "Cheque approved and bank balance updated.",
+                "transaction": BankTransactionSerializer(tx, context={"request": request}).data,
+                "account": BankAccountSerializer(tx.account, context={"request": request}).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["post"], url_path="reject_cheque")
+    def reject_cheque(self, request, pk=None):
+        """
+        Reject / bounce a pending cheque without affecting the bank account balance.
+        """
+        tx = self.get_object()
+        if tx.payment_method != BankTransaction.PaymentMethod.CHEQUE:
+            return Response(
+                {"success": False, "message": "Only Cheque transactions can be rejected."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if tx.cheque_status != BankTransaction.ChequeStatus.PENDING:
+            return Response(
+                {"success": False, "message": f"Cheque is already '{tx.cheque_status}'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        tx.cheque_status = BankTransaction.ChequeStatus.REJECTED
+        if request.user and request.user.is_authenticated:
+            tx.updated_by = request.user
+        tx.save()
+
+        log_activity(
+            request,
+            action="REJECT_CHEQUE",
+            description=(
+                f"Rejected {tx.transaction_type} cheque #{tx.reference_number or tx.id} "
+                f"of PKR {tx.amount} for {tx.account.bank_name}"
+            ),
+            module="Bank Transactions",
+        )
+
+        return Response(
+            {
+                "success": True,
+                "message": "Cheque marked as Rejected.",
+                "transaction": BankTransactionSerializer(tx, context={"request": request}).data,
+            },
+            status=status.HTTP_200_OK,
+        )

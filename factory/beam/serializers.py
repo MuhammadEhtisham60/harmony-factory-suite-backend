@@ -72,6 +72,9 @@ class BeamListSerializer(serializers.ModelSerializer):
         source="beam_name", required=False, allow_blank=True
     )
     beamNumber = serializers.CharField(source="beam_number")
+    beamCode = serializers.CharField(
+        source="beam_code", required=False, allow_blank=True, default=""
+    )
     yarnCount = serializers.CharField(
         source="yarn_count", required=False, allow_blank=True
     )
@@ -99,6 +102,7 @@ class BeamListSerializer(serializers.ModelSerializer):
             "id",
             "beamName",
             "beamNumber",
+            "beamCode",
             "yarnCount",
             "warpCount",
             "totalEnds",
@@ -153,6 +157,9 @@ class BeamDetailSerializer(serializers.ModelSerializer):
         source="beam_name", required=False, allow_blank=True, default=""
     )
     beamNumber = serializers.CharField(source="beam_number")
+    beamCode = serializers.CharField(
+        source="beam_code", required=False, allow_blank=True, default=""
+    )
     yarnCount = serializers.CharField(
         source="yarn_count", required=False, allow_blank=True, default=""
     )
@@ -189,6 +196,7 @@ class BeamDetailSerializer(serializers.ModelSerializer):
             "id",
             "beamName",
             "beamNumber",
+            "beamCode",
             "yarnCount",
             "warpCount",
             "totalEnds",

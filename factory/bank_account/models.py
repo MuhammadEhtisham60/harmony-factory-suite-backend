@@ -97,12 +97,19 @@ class BankAccount(models.Model):
     def recalculate_balances(self):
         """
         Recalculates total_credit, total_debit and current_balance from scratch.
+        Only Approved transactions (non-cheque or approved cheques) affect the balance.
         """
-        credits = self.transactions.filter(transaction_type="Credit").aggregate(
+        credits = self.transactions.filter(
+            transaction_type="Credit",
+            cheque_status="Approved",
+        ).aggregate(
             total=models.Sum("amount")
         )["total"] or Decimal("0.00")
 
-        debits = self.transactions.filter(transaction_type="Debit").aggregate(
+        debits = self.transactions.filter(
+            transaction_type="Debit",
+            cheque_status="Approved",
+        ).aggregate(
             total=models.Sum("amount")
         )["total"] or Decimal("0.00")
 
@@ -133,6 +140,11 @@ class BankTransaction(models.Model):
         WIRE = "Wire Transfer", "Wire Transfer"
         OTHER = "Other", "Other"
 
+    class ChequeStatus(models.TextChoices):
+        APPROVED = "Approved", "Approved"
+        PENDING = "Pending", "Pending"
+        REJECTED = "Rejected", "Rejected"
+
     account = models.ForeignKey(
         BankAccount,
         on_delete=models.CASCADE,
@@ -160,6 +172,22 @@ class BankTransaction(models.Model):
         blank=True,
         default="",
         help_text="Cheque number, transaction ID, or bank reference",
+    )
+    cheque_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Cheque maturity / clearance date (when payment method is Cheque)",
+    )
+    cheque_status = models.CharField(
+        max_length=20,
+        choices=ChequeStatus.choices,
+        default=ChequeStatus.APPROVED,
+        help_text="Pending until cheque is approved; Approved for immediate transactions",
+    )
+    approved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Timestamp when a pending cheque was approved",
     )
     party_name = models.CharField(
         max_length=255,

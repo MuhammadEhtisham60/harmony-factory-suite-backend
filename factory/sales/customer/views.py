@@ -133,9 +133,44 @@ class CustomerViewSet(ModelViewSet):
         serializer = CustomerDetailSerializer(instance, context={"request": request})
         return Response({"success": True, "data": serializer.data})
 
+    def _get_uncleared_dues_error(self, instance, action_label="perform this action on"):
+        from factory.sales.customer_ledger.ledger import (
+            build_customer_cloth_ledger,
+            exact_str,
+        )
+
+        customer_ledger = build_customer_cloth_ledger(instance)
+        ledger_balance = (
+            customer_ledger["summary"].get("total_receivables") or Decimal("0")
+        )
+        if ledger_balance > Decimal("0"):
+            return (
+                f"Cannot {action_label} '{instance.customer_name}': "
+                f"uncleared ledger receivables of PKR {exact_str(ledger_balance)} remain. "
+                f"Please clear all dues first."
+            )
+        if ledger_balance < Decimal("0"):
+            return (
+                f"Cannot {action_label} '{instance.customer_name}': "
+                f"uncleared ledger payables/credit of PKR {exact_str(abs(ledger_balance))} remain. "
+                f"Please settle all dues first."
+            )
+        return None
+
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
+
+        # Block status change if customer has uncleared receivables/payables
+        new_status = request.data.get("status")
+        if new_status is not None and new_status != instance.status:
+            dues_err = self._get_uncleared_dues_error(instance, action_label="change status of")
+            if dues_err:
+                return Response(
+                    {"success": False, "message": dues_err},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
         serializer = CustomerDetailSerializer(
             instance, data=request.data, partial=partial, context={"request": request}
         )
